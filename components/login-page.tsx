@@ -130,14 +130,12 @@ export default function LoginPage() {
     // Test OTP verification - only "0000" is valid
     if (otp === "0000") {
       console.log(`OTP verified successfully for email:`, email)
-      // TODO: Redirect to dashboard
-      // window.location.href = "/dashboard"
-      alert("Login successful! Redirecting to dashboard...")
+      // Redirect to dashboard
+      window.location.href = "/dashboard"
     } else {
       setOtpError("Invalid OTP. Please try again.")
+      setIsVerifyingOtp(false)
     }
-
-    setIsVerifyingOtp(false)
   }
 
   const handleOtpChange = (value: string) => {
