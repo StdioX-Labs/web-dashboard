@@ -12,19 +12,11 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to access the dashboard.
+
 
 ## Overview
 
 The SoldOutAfrica Dashboard provides event organizers with powerful tools to create, manage, and scale their events seamlessly. Built with modern web technologies, the platform offers an intuitive interface with smooth animations and responsive design across all devices.
-│   └── page.tsx           # Home page (login)
-├── components/            # React components
-│   ├── login-page.tsx    # Login/signup page
-│   └── theme-provider.tsx # Theme context
-├── lib/                   # Utilities
-│   └── utils.ts          # Helper functions
-└── public/                # Static assets
-```
 
 ## 🎨 Design System
 
