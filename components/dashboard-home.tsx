@@ -44,64 +44,215 @@ export default function DashboardHome() {
         <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here&apos;s what&apos;s happening with your events.</p>
       </motion.div>
 
-      {/* Wallet Summary Card - Mobile friendly */}
+      {/* Wallet Card - Responsive Design */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="mb-6 sm:mb-8"
       >
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-4 sm:p-6 lg:p-8 text-white">
-          {/* Subtle accent circles */}
-          <div className="absolute -right-8 -top-8 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -left-8 -bottom-8 w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-black/20 blur-2xl" />
+        {/* Mobile - Credit Card Style */}
+        <div className="md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 text-white shadow-2xl max-w-md mx-auto aspect-[1.586/1]">
+          {/* Subtle animated background */}
+          <motion.div
+            animate={{
+              scale: [1, 1.1, 1],
+              opacity: [0.2, 0.3, 0.2]
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/10 blur-2xl"
+          />
 
-          <div className="relative z-10">
-            <div className="max-w-5xl">
-              {/* Total Revenue */}
-              <div className="mb-4 sm:mb-6">
-                <p className="text-xs sm:text-sm opacity-75 mb-1 sm:mb-2">Total Revenue</p>
-                <p className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold break-words">
-                  {dashboardData.wallet.currency} {(dashboardData.wallet.balance / 0.875).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-
-              {/* Breakdown */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 sm:pt-6 border-t border-white/20">
-                <div className="pb-4 border-b border-white/10 sm:border-b-0">
-                  <p className="text-xs opacity-75 mb-1">Commission & Fees (12.5%)</p>
-                  <p className="text-base sm:text-lg lg:text-xl font-semibold break-words">
-                    - {dashboardData.wallet.currency} {((dashboardData.wallet.balance / 0.875) * 0.125).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </p>
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            {/* Top Section - Available Balance */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <Wallet className="w-5 h-5" />
                 </div>
-                <div className="pb-4 border-b border-white/10 sm:border-b-0">
-                  <p className="text-xs opacity-75 mb-1">Withdrawn</p>
-                  <p className="text-base sm:text-lg lg:text-xl font-semibold break-words">
-                    - {dashboardData.wallet.currency} {dashboardData.wallet.pending.toLocaleString()}
-                  </p>
-                </div>
-                <div className="pb-4 border-b border-white/10 lg:border-b-0 lg:border-l lg:border-white/20 lg:pl-6">
-                  <p className="text-xs opacity-75 mb-1">Available Balance</p>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-300 break-words">
+                <div>
+                  <p className="text-xs opacity-70 uppercase tracking-wider">Available Balance</p>
+                  <p className="text-2xl font-bold">
                     {dashboardData.wallet.currency} {dashboardData.wallet.balance.toLocaleString()}
                   </p>
                 </div>
-                <div className="lg:border-l lg:border-white/20 lg:pl-6">
-                  <p className="text-xs opacity-75 mb-2">Quick Actions</p>
-                  <div className="flex flex-row sm:flex-col gap-2">
-                    <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 bg-white text-[#7c3aed] hover:bg-white/90 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md">
-                      <Send className="w-3 h-3" />
-                      <span className="hidden sm:inline">Withdraw</span>
-                      <span className="sm:hidden">Withdraw</span>
-                    </button>
-                    <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-white/20 cursor-pointer">
-                      <Download className="w-3 h-3" />
-                      <span className="hidden sm:inline">Report</span>
-                      <span className="sm:hidden">Report</span>
-                    </button>
-                  </div>
+              </div>
+            </div>
+
+            {/* Middle Section - Stats */}
+            <div className="grid grid-cols-3 gap-3 py-3 border-y border-white/10">
+              <div>
+                <p className="text-xs opacity-60 mb-0.5">Revenue</p>
+                <p className="text-sm font-semibold">
+                  {dashboardData.wallet.currency} {(dashboardData.wallet.balance / 0.875).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs opacity-60 mb-0.5">Fees</p>
+                <p className="text-sm font-semibold">
+                  - {((dashboardData.wallet.balance / 0.875) * 0.125).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs opacity-60 mb-0.5">Withdrawn</p>
+                <p className="text-sm font-semibold">
+                  - {dashboardData.wallet.pending.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Section - Actions */}
+            <div className="flex gap-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 px-4 py-2.5 bg-white/90 text-[#7c3aed] rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:bg-white cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                Withdraw
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/20 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop/iPad - Expanded Layout */}
+        <div className="hidden md:block relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 lg:p-8 text-white shadow-2xl">
+          {/* Animated gradient orbs */}
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3]
+            }}
+            transition={{ 
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/10 blur-3xl" 
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              opacity: [0.2, 0.4, 0.2]
+            }}
+            transition={{ 
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-black/20 blur-3xl" 
+          />
+          
+          <div className="relative z-10">
+            {/* Header with Revenue */}
+            <div className="mb-6 lg:mb-8">
+              <div className="flex items-center gap-3 mb-3 lg:mb-4">
+                <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-6 h-6 lg:w-7 lg:h-7" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm opacity-70 mb-1">Total Revenue</p>
+                  <motion.h2
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-3xl lg:text-4xl xl:text-5xl font-bold truncate"
+                  >
+                    {dashboardData.wallet.currency} {(dashboardData.wallet.balance / 0.875).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </motion.h2>
                 </div>
               </div>
+            </div>
+
+            {/* Grid Layout */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 xl:gap-6">
+              {/* Commission & Fees */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="p-4 lg:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <p className="text-xs lg:text-sm text-white/70 font-medium flex-1 min-w-0">Commission & Fees</p>
+                  <div className="px-2 py-1 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] lg:text-xs text-red-300 font-bold whitespace-nowrap">-12.5%</span>
+                  </div>
+                </div>
+                <p className="text-lg lg:text-xl xl:text-2xl font-bold truncate">
+                  - {dashboardData.wallet.currency} {((dashboardData.wallet.balance / 0.875) * 0.125).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              </motion.div>
+
+              {/* Withdrawn */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="p-4 lg:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <p className="text-xs lg:text-sm text-white/70 font-medium flex-1 min-w-0">Withdrawn</p>
+                  <Send className="w-4 h-4 lg:w-5 lg:h-5 text-white/50 flex-shrink-0" />
+                </div>
+                <p className="text-lg lg:text-xl xl:text-2xl font-bold truncate">
+                  - {dashboardData.wallet.currency} {dashboardData.wallet.pending.toLocaleString()}
+                </p>
+              </motion.div>
+
+              {/* Available Balance */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className="p-4 lg:p-5 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-400/30 shadow-lg shadow-green-500/10"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <p className="text-xs lg:text-sm text-green-200 font-medium flex-1 min-w-0">Available Balance</p>
+                  <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-xl bg-green-500/30 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-green-200" />
+                  </div>
+                </div>
+                <p className="text-xl lg:text-2xl xl:text-3xl font-bold text-green-200 truncate">
+                  {dashboardData.wallet.currency} {dashboardData.wallet.balance.toLocaleString()}
+                </p>
+              </motion.div>
+
+              {/* Quick Actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="flex flex-col gap-2 lg:gap-3 justify-center"
+              >
+                <motion.button 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-white text-[#7c3aed] rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  <span>Withdraw</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl text-xs lg:text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/20 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  <span>Report</span>
+                </motion.button>
+              </motion.div>
             </div>
           </div>
         </div>

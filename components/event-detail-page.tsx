@@ -204,6 +204,39 @@ export default function EventDetailPage() {
           </div>
         </div>
 
+        {/* Pending Approval Notification */}
+        {eventData.status === "pending" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 p-4 sm:p-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-bold text-orange-900 dark:text-orange-200 mb-1">
+                    Pending Approval
+                  </h3>
+                  <p className="text-sm sm:text-base text-orange-800 dark:text-orange-300">
+                    The SoldOutAfrica team is currently reviewing your event. You'll be notified once your event has been approved and is live on the platform.
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm text-orange-700 dark:text-orange-400">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                      <span className="font-medium">Under Review</span>
+                    </div>
+                    <span className="opacity-50">•</span>
+                    <span className="opacity-75">Typically takes 24-48 hours</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Event Balance Card - Mobile friendly */}
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-4 sm:p-6 lg:p-8 text-white mb-6">
           <div className="absolute -right-8 -top-8 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/10 blur-3xl" />
@@ -249,7 +282,7 @@ export default function EventDetailPage() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees")}
                 className={cn(
                   "px-4 sm:px-6 py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0",
                   activeTab === tab.id

@@ -124,37 +124,6 @@ export default function EventsPage() {
             Create Event
           </Link>
         </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {[
-            { label: "Total Events", value: stats.totalEvents, icon: Calendar, color: "from-blue-500 to-blue-600" },
-            { label: "Active", value: stats.activeEvents, icon: CheckCircle, color: "from-green-500 to-green-600" },
-            { label: "Pending", value: stats.pendingEvents, icon: Clock, color: "from-orange-500 to-orange-600" },
-            { label: "Total Revenue", value: `KES ${(stats.totalRevenue / 1000).toFixed(0)}K`, icon: TrendingUp, color: "from-purple-500 to-purple-600" },
-          ].map((stat, index) => {
-            const Icon = stat.icon
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-                className="rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-5"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={cn("w-10 h-10 rounded-lg bg-gradient-to-br flex items-center justify-center", stat.color)}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xl sm:text-2xl font-bold truncate">{stat.value}</p>
-                  </div>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
-              </motion.div>
-            )
-          })}
-        </div>
       </motion.div>
 
       {/* Search and Filter */}
@@ -282,6 +251,18 @@ export default function EventsPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Pending Approval Message */}
+                    {event.status === "pending" && (
+                      <div className="mb-4 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30">
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
+                            <span className="font-semibold">Under Review:</span> The SoldOutAfrica team is reviewing your event.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Progress Bar */}
                     <div className="mb-4">
