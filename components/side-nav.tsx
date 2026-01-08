@@ -6,16 +6,16 @@ import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, Chevron
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 type NavItem = {
   name: string
   icon: React.ElementType
   href: string
-  active?: boolean
 }
 
 const navItems: NavItem[] = [
-  { name: "Home", icon: Home, href: "/dashboard", active: true },
+  { name: "Home", icon: Home, href: "/dashboard" },
   { name: "Events", icon: Calendar, href: "/dashboard/events" },
   { name: "Promotions", icon: Megaphone, href: "/dashboard/promotions" },
   { name: "Users", icon: Users, href: "/dashboard/users" },
@@ -35,6 +35,8 @@ type NavContentProps = {
 }
 
 function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContentProps) {
+  const pathname = usePathname()
+
   return (
     <>
       {/* Logo Section - Always visible */}
@@ -79,7 +81,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
       <nav className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = item.active
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
 
           return (
             <Link
@@ -156,18 +158,20 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
 }
 
 export default function SideNav() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true) // Default to collapsed
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-card border border-border shadow-lg hover:bg-secondary transition-colors"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Mobile Menu Button - Only show when menu is closed */}
+      {!isMobileOpen && (
+        <button
+          onClick={() => setIsMobileOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-card border border-border shadow-lg hover:bg-secondary transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Mobile Overlay */}
       <AnimatePresence>
@@ -206,10 +210,10 @@ export default function SideNav() {
             animate={{ x: 0 }}
             exit={{ x: -280 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-card border-r border-border flex flex-col z-50 shadow-2xl"
+            className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-card border-r border-border flex flex-col z-50 shadow-2xl overflow-hidden"
           >
             <NavContent
-              isCollapsed={isCollapsed}
+              isCollapsed={false}
               setIsCollapsed={setIsCollapsed}
               setIsMobileOpen={setIsMobileOpen}
             />

@@ -44,51 +44,64 @@ export default function DashboardHome() {
         <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here&apos;s what&apos;s happening with your events.</p>
       </motion.div>
 
-      {/* Wallet Summary Card - Darker gradient */}
+      {/* Wallet Summary Card - Mobile friendly */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="mb-6 sm:mb-8"
       >
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 sm:p-8 text-white">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-4 sm:p-6 lg:p-8 text-white">
           {/* Subtle accent circles */}
           <div className="absolute -right-8 -top-8 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -left-8 -bottom-8 w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-black/20 blur-2xl" />
 
           <div className="relative z-10">
-            <div className="flex items-start justify-between mb-6 sm:mb-8">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </div>
-                  <span className="text-xs sm:text-sm font-medium opacity-90">Available Balance</span>
-                </div>
-                <div>
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                    {dashboardData.wallet.currency} {dashboardData.wallet.balance.toLocaleString()}
-                  </h2>
-                  <p className="text-xs sm:text-sm opacity-75 flex items-center gap-1">
-                    <span>Pending:</span>
-                    <span className="font-semibold">{dashboardData.wallet.currency} {dashboardData.wallet.pending.toLocaleString()}</span>
+            <div className="max-w-5xl">
+              {/* Total Revenue */}
+              <div className="mb-4 sm:mb-6">
+                <p className="text-xs sm:text-sm opacity-75 mb-1 sm:mb-2">Total Revenue</p>
+                <p className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold break-words">
+                  {dashboardData.wallet.currency} {(dashboardData.wallet.balance / 0.875).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </p>
+              </div>
+
+              {/* Breakdown */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 sm:pt-6 border-t border-white/20">
+                <div className="pb-4 border-b border-white/10 sm:border-b-0">
+                  <p className="text-xs opacity-75 mb-1">Commission & Fees (12.5%)</p>
+                  <p className="text-base sm:text-lg lg:text-xl font-semibold break-words">
+                    - {dashboardData.wallet.currency} {((dashboardData.wallet.balance / 0.875) * 0.125).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </p>
                 </div>
+                <div className="pb-4 border-b border-white/10 sm:border-b-0">
+                  <p className="text-xs opacity-75 mb-1">Withdrawn</p>
+                  <p className="text-base sm:text-lg lg:text-xl font-semibold break-words">
+                    - {dashboardData.wallet.currency} {dashboardData.wallet.pending.toLocaleString()}
+                  </p>
+                </div>
+                <div className="pb-4 border-b border-white/10 lg:border-b-0 lg:border-l lg:border-white/20 lg:pl-6">
+                  <p className="text-xs opacity-75 mb-1">Available Balance</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-300 break-words">
+                    {dashboardData.wallet.currency} {dashboardData.wallet.balance.toLocaleString()}
+                  </p>
+                </div>
+                <div className="lg:border-l lg:border-white/20 lg:pl-6">
+                  <p className="text-xs opacity-75 mb-2">Quick Actions</p>
+                  <div className="flex flex-row sm:flex-col gap-2">
+                    <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 bg-white text-[#7c3aed] hover:bg-white/90 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md">
+                      <Send className="w-3 h-3" />
+                      <span className="hidden sm:inline">Withdraw</span>
+                      <span className="sm:hidden">Withdraw</span>
+                    </button>
+                    <button className="flex-1 sm:flex-none px-3 py-2 sm:py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-white/20 cursor-pointer">
+                      <Download className="w-3 h-3" />
+                      <span className="hidden sm:inline">Report</span>
+                      <span className="sm:hidden">Report</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="hidden sm:flex w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/10 backdrop-blur-sm items-center justify-center">
-                <TrendingUp className="w-8 h-8 lg:w-10 lg:h-10" />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-3 bg-white text-[#7c3aed] hover:bg-white/90 rounded-lg sm:rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer">
-                <Send className="w-4 h-4" />
-                Withdraw
-              </button>
-              <button className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 border border-white/20 cursor-pointer">
-                <Eye className="w-4 h-4" />
-                History
-              </button>
             </div>
           </div>
         </div>
