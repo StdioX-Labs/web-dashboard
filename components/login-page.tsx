@@ -366,7 +366,14 @@ export default function LoginPage() {
                 >
                   <button
                     type="button"
-                    onClick={() => setMode("signin")}
+                    onClick={() => {
+                      setMode("signin")
+                      // Reset OTP state when switching modes
+                      setShowOtpInput(false)
+                      setOtp("")
+                      setOtpError("")
+                      setOtpTouched(false)
+                    }}
                     className={cn(
                       "flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 text-center",
                       mode === "signin"
@@ -374,11 +381,18 @@ export default function LoginPage() {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Sign In
+                    Login
                   </button>
                   <button
                     type="button"
-                    onClick={() => setMode("signup")}
+                    onClick={() => {
+                      setMode("signup")
+                      // Reset OTP state when switching modes
+                      setShowOtpInput(false)
+                      setOtp("")
+                      setOtpError("")
+                      setOtpTouched(false)
+                    }}
                     className={cn(
                       "flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 text-center",
                       mode === "signup"
@@ -613,7 +627,7 @@ export default function LoginPage() {
                           </>
                         ) : (
                           <>
-                            <span>Verify & Sign in</span>
+                            <span>Verify & Login</span>
                             <ArrowRight className="h-4 w-4" />
                           </>
                         )}
