@@ -18,6 +18,14 @@ export default function LoginPage() {
   const [cursorType, setCursorType] = useState<"default" | "pointer" | "text">("default")
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // OTP state
+  const [showOtpInput, setShowOtpInput] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [otpError, setOtpError] = useState("")
+  const [otpTouched, setOtpTouched] = useState(false)
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const otpInputRef = useRef<HTMLInputElement>(null)
+
   // Update cursor style
   useEffect(() => {
     document.body.style.cursor = cursorType
@@ -87,9 +95,83 @@ export default function LoginPage() {
     }
 
     setIsSubmitting(true)
+
+    // Simulate API call to send OTP
     await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    if (mode === "signin") {
+      // For sign in, show OTP input
+      setShowOtpInput(true)
+      setIsSubmitting(false)
+      // Focus on OTP input
+      setTimeout(() => otpInputRef.current?.focus(), 100)
+    } else {
+      // For sign up, proceed with registration
+      setIsSubmitting(false)
+      console.log(`Sign up with email:`, email)
+      // TODO: Implement sign up flow
+    }
+  }
+
+  const handleOtpVerification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setOtpTouched(true)
+
+    if (!otp || otp.length !== 4) {
+      setOtpError("Please enter a valid 4-digit OTP")
+      return
+    }
+
+    setIsVerifyingOtp(true)
+
+    // Simulate API call to verify OTP
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    // Test OTP verification - only "0000" is valid
+    if (otp === "0000") {
+      console.log(`OTP verified successfully for email:`, email)
+      // TODO: Redirect to dashboard
+      // window.location.href = "/dashboard"
+      alert("Login successful! Redirecting to dashboard...")
+    } else {
+      setOtpError("Invalid OTP. Please try again.")
+    }
+
+    setIsVerifyingOtp(false)
+  }
+
+  const handleOtpChange = (value: string) => {
+    // Only allow numbers and max 4 digits
+    const numericValue = value.replace(/\D/g, "").slice(0, 4)
+    setOtp(numericValue)
+
+    if (otpTouched) {
+      if (!numericValue) {
+        setOtpError("OTP is required")
+      } else if (numericValue.length !== 4) {
+        setOtpError("OTP must be 4 digits")
+      } else {
+        setOtpError("")
+      }
+    }
+  }
+
+  const handleResendOtp = async () => {
+    setIsSubmitting(true)
+    // Simulate API call to resend OTP
+    await new Promise((resolve) => setTimeout(resolve, 1000))
     setIsSubmitting(false)
-    console.log(`${mode} with email:`, email)
+    setOtp("")
+    setOtpError("")
+    setOtpTouched(false)
+    console.log(`Resent OTP to:`, email)
+  }
+
+  const handleBackToEmail = () => {
+    setShowOtpInput(false)
+    setOtp("")
+    setOtpError("")
+    setOtpTouched(false)
   }
 
   return (
@@ -311,7 +393,7 @@ export default function LoginPage() {
                 {/* Form heading - Centered */}
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={mode}
+                    key={showOtpInput ? "otp" : mode}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -319,113 +401,250 @@ export default function LoginPage() {
                     className="mb-10 text-center"
                   >
                     <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-                      {mode === "signin" ? "Welcome back" : "Get started"}
+                      {showOtpInput 
+                        ? "Enter verification code" 
+                        : mode === "signin" 
+                        ? "Welcome back" 
+                        : "Get started"}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {mode === "signin"
+                      {showOtpInput
+                        ? `We've sent a 4-digit code to ${email}`
+                        : mode === "signin"
                         ? "Enter your email to access your dashboard"
                         : "Enter your email to create your account"}
                     </p>
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Form - With validation */}
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <div
-                      className="relative"
-                      onMouseEnter={() => setCursorType("text")}
-                      onMouseLeave={() => setCursorType("default")}
+                {/* Conditional Form - Email or OTP */}
+                <AnimatePresence mode="wait">
+                  {!showOtpInput ? (
+                    // Email Input Form
+                    <motion.form
+                      key="email-form"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.3 }}
+                      onSubmit={handleSubmit}
+                      className="space-y-6"
                     >
-                      <input
-                        ref={inputRef}
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={handleBlur}
-                        placeholder="you@example.com"
-                        className={cn(
-                          "w-full h-12 px-4 pl-11 rounded-xl border bg-background",
-                          "transition-all duration-200 outline-none text-sm",
-                          "placeholder:text-muted-foreground text-center",
-                          emailError && touched
-                            ? "border-destructive ring-4 ring-destructive/10"
-                            : isFocused
-                            ? "border-[#8b5cf6] ring-4 ring-[#8b5cf6]/10"
-                            : "border-border hover:border-[#8b5cf6]/30"
-                        )}
-                        aria-invalid={!!emailError && touched}
-                        aria-describedby={emailError && touched ? "email-error" : undefined}
-                      />
-                      <Mail
-                        className={cn(
-                          "absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors pointer-events-none",
-                          emailError && touched
-                            ? "text-destructive"
-                            : isFocused
-                            ? "text-[#8b5cf6]"
-                            : "text-muted-foreground"
-                        )}
-                      />
-                    </div>
-
-                    {/* Error message */}
-                    <AnimatePresence mode="wait">
-                      {emailError && touched && (
-                        <motion.p
-                          id="email-error"
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="text-xs text-destructive mt-2 text-center"
-                          role="alert"
+                      <div>
+                        <div
+                          className="relative"
+                          onMouseEnter={() => setCursorType("text")}
+                          onMouseLeave={() => setCursorType("default")}
                         >
-                          {emailError}
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                          <input
+                            ref={inputRef}
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => handleEmailChange(e.target.value)}
+                            onFocus={() => setIsFocused(true)}
+                            onBlur={handleBlur}
+                            placeholder="you@example.com"
+                            className={cn(
+                              "w-full h-12 px-4 pl-11 rounded-xl border bg-background",
+                              "transition-all duration-200 outline-none text-sm",
+                              "placeholder:text-muted-foreground text-center",
+                              emailError && touched
+                                ? "border-destructive ring-4 ring-destructive/10"
+                                : isFocused
+                                ? "border-[#8b5cf6] ring-4 ring-[#8b5cf6]/10"
+                                : "border-border hover:border-[#8b5cf6]/30"
+                            )}
+                            aria-invalid={!!emailError && touched}
+                            aria-describedby={emailError && touched ? "email-error" : undefined}
+                          />
+                          <Mail
+                            className={cn(
+                              "absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors pointer-events-none",
+                              emailError && touched
+                                ? "text-destructive"
+                                : isFocused
+                                ? "text-[#8b5cf6]"
+                                : "text-muted-foreground"
+                            )}
+                          />
+                        </div>
 
-                  {/* Submit button with purple accent */}
-                  <motion.button
-                    type="submit"
-                    disabled={isSubmitting || !email || (touched && !!emailError)}
-                    whileHover={{ scale: 1.02, y: -1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onMouseEnter={() => setCursorType("pointer")}
-                    onMouseLeave={() => setCursorType("default")}
-                    className={cn(
-                      "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
-                      "flex items-center justify-center gap-2",
-                      "transition-all duration-300",
-                      "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white",
-                      "hover:shadow-lg hover:shadow-[#8b5cf6]/25",
-                      "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
-                    )}
-                  >
-                    {/* Shimmer effect on hover */}
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                        {/* Error message */}
+                        <AnimatePresence mode="wait">
+                          {emailError && touched && (
+                            <motion.p
+                              id="email-error"
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-xs text-destructive mt-2 text-center"
+                              role="alert"
+                            >
+                              {emailError}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
 
-                    {isSubmitting ? (
-                      <>
-                        <motion.div
-                          className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{mode === "signin" ? "Sign in" : "Create account"}</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </motion.button>
-                </form>
+                      {/* Submit button */}
+                      <motion.button
+                        type="submit"
+                        disabled={isSubmitting || !email || (touched && !!emailError)}
+                        whileHover={{ scale: 1.02, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onMouseEnter={() => setCursorType("pointer")}
+                        onMouseLeave={() => setCursorType("default")}
+                        className={cn(
+                          "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
+                          "flex items-center justify-center gap-2",
+                          "transition-all duration-300",
+                          "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white",
+                          "hover:shadow-lg hover:shadow-[#8b5cf6]/25",
+                          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
+                        )}
+                      >
+                        {/* Shimmer effect on hover */}
+                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                        {isSubmitting ? (
+                          <>
+                            <motion.div
+                              className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                            <span>Sending code...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>{mode === "signin" ? "Continue" : "Create account"}</span>
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </motion.button>
+                    </motion.form>
+                  ) : (
+                    // OTP Input Form
+                    <motion.form
+                      key="otp-form"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      onSubmit={handleOtpVerification}
+                      className="space-y-6"
+                    >
+                      <div>
+                        <div
+                          className="relative"
+                          onMouseEnter={() => setCursorType("text")}
+                          onMouseLeave={() => setCursorType("default")}
+                        >
+                          <input
+                            ref={otpInputRef}
+                            id="otp"
+                            type="text"
+                            inputMode="numeric"
+                            value={otp}
+                            onChange={(e) => handleOtpChange(e.target.value)}
+                            onFocus={() => setOtpTouched(true)}
+                            placeholder="0000"
+                            maxLength={4}
+                            className={cn(
+                              "w-full h-14 px-4 rounded-xl border bg-background",
+                              "transition-all duration-200 outline-none text-2xl font-bold",
+                              "placeholder:text-muted-foreground text-center tracking-widest",
+                              otpError && otpTouched
+                                ? "border-destructive ring-4 ring-destructive/10"
+                                : "border-[#8b5cf6] ring-4 ring-[#8b5cf6]/10"
+                            )}
+                            aria-invalid={!!otpError && otpTouched}
+                            aria-describedby={otpError && otpTouched ? "otp-error" : undefined}
+                          />
+                        </div>
+
+                        {/* Error message */}
+                        <AnimatePresence mode="wait">
+                          {otpError && otpTouched && (
+                            <motion.p
+                              id="otp-error"
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-xs text-destructive mt-2 text-center"
+                              role="alert"
+                            >
+                              {otpError}
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Verify button */}
+                      <motion.button
+                        type="submit"
+                        disabled={isVerifyingOtp || otp.length !== 4}
+                        whileHover={{ scale: 1.02, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onMouseEnter={() => setCursorType("pointer")}
+                        onMouseLeave={() => setCursorType("default")}
+                        className={cn(
+                          "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
+                          "flex items-center justify-center gap-2",
+                          "transition-all duration-300",
+                          "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white",
+                          "hover:shadow-lg hover:shadow-[#8b5cf6]/25",
+                          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
+                        )}
+                      >
+                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                        {isVerifyingOtp ? (
+                          <>
+                            <motion.div
+                              className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                            <span>Verifying...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Verify & Sign in</span>
+                            <ArrowRight className="h-4 w-4" />
+                          </>
+                        )}
+                      </motion.button>
+
+                      {/* Resend and Back buttons */}
+                      <div className="flex items-center justify-center gap-4 text-sm">
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={isSubmitting}
+                          onMouseEnter={() => setCursorType("pointer")}
+                          onMouseLeave={() => setCursorType("default")}
+                          className="text-muted-foreground hover:text-[#8b5cf6] transition-colors disabled:opacity-50"
+                        >
+                          Resend code
+                        </button>
+                        <span className="text-muted-foreground">•</span>
+                        <button
+                          type="button"
+                          onClick={handleBackToEmail}
+                          onMouseEnter={() => setCursorType("pointer")}
+                          onMouseLeave={() => setCursorType("default")}
+                          className="text-muted-foreground hover:text-[#8b5cf6] transition-colors"
+                        >
+                          Change email
+                        </button>
+                      </div>
+                    </motion.form>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
