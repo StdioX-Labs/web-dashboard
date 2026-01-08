@@ -157,11 +157,11 @@ export default function LoginPage() {
                 transition={{ duration: 0.6 }}
               >
                 <Image
-                  src="/soldoutafrica-black.png"
+                  src="/soldoutafrica-white.png"
                   alt="SoldOutAfrica"
                   width={340}
                   height={77}
-                  className="h-20 xl:h-24 w-auto"
+                  className="h-20 xl:h-24 w-auto rounded-2xl"
                   priority
                   style={{ filter: 'none' }}
                 />
