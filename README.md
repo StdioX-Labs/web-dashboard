@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SoldOutAfrica Dashboard
 
-## Getting Started
+Event organizer dashboard for managing events, ticket sales, and analytics.
 
-First, run the development server:
+## 🚀 Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Run development server
 pnpm dev
-# or
-bun dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📋 Current Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### ✅ Login Page
+- Beautiful, mobile-responsive authentication interface
+- Sign in / Sign up toggle
+- Email-based authentication flow
+- Smooth animations and transitions
+- Marketplace-inspired design with MontserratAlt1 font
+- Dark mode support
 
-## Learn More
+See [LOGIN_PAGE.md](./LOGIN_PAGE.md) for detailed documentation.
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Framework**: [Next.js 16](https://nextjs.org/) with App Router
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Package Manager**: [pnpm](https://pnpm.io/)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📁 Project Structure
 
-## Deploy on Vercel
+```
+web-dashboard/
+├── app/                    # Next.js app directory
+│   ├── fonts/             # MontserratAlt1 font files
+│   ├── globals.css        # Global styles & theme
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Home page (login)
+├── components/            # React components
+│   ├── login-page.tsx    # Login/signup page
+│   └── theme-provider.tsx # Theme context
+├── lib/                   # Utilities
+│   └── utils.ts          # Helper functions
+└── public/                # Static assets
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Design System
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The dashboard uses the same design language as the SoldOutAfrica marketplace:
+
+- **Typography**: MontserratAlt1 (100-700 weights)
+- **Colors**: Black & white with grayscale palette
+- **Theme**: Light/dark mode support
+- **Spacing**: Consistent scale
+- **Animations**: Smooth, purposeful
+
+## 🔮 Upcoming Features
+
+- [ ] Dashboard home with analytics overview
+- [ ] Event management (create, edit, delete)
+- [ ] Ticket type configuration
+- [ ] Real-time sales tracking
+- [ ] Attendee management
+- [ ] Revenue analytics & reports
+- [ ] Promotional tools
+- [ ] Team/staff management
+- [ ] Integration settings
+- [ ] Notification center
+
+## 📱 Responsive Design
+
+Fully optimized for:
+- 📱 Mobile devices (< 640px)
+- 📱 Tablets (640px - 1024px)
+- 💻 Desktop (> 1024px)
+
+## 🌐 Browser Support
+
+- Chrome/Edge (latest)
+- Firefox (latest)
+- Safari (latest)
+- Mobile browsers
+
+## 🤝 Related Projects
+
+- [SoldOutAfrica Marketplace](../soa-stack/marketplace) - Customer-facing event marketplace
+
+## 📄 License
+
+© 2026 SoldOutAfrica. All rights reserved.
+
