@@ -1,8 +1,8 @@
 # SoldOutAfrica Dashboard
 
-Event organizer dashboard for managing events, ticket sales, and analytics.
+A modern, elegant dashboard for event organizers to manage their events, track performance, and engage with their audience.
 
-## 🚀 Quick Start
+## Getting Started
 
 ```bash
 # Install dependencies
@@ -10,45 +10,13 @@ pnpm install
 
 # Run development server
 pnpm dev
-
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
+Open [http://localhost:3000](http://localhost:3000) to access the dashboard.
 
-## 📋 Current Features
+## Overview
 
-### ✅ Login Page
-- Beautiful, mobile-responsive authentication interface
-- Sign in / Sign up toggle
-- Email-based authentication flow
-- Smooth animations and transitions
-- Marketplace-inspired design with MontserratAlt1 font
-- Dark mode support
-
-See [LOGIN_PAGE.md](./LOGIN_PAGE.md) for detailed documentation.
-
-## 🛠️ Tech Stack
-
-- **Framework**: [Next.js 16](https://nextjs.org/) with App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Package Manager**: [pnpm](https://pnpm.io/)
-
-## 📁 Project Structure
-
-```
-web-dashboard/
-├── app/                    # Next.js app directory
-│   ├── fonts/             # MontserratAlt1 font files
-│   ├── globals.css        # Global styles & theme
-│   ├── layout.tsx         # Root layout
+The SoldOutAfrica Dashboard provides event organizers with powerful tools to create, manage, and scale their events seamlessly. Built with modern web technologies, the platform offers an intuitive interface with smooth animations and responsive design across all devices.
 │   └── page.tsx           # Home page (login)
 ├── components/            # React components
 │   ├── login-page.tsx    # Login/signup page
