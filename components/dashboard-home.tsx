@@ -465,7 +465,7 @@ export default function DashboardHome() {
         className="mb-6 sm:mb-8"
       >
         {/* Mobile - Credit Card Style */}
-        <div className="md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 text-white shadow-2xl max-w-md mx-auto aspect-[1.586/1]">
+        <div className="md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 text-white shadow-2xl max-w-md mx-auto min-h-[280px]">
           {/* Subtle animated background */}
           <motion.div
             animate={{

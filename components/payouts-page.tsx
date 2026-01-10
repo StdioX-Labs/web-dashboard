@@ -188,6 +188,25 @@ export default function PayoutsPage() {
           .status-completed { color: #059669; font-weight: 600; }
           .status-approved { color: #3b82f6; font-weight: 600; }
           .status-rejected { color: #dc2626; font-weight: 600; }
+          
+          /* Mobile responsive styles */
+          @media (max-width: 768px) {
+            body { padding: 10px; }
+            .brand-name { font-size: 20px; }
+            .report-title { font-size: 18px; }
+            .summary { grid-template-columns: 1fr; gap: 10px; }
+            .summary-value { font-size: 20px; }
+            table { font-size: 11px; overflow-x: auto; display: block; }
+            th, td { padding: 8px 6px; font-size: 10px; }
+          }
+          
+          /* Print styles */
+          @media print {
+            body { padding: 0; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+          }
         </style>
       </head>
       <body>

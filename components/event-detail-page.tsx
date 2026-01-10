@@ -711,6 +711,7 @@ const attendees = [
     purchaseDate: "2025-12-31",
     checkedIn: true,
     checkedInTime: "2026-02-15 20:45",
+
   },
   {
     id: 18,
@@ -1064,6 +1065,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setEditingTicket(null)
     setEditTicketName("")
     setEditTicketPrice("")
+
     setEditTicketQuantity("")
     setEditTicketDescription("")
     setEditTicketSaleStart(undefined)
