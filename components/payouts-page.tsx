@@ -192,8 +192,9 @@ export default function PayoutsPage() {
           /* Mobile responsive styles */
           @media (max-width: 768px) {
             body { padding: 10px; }
-            .brand-name { font-size: 20px; }
-            .report-title { font-size: 18px; }
+            .header { padding-bottom: 15px; }
+            .brand-name { font-size: 18px; }
+            .report-title { font-size: 16px; margin-top: 8px; }
             .summary { grid-template-columns: 1fr; gap: 10px; }
             .summary-value { font-size: 20px; }
             table { font-size: 11px; overflow-x: auto; display: block; }

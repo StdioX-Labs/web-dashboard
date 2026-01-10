@@ -1398,6 +1398,79 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               color: #8b5cf6;
             }
 
+            /* Mobile responsive styles */
+            @media (max-width: 768px) {
+              body {
+                padding: 10px;
+              }
+              .report-header {
+                flex-direction: column;
+                gap: 15px;
+                padding-bottom: 15px;
+              }
+              .brand-section {
+                width: 100%;
+              }
+              .brand-name {
+                font-size: 18px;
+              }
+              .brand-tagline {
+                font-size: 10px;
+              }
+              .report-info {
+                text-align: left;
+                width: 100%;
+              }
+              .report-title {
+                font-size: 16px;
+              }
+              .report-date {
+                font-size: 11px;
+              }
+              .report-id {
+                font-size: 10px;
+              }
+              .info-section {
+                padding: 15px;
+              }
+              .info-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+              }
+              .info-value {
+                font-size: 14px;
+              }
+              .summary-section {
+                grid-template-columns: 1fr;
+                gap: 10px;
+              }
+              .summary-card {
+                padding: 12px;
+              }
+              .summary-value {
+                font-size: 18px;
+              }
+              .table-section {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -10px;
+                padding: 0 10px;
+              }
+              table {
+                min-width: 800px;
+                font-size: 12px;
+              }
+              th, td {
+                padding: 8px 6px;
+                font-size: 11px;
+              }
+              .report-footer {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+              }
+            }
+
             /* Print styles */
             @media print {
               body { padding: 0; }
@@ -1749,6 +1822,79 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             .footer-company {
               font-weight: 600;
               color: #8b5cf6;
+            }
+
+            /* Mobile responsive styles */
+            @media (max-width: 768px) {
+              body {
+                padding: 10px;
+              }
+              .report-header {
+                flex-direction: column;
+                gap: 15px;
+                padding-bottom: 15px;
+              }
+              .brand-section {
+                width: 100%;
+              }
+              .brand-name {
+                font-size: 18px;
+              }
+              .brand-tagline {
+                font-size: 10px;
+              }
+              .report-info {
+                text-align: left;
+                width: 100%;
+              }
+              .report-title {
+                font-size: 16px;
+              }
+              .report-date {
+                font-size: 11px;
+              }
+              .report-id {
+                font-size: 10px;
+              }
+              .info-section {
+                padding: 15px;
+              }
+              .info-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+              }
+              .info-value {
+                font-size: 14px;
+              }
+              .summary-section {
+                grid-template-columns: 1fr;
+                gap: 10px;
+              }
+              .summary-card {
+                padding: 12px;
+              }
+              .summary-value {
+                font-size: 18px;
+              }
+              .table-section {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -10px;
+                padding: 0 10px;
+              }
+              table {
+                min-width: 800px;
+                font-size: 12px;
+              }
+              th, td {
+                padding: 8px 6px;
+                font-size: 11px;
+              }
+              .report-footer {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+              }
             }
 
             /* Print styles */

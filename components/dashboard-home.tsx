@@ -326,6 +326,72 @@ export default function DashboardHome() {
               color: #8b5cf6;
             }
 
+            /* Mobile responsive styles */
+            @media (max-width: 768px) {
+              body {
+                padding: 10px;
+              }
+              .report-header {
+                flex-direction: column;
+                gap: 15px;
+                padding-bottom: 15px;
+              }
+              .brand-section {
+                width: 100%;
+              }
+              .brand-name {
+                font-size: 18px;
+              }
+              .brand-tagline {
+                font-size: 10px;
+              }
+              .report-info {
+                text-align: left;
+                width: 100%;
+              }
+              .report-title {
+                font-size: 16px;
+              }
+              .report-date {
+                font-size: 11px;
+              }
+              .report-id {
+                font-size: 10px;
+              }
+              .summary-section {
+                padding: 15px;
+              }
+              .summary-title {
+                font-size: 16px;
+              }
+              .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+              }
+              .summary-value {
+                font-size: 20px;
+              }
+              .breakdown-section {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -10px;
+                padding: 0 10px;
+              }
+              table {
+                min-width: 500px;
+                font-size: 12px;
+              }
+              th, td {
+                padding: 8px 6px;
+                font-size: 11px;
+              }
+              .report-footer {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+              }
+            }
+
             /* Print styles */
             @media print {
               body { padding: 0; }
@@ -446,7 +512,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-4 lg:pt-8 max-w-[1600px] mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -517,7 +583,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Middle Section - Stats */}
-            <div className="grid grid-cols-3 gap-3 py-3 border-y border-white/10">
+            <div className="grid grid-cols-3 gap-3 py-3 mb-3">
               <div>
                 <p className="text-xs opacity-60 mb-0.5">Revenue</p>
                 <p className="text-sm font-semibold">
