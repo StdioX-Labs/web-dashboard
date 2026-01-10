@@ -238,7 +238,7 @@ export default function SideNav() {
             animate={{ x: 0 }}
             exit={{ x: -280 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-card border-r border-border flex flex-col z-50 shadow-2xl overflow-hidden"
+            className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-card border-r border-border flex flex-col z-50 shadow-2xl"
           >
             <NavContent
               isCollapsed={false}
