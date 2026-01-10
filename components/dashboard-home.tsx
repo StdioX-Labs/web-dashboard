@@ -512,7 +512,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-4 lg:pt-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8 max-w-[1600px] mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -531,7 +531,7 @@ export default function DashboardHome() {
         className="mb-6 sm:mb-8"
       >
         {/* Mobile - Credit Card Style */}
-        <div className="md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 text-white shadow-2xl max-w-md mx-auto min-h-[280px]">
+        <div className="md:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-5 text-white shadow-2xl max-w-md mx-auto">
           {/* Subtle animated background */}
           <motion.div
             animate={{
@@ -554,26 +554,26 @@ export default function DashboardHome() {
               e.stopPropagation();
               setShowBalance(!showBalance);
             }}
-            className="absolute top-4 right-4 p-2.5 rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-sm transition-all cursor-pointer z-20 border border-white/30 pointer-events-auto"
+            className="absolute top-3 right-3 p-2 rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-sm transition-all cursor-pointer z-20 border border-white/30 pointer-events-auto"
             aria-label={showBalance ? "Hide balance" : "Show balance"}
           >
             {showBalance ? (
-              <Eye className="w-5 h-5 text-white" />
+              <Eye className="w-4 h-4 text-white" />
             ) : (
-              <EyeOff className="w-5 h-5 text-white" />
+              <EyeOff className="w-4 h-4 text-white" />
             )}
           </button>
 
-          <div className="relative z-10 h-full flex flex-col justify-between">
+          <div className="relative z-10 flex flex-col gap-4">
             {/* Top Section - Available Balance */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <Wallet className="w-5 h-5" />
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-xs opacity-70 uppercase tracking-wider">Available Balance</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-[10px] opacity-70 uppercase tracking-wider">Available Balance</p>
+                  <p className="text-xl font-bold">
                     {showBalance
                       ? `${dashboardData.wallet.currency} ${dashboardData.wallet.balance.toLocaleString()}`
                       : '€€€€€€'}
@@ -583,26 +583,26 @@ export default function DashboardHome() {
             </div>
 
             {/* Middle Section - Stats */}
-            <div className="grid grid-cols-3 gap-3 py-3 mb-3">
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <p className="text-xs opacity-60 mb-0.5">Revenue</p>
-                <p className="text-sm font-semibold">
+                <p className="text-[10px] opacity-60 mb-0.5">Revenue</p>
+                <p className="text-xs font-semibold">
                   {showBalance
                     ? `${dashboardData.wallet.currency} ${(dashboardData.wallet.balance / 0.875).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                     : '€€€€€€'}
                 </p>
               </div>
               <div>
-                <p className="text-xs opacity-60 mb-0.5">Fees</p>
-                <p className="text-sm font-semibold">
+                <p className="text-[10px] opacity-60 mb-0.5">Fees</p>
+                <p className="text-xs font-semibold">
                   {showBalance
                     ? `- ${((dashboardData.wallet.balance / 0.875) * 0.125).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
                     : '€€€€€€'}
                 </p>
               </div>
               <div>
-                <p className="text-xs opacity-60 mb-0.5">Withdrawn</p>
-                <p className="text-sm font-semibold">
+                <p className="text-[10px] opacity-60 mb-0.5">Withdrawn</p>
+                <p className="text-xs font-semibold">
                   {showBalance
                     ? `- ${dashboardData.wallet.pending.toLocaleString()}`
                     : '€€€€€€'}
@@ -616,18 +616,18 @@ export default function DashboardHome() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={openWithdrawModal}
-                className="flex-1 px-4 py-2.5 bg-white/90 text-[#7c3aed] rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:bg-white cursor-pointer"
+                className="flex-1 px-4 py-2 bg-white/90 text-[#7c3aed] rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-lg hover:bg-white cursor-pointer"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5" />
                 Withdraw
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={exportFinancialReport}
-                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-white/20 cursor-pointer"
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border border-white/20 cursor-pointer"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
               </motion.button>
             </div>
           </div>
