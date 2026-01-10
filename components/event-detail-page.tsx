@@ -110,7 +110,18 @@ const allEventsData = [
   },
 ]
 
-const ticketTypesData: { [key: number]: typeof ticketTypes } = {
+// Define ticket type interface
+type TicketType = {
+  id: number
+  name: string
+  price: number
+  totalAvailable: number
+  sold: number
+  revenue: number
+  status: "active" | "sold_out" | "suspended"
+}
+
+const ticketTypesData: { [key: number]: TicketType[] } = {
   1: [
     {
       id: 1,
@@ -1431,7 +1442,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               </div>
               <div class="info-item">
                 <div class="info-label">Venue</div>
-                <div class="info-value">${eventData.location || 'N/A'}</div>
+                <div class="info-value">${eventData.venue || 'N/A'}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Report Generated</div>
@@ -1784,7 +1795,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               </div>
               <div class="info-item">
                 <div class="info-label">Venue</div>
-                <div class="info-value">${eventData.location || 'N/A'}</div>
+                <div class="info-value">${eventData.venue || 'N/A'}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Report Generated</div>
