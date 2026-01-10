@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,9 +29,21 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no"/>
         <meta name="mobile-web-app-capable" content="yes"/>
         <meta charSet="UTF-8"/>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Prevent MetaMask from auto-connecting
+              if (typeof window !== 'undefined') {
+                window.ethereum = undefined;
+                window.web3 = undefined;
+              }
+            `,
+          }}
+        />
       </head>
       <body className="antialiased">
         {children}
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );

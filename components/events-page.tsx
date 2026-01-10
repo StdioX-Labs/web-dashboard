@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { motion } from "framer-motion"
-import { Calendar, TrendingUp, Eye, Edit, Plus, Search, CheckCircle, Clock } from "lucide-react"
+import { Calendar, Eye, Edit, Plus, Search, CheckCircle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
@@ -35,9 +35,9 @@ const eventsData = [
     name: "Food & Wine Expo",
     date: "2026-03-01",
     status: "pending",
-    ticketsSold: 180,
+    ticketsSold: 0,
     totalTickets: 300,
-    revenue: 54000,
+    revenue: 0,
     attendees: 0,
     image: "/placeholder.jpg",
   },
@@ -46,9 +46,9 @@ const eventsData = [
     name: "Art Gallery Exhibition",
     date: "2026-03-10",
     status: "pending",
-    ticketsSold: 85,
+    ticketsSold: 0,
     totalTickets: 150,
-    revenue: 25500,
+    revenue: 0,
     attendees: 0,
     image: "/placeholder.jpg",
   },
@@ -63,11 +63,22 @@ const eventsData = [
     attendees: 195,
     image: "/placeholder.jpg",
   },
+  {
+    id: 6,
+    name: "Comedy Night Special",
+    date: "2026-02-25",
+    status: "suspended",
+    ticketsSold: 150,
+    totalTickets: 300,
+    revenue: 45000,
+    attendees: 0,
+    image: "/placeholder.jpg",
+  },
 ]
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "suspended">("all")
 
   // Filter events based on search and status
   const filteredEvents = eventsData.filter((event) => {
@@ -76,27 +87,26 @@ export default function EventsPage() {
     return matchesSearch && matchesStatus
   })
 
-  // Calculate summary statistics
-  const stats = {
-    totalEvents: eventsData.length,
-    activeEvents: eventsData.filter((e) => e.status === "active").length,
-    pendingEvents: eventsData.filter((e) => e.status === "pending").length,
-    totalRevenue: eventsData.reduce((sum, e) => sum + e.revenue, 0),
-  }
-
   const getStatusBadge = (status: string) => {
     if (status === "active") {
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium">
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium border border-green-200 dark:border-green-900">
           <CheckCircle className="w-3 h-3" />
           Active
         </div>
       )
     } else if (status === "pending") {
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 text-xs font-medium">
-          <Clock className="w-3 h-3" />
-          Pending Approval
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 text-xs font-bold border-2 border-orange-500/50 animate-pulse">
+          <Clock className="w-3.5 h-3.5" />
+          Pending Review
+        </div>
+      )
+    } else if (status === "suspended") {
+      return (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs font-bold border-2 border-red-500/50">
+          <Clock className="w-3.5 h-3.5" />
+          Suspended
         </div>
       )
     }
@@ -151,10 +161,11 @@ export default function EventsPage() {
             { label: "All", value: "all" },
             { label: "Active", value: "active" },
             { label: "Pending", value: "pending" },
+            { label: "Suspended", value: "suspended" },
           ].map((filter) => (
             <button
               key={filter.value}
-              onClick={() => setStatusFilter(filter.value as "all" | "active" | "pending")}
+              onClick={() => setStatusFilter(filter.value as "all" | "active" | "pending" | "suspended")}
               className={cn(
                 "px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0",
                 statusFilter === filter.value
@@ -201,7 +212,14 @@ export default function EventsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + index * 0.05 }}
-              className="group relative overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-card hover:border-[#8b5cf6]/30 hover:shadow-lg transition-all duration-300"
+              className={cn(
+                "group relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card hover:shadow-lg transition-all duration-300",
+                event.status === "pending"
+                  ? "border-orange-500/50 bg-orange-50/30 dark:bg-orange-950/10 hover:border-orange-500/70"
+                  : event.status === "suspended"
+                  ? "border-red-500/50 bg-red-50/30 dark:bg-red-950/10 hover:border-red-500/70"
+                  : "border-border hover:border-[#8b5cf6]/30"
+              )}
             >
               <div className="p-4 sm:p-6">
                 <div className="flex flex-col sm:flex-row gap-4">
@@ -233,21 +251,27 @@ export default function EventsPage() {
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Tickets Sold</p>
                         <p className="text-sm sm:text-base font-semibold">
-                          {event.ticketsSold} / {event.totalTickets}
+                          {event.status === "pending" ? "-" : `${event.ticketsSold} / ${event.totalTickets}`}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Revenue</p>
-                        <p className="text-sm sm:text-base font-semibold">KES {event.revenue.toLocaleString()}</p>
+                        <p className="text-sm sm:text-base font-semibold">
+                          {event.status === "pending" ? "-" : `KES ${event.revenue.toLocaleString()}`}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Attendees</p>
-                        <p className="text-sm sm:text-base font-semibold">{event.attendees}</p>
+                        <p className="text-sm sm:text-base font-semibold">
+                          {event.status === "pending" ? "-" : event.attendees}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Capacity</p>
                         <p className="text-sm sm:text-base font-semibold">
-                          {Math.round((event.ticketsSold / event.totalTickets) * 100)}%
+                          {event.status === "pending"
+                            ? "-"
+                            : `${Math.round((event.ticketsSold / event.totalTickets) * 100)}%`}
                         </p>
                       </div>
                     </div>
@@ -264,15 +288,29 @@ export default function EventsPage() {
                       </div>
                     )}
 
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] transition-all duration-500"
-                          style={{ width: `${(event.ticketsSold / event.totalTickets) * 100}%` }}
-                        />
+                    {/* Suspended Event Message */}
+                    {event.status === "suspended" && (
+                      <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30">
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs sm:text-sm text-red-800 dark:text-red-300">
+                            <span className="font-semibold">Suspended:</span> This event has been suspended. Ticket sales are paused.
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Progress Bar */}
+                    {event.status !== "pending" && (
+                      <div className="mb-4">
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] transition-all duration-500"
+                            style={{ width: `${(event.ticketsSold / event.totalTickets) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -283,13 +321,15 @@ export default function EventsPage() {
                         <Eye className="w-4 h-4" />
                         View Details
                       </Link>
-                      <Link
-                        href={`/dashboard/events/${event.id}/edit`}
-                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-all duration-200 cursor-pointer"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </Link>
+                      {event.status !== "pending" && (
+                        <Link
+                          href={`/dashboard/events/${event.id}/edit`}
+                          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-all duration-200 cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

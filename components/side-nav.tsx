@@ -2,11 +2,12 @@
 
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight } from "lucide-react"
+import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 type NavItem = {
   name: string
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { name: "Events", icon: Calendar, href: "/dashboard/events" },
   { name: "Promotions", icon: Megaphone, href: "/dashboard/promotions" },
   { name: "Users", icon: Users, href: "/dashboard/users" },
+  { name: "Payouts", icon: DollarSign, href: "/dashboard/payouts" },
 ]
 
 // Mock user data - replace with actual user data
@@ -36,6 +38,36 @@ type NavContentProps = {
 
 function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContentProps) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleLogout = () => {
+    // Close mobile menu
+    setIsMobileOpen(false)
+
+    // Clear any stored authentication data
+    if (typeof window !== 'undefined') {
+      // Clear localStorage
+      localStorage.removeItem('authToken')
+      localStorage.removeItem('user')
+      localStorage.removeItem('sessionId')
+
+      // Clear sessionStorage
+      sessionStorage.clear()
+
+      // You can also clear specific items if you know their keys
+      // localStorage.removeItem('yourAuthKeyHere')
+    }
+
+    // Show success message
+    toast.success("Logged out successfully!", {
+      description: "You have been securely logged out of your account.",
+    })
+
+    // Redirect to login page after a short delay
+    setTimeout(() => {
+      router.push('/')
+    }, 500)
+  }
 
   return (
     <>
@@ -138,11 +170,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
 
         {/* Logout Button */}
         <button
-          onClick={() => {
-            setIsMobileOpen(false)
-            console.log("Logout clicked")
-            // TODO: Implement logout logic
-          }}
+          onClick={handleLogout}
           title={isCollapsed ? 'Logout' : undefined}
           className={cn(
             "w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors",

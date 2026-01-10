@@ -173,7 +173,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-screen bg-background text-foreground overflow-hidden relative">
+    <div className="h-screen bg-background text-foreground overflow-x-hidden relative">
       {/* Enhanced animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -350,7 +350,7 @@ export default function LoginPage() {
             </div>
 
             {/* Auth card - Sleeker styling with increased height */}
-            <div className="relative">
+            <div className="relative overflow-visible">
               {/* Subtle gradient background */}
               <div className="absolute inset-0 bg-gradient-to-br from-foreground/[0.03] to-foreground/[0.06] rounded-3xl" />
               <div className="absolute inset-[1px] bg-background rounded-3xl" />
@@ -444,14 +444,16 @@ export default function LoginPage() {
                     >
                       <div>
                         <div
-                          className="relative"
+                          className="relative z-10"
                           onMouseEnter={() => setCursorType("text")}
                           onMouseLeave={() => setCursorType("default")}
                         >
                           <input
                             ref={inputRef}
                             id="email"
+                            name="email"
                             type="email"
+                            autoComplete="email"
                             value={email}
                             onChange={(e) => handleEmailChange(e.target.value)}
                             onFocus={() => setIsFocused(true)}
@@ -459,7 +461,7 @@ export default function LoginPage() {
                             placeholder="you@example.com"
                             className={cn(
                               "w-full h-12 px-4 pl-11 rounded-xl border bg-background",
-                              "transition-all duration-200 outline-none text-sm",
+                              "transition-all duration-200 outline-none text-sm relative z-10",
                               "placeholder:text-muted-foreground text-center",
                               emailError && touched
                                 ? "border-destructive ring-4 ring-destructive/10"
@@ -469,6 +471,7 @@ export default function LoginPage() {
                             )}
                             aria-invalid={!!emailError && touched}
                             aria-describedby={emailError && touched ? "email-error" : undefined}
+                            style={{ position: 'relative' }}
                           />
                           <Mail
                             className={cn(
