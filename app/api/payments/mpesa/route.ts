@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, amount } = await request.json()
+    const { phoneNumber, amount, groupCode } = await request.json()
 
     // Validate inputs
     if (!phoneNumber || !amount) {
@@ -18,9 +18,10 @@ export async function POST(request: NextRequest) {
     // Steps to implement real M-Pesa:
     // 1. Get OAuth token from Safaricom
     // 2. Make STK Push request
-    // 3. Store transaction reference
+    // 3. Store transaction reference with group code
     // 4. Handle callback from Safaricom
     // 5. Update ticket status in database
+    // 6. Mark all barcodes in group as paid
 
     const transactionId = `MPesa${Date.now()}`
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       transactionId,
+      groupCode,
       message: 'Payment request sent to phone',
       checkoutRequestID: transactionId
     })

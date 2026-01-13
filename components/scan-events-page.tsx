@@ -20,6 +20,12 @@ interface TicketInfo {
   groupSize?: number
   requiresPayment?: boolean
   amount?: number
+  isPaid?: boolean
+  groupBarcodes?: Array<{
+    barcode: string
+    isScanned: boolean
+    holderName?: string
+  }>
 }
 
 export default function ScanEventsPage() {
@@ -32,6 +38,8 @@ export default function ScanEventsPage() {
   const [showPaymentPrompt, setShowPaymentPrompt] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([])
+  const [isRedeeming, setIsRedeeming] = useState(false)
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const scannerRef = useRef<HTMLDivElement>(null)
@@ -42,20 +50,39 @@ export default function ScanEventsPage() {
       const html5QrCode = new Html5Qrcode("qr-reader")
       html5QrCodeRef.current = html5QrCode
 
+      // Get available devices
+      const devices = await Html5Qrcode.getCameras()
+
+      // Check for barcode scanner device (usually has 'barcode' or 'scanner' in label)
+      const barcodeScanner = devices.find(device =>
+        device.label.toLowerCase().includes('barcode') ||
+        device.label.toLowerCase().includes('scanner')
+      )
+
       const config = {
         fps: 10,
         qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
+        aspectRatio: 1.0,
+        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] // Support all barcode formats
       }
 
+      // Use barcode scanner if available, otherwise use environment camera
+      const cameraId = barcodeScanner ? barcodeScanner.id : { facingMode: "environment" }
+
       await html5QrCode.start(
-        { facingMode: "environment" },
+        cameraId,
         config,
         (decodedText) => {
           handleScan(decodedText)
         },
         undefined
       )
+
+      if (barcodeScanner) {
+        toast.success("Barcode Scanner Connected", {
+          description: "Using dedicated barcode scanner device"
+        })
+      }
     } catch (err) {
       console.error("Error starting scanner:", err)
       toast.error("Failed to start camera", {
@@ -85,6 +112,7 @@ export default function ScanEventsPage() {
   const validateTicket = async (barcode: string, groupCode?: string) => {
     setIsValidating(true)
     setTicketInfo(null)
+    setSelectedBarcodes([])
 
     try {
       const response = await fetch('/api/tickets/validate', {
@@ -104,18 +132,19 @@ export default function ScanEventsPage() {
         const ticketData: TicketInfo = data.ticket
         setTicketInfo(ticketData)
 
-        if (ticketData.requiresPayment) {
+        // Check if ticket is paid
+        if (!ticketData.isPaid && ticketData.requiresPayment) {
           setShowPaymentPrompt(true)
           toast.info("Payment Required", {
-            description: "This ticket requires payment to be activated"
+            description: "This ticket has not been paid for. Please complete payment."
           })
         } else if (ticketData.status === "valid") {
           toast.success("Valid Ticket!", {
-            description: "Ticket verified successfully"
+            description: ticketData.isPaid ? "Ticket verified successfully" : "Ticket is valid and paid"
           })
         } else if (ticketData.status === "used") {
           toast.error("Ticket Already Used", {
-            description: "This ticket has already been scanned"
+            description: "This ticket has already been scanned and redeemed"
           })
         } else if (ticketData.status === "invalid") {
           toast.error("Invalid Ticket", {
@@ -138,11 +167,18 @@ export default function ScanEventsPage() {
   }
 
   const handleManualValidation = async () => {
-    if (!manualCode.trim()) {
-      toast.error("Please enter a barcode")
+    // Allow validation with just group code if barcode is empty
+    if (!manualCode.trim() && !manualGroupCode.trim()) {
+      toast.error("Please enter a barcode or group code")
       return
     }
-    await validateTicket(manualCode, manualGroupCode || undefined)
+
+    // If only group code is provided (customer has M-Pesa message)
+    if (!manualCode.trim() && manualGroupCode.trim()) {
+      await validateTicket(manualGroupCode, manualGroupCode)
+    } else {
+      await validateTicket(manualCode, manualGroupCode || undefined)
+    }
   }
 
   const handleMpesaPayment = async () => {
@@ -167,6 +203,7 @@ export default function ScanEventsPage() {
         body: JSON.stringify({
           phoneNumber: phoneNumber,
           amount: ticketInfo.amount,
+          groupCode: ticketInfo.groupCode,
         }),
       })
 
@@ -178,10 +215,10 @@ export default function ScanEventsPage() {
         })
 
         setTimeout(() => {
-          setTicketInfo(prev => prev ? { ...prev, status: "valid", requiresPayment: false } : null)
+          setTicketInfo(prev => prev ? { ...prev, status: "valid", requiresPayment: false, isPaid: true } : null)
           setShowPaymentPrompt(false)
           toast.success("Payment Confirmed!", {
-            description: "Ticket is now active"
+            description: "Ticket is now active and can be redeemed"
           })
         }, 3000)
       } else {
@@ -196,6 +233,73 @@ export default function ScanEventsPage() {
       })
     } finally {
       setIsProcessingPayment(false)
+    }
+  }
+
+  // Toggle barcode selection for group tickets
+  const toggleBarcodeSelection = (barcode: string) => {
+    setSelectedBarcodes(prev => {
+      if (prev.includes(barcode)) {
+        return prev.filter(b => b !== barcode)
+      } else {
+        return [...prev, barcode]
+      }
+    })
+  }
+
+  // Redeem selected barcodes
+  const handleRedeemBarcodes = async () => {
+    if (selectedBarcodes.length === 0) {
+      toast.error("Please select at least one ticket to redeem")
+      return
+    }
+
+    setIsRedeeming(true)
+
+    try {
+      const response = await fetch('/api/tickets/redeem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupCode: ticketInfo?.groupCode,
+          barcodes: selectedBarcodes,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success("Tickets Redeemed!", {
+          description: `Successfully redeemed ${selectedBarcodes.length} ticket(s)`
+        })
+
+        // Update ticket info to mark selected barcodes as scanned
+        setTicketInfo(prev => {
+          if (!prev || !prev.groupBarcodes) return prev
+          return {
+            ...prev,
+            groupBarcodes: prev.groupBarcodes.map(gb => ({
+              ...gb,
+              isScanned: selectedBarcodes.includes(gb.barcode) ? true : gb.isScanned
+            }))
+          }
+        })
+
+        setSelectedBarcodes([])
+      } else {
+        toast.error("Redemption Failed", {
+          description: data.error || "Could not redeem tickets"
+        })
+      }
+    } catch (error) {
+      console.error("Redemption error:", error)
+      toast.error("Redemption Failed", {
+        description: "Could not redeem tickets. Please try again."
+      })
+    } finally {
+      setIsRedeeming(false)
     }
   }
 
@@ -219,23 +323,24 @@ export default function ScanEventsPage() {
     setTicketInfo(null)
     setShowPaymentPrompt(false)
     setPhoneNumber("")
+    setSelectedBarcodes([])
     if (scanMode === "camera") {
       startScanning()
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2"
+          className="text-center space-y-1 sm:space-y-2"
         >
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent">
             Scan Event Tickets
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Scan QR codes or enter barcodes manually to verify tickets
           </p>
         </motion.div>
@@ -243,29 +348,31 @@ export default function ScanEventsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex gap-4 p-2 bg-muted/50 rounded-2xl"
+          className="flex gap-2 sm:gap-4 p-1.5 sm:p-2 bg-muted/50 rounded-xl sm:rounded-2xl"
         >
           <button
             onClick={() => setScanMode("camera")}
-            className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all ${
               scanMode === "camera"
                 ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Camera className="w-5 h-5" />
-            Camera Scan
+            <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden xs:inline">Camera Scan</span>
+            <span className="xs:hidden">Camera</span>
           </button>
           <button
             onClick={() => setScanMode("manual")}
-            className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all ${
               scanMode === "manual"
                 ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Keyboard className="w-5 h-5" />
-            Manual Entry
+            <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden xs:inline">Manual Entry</span>
+            <span className="xs:hidden">Manual</span>
           </button>
         </motion.div>
 
@@ -297,46 +404,49 @@ export default function ScanEventsPage() {
               )}
             </div>
           ) : (
-            <div className="p-6 sm:p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Barcode / QR Code *
+                    Barcode (For unpaid walk-ins)
                   </label>
                   <input
                     type="text"
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. VT67PD"
-                    className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                    placeholder="e.g. VT67PD (optional)"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Group Code (Optional)
+                    Group Code (From M-Pesa SMS) *
                   </label>
                   <input
                     type="text"
                     value={manualGroupCode}
                     onChange={(e) => setManualGroupCode(e.target.value.toUpperCase())}
-                    placeholder="Enter group code if applicable"
-                    className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                    placeholder="e.g. GRP123"
+                    className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
                   />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Enter group code from M-Pesa message. System will fetch all ticket details and barcodes.
+                  </p>
                 </div>
               </div>
               <button
                 onClick={handleManualValidation}
-                disabled={isValidating || !manualCode.trim()}
-                className="w-full py-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={isValidating || (!manualCode.trim() && !manualGroupCode.trim())}
+                className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isValidating ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     Validating...
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                     Validate Ticket
                   </>
                 )}
@@ -416,6 +526,85 @@ export default function ScanEventsPage() {
                   </div>
                 </div>
 
+                {/* Group Ticket Barcode Selection */}
+                {ticketInfo.isGroupTicket && ticketInfo.groupBarcodes && ticketInfo.groupBarcodes.length > 0 && ticketInfo.isPaid && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="pt-4 border-t border-border space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-base sm:text-lg">Select Tickets to Redeem</h4>
+                      <span className="text-xs sm:text-sm text-muted-foreground">
+                        {selectedBarcodes.length} of {ticketInfo.groupBarcodes.filter(gb => !gb.isScanned).length} selected
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {ticketInfo.groupBarcodes.map((groupBarcode, index) => (
+                        <div
+                          key={groupBarcode.barcode}
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                            groupBarcode.isScanned
+                              ? "border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed"
+                              : selectedBarcodes.includes(groupBarcode.barcode)
+                              ? "border-[#8b5cf6] bg-[#8b5cf6]/10"
+                              : "border-border hover:border-[#8b5cf6]/50 cursor-pointer"
+                          }`}
+                          onClick={() => !groupBarcode.isScanned && toggleBarcodeSelection(groupBarcode.barcode)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                              groupBarcode.isScanned
+                                ? "border-gray-400 bg-gray-200"
+                                : selectedBarcodes.includes(groupBarcode.barcode)
+                                ? "border-[#8b5cf6] bg-[#8b5cf6]"
+                                : "border-border"
+                            }`}>
+                              {(selectedBarcodes.includes(groupBarcode.barcode) || groupBarcode.isScanned) && (
+                                <CheckCircle className={`w-3 h-3 ${groupBarcode.isScanned ? "text-gray-600" : "text-white"}`} />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                Ticket #{index + 1}: {groupBarcode.barcode}
+                              </p>
+                              {groupBarcode.holderName && (
+                                <p className="text-xs text-muted-foreground">{groupBarcode.holderName}</p>
+                              )}
+                            </div>
+                          </div>
+                          {groupBarcode.isScanned && (
+                            <span className="text-xs font-medium text-gray-600 px-2 py-1 bg-gray-200 rounded">
+                              Scanned
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {selectedBarcodes.length > 0 && (
+                      <button
+                        onClick={handleRedeemBarcodes}
+                        disabled={isRedeeming}
+                        className="w-full py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isRedeeming ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Redeeming...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-5 h-5" />
+                            Redeem {selectedBarcodes.length} Ticket{selectedBarcodes.length > 1 ? 's' : ''}
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+
                 {ticketInfo.requiresPayment && showPaymentPrompt && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -484,19 +673,19 @@ export default function ScanEventsPage() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-[#8b5cf6] font-bold">1.</span>
-              <span>Select camera scan mode to scan QR codes or barcodes automatically</span>
+              <span><strong>Paid customers with QR code:</strong> Use camera scan mode. QR contains all details.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[#8b5cf6] font-bold">2.</span>
-              <span>Or switch to manual entry to type in barcode and group code</span>
+              <span><strong>Paid customers with M-Pesa SMS:</strong> Use manual entry. Enter ONLY the group code (e.g., GRP123). System fetches all barcodes automatically.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[#8b5cf6] font-bold">3.</span>
-              <span>Group tickets can have multiple barcodes under one group code</span>
+              <span><strong>Unpaid customers:</strong> Look up booking, process M-Pesa payment. Group code generated after payment.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[#8b5cf6] font-bold">4.</span>
-              <span>If payment is required, enter M-Pesa number to complete payment</span>
+              <span><strong>Group tickets:</strong> Select specific barcodes for attending members only, then redeem.</span>
             </li>
           </ul>
         </motion.div>
