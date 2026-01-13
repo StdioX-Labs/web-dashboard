@@ -7,7 +7,7 @@ import { Html5Qrcode } from "html5-qrcode"
 import { toast } from "sonner"
 
 type ScanMode = "camera" | "manual" | "payment"
-type TicketStatus = "valid" | "invalid" | "used" | "unpaid" | null
+type TicketStatus = "valid" | "invalid" | "used" | null
 
 interface TicketInfo {
   barcode: string
@@ -18,9 +18,6 @@ interface TicketInfo {
   holderName?: string
   isGroupTicket: boolean
   groupSize?: number
-  requiresPayment?: boolean
-  amount?: number
-  isPaid?: boolean
   groupBarcodes?: Array<{
     barcode: string
     isScanned: boolean
@@ -98,7 +95,7 @@ export default function ScanEventsPage() {
     await validateTicket(code)
   }
 
-  const validateTicket = async (barcode: string, groupCode?: string) => {
+  const validateTicket = async (code: string) => {
     setIsValidating(true)
     setTicketInfo(null)
     setSelectedBarcodes([])
@@ -107,7 +104,7 @@ export default function ScanEventsPage() {
       const response = await fetch('/api/tickets/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode, groupCode }),
+        body: JSON.stringify({ groupCode: code }),
       })
 
       const data = await response.json()
@@ -116,11 +113,7 @@ export default function ScanEventsPage() {
         const ticketData: TicketInfo = data.ticket
         setTicketInfo(ticketData)
 
-        if (!ticketData.isPaid && ticketData.requiresPayment) {
-          toast.info("Payment Required", {
-            description: "This ticket has not been paid for. Please complete payment."
-          })
-        } else if (ticketData.status === "valid") {
+        if (ticketData.status === "valid") {
           toast.success("Valid Ticket!", {
             description: "Ticket verified successfully"
           })
@@ -134,8 +127,8 @@ export default function ScanEventsPage() {
           })
         }
       } else {
-        toast.error("Validation Failed", {
-          description: data.error || "Could not validate ticket"
+        toast.error("Invalid Group Code", {
+          description: data.error || "Could not find ticket with this code"
         })
       }
     } catch (error) {
@@ -153,7 +146,7 @@ export default function ScanEventsPage() {
       toast.error("Please enter a group code")
       return
     }
-    await validateTicket(manualGroupCode, manualGroupCode)
+    await validateTicket(manualGroupCode)
   }
 
   const handleMpesaPayment = async () => {
@@ -170,7 +163,7 @@ export default function ScanEventsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: phoneNumber,
-          amount: ticketInfo?.amount || 2500,
+          amount: 2500,
         }),
       })
 
@@ -192,8 +185,6 @@ export default function ScanEventsPage() {
             holderName: phoneNumber,
             isGroupTicket: true,
             groupSize: 4,
-            isPaid: true,
-            requiresPayment: false,
             groupBarcodes: data.barcodes?.map((bc: string, idx: number) => ({
               barcode: bc,
               isScanned: false,
@@ -323,7 +314,7 @@ export default function ScanEventsPage() {
             Scan Event Tickets
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Scan QR codes or enter barcodes manually to verify tickets
+            Scan QR codes or enter group codes to verify tickets
           </p>
         </motion.div>
 
@@ -392,7 +383,7 @@ export default function ScanEventsPage() {
                 <div className="p-6 text-center text-muted-foreground">
                   <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
                   <p>Camera will start automatically</p>
-                  <p className="text-sm mt-1">Point at customer's QR code ticket</p>
+                  <p className="text-sm mt-1">Point at customer&apos;s QR code ticket</p>
                 </div>
               )}
             </div>
@@ -448,11 +439,11 @@ export default function ScanEventsPage() {
               <div className="text-center mb-4">
                 <Keyboard className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
                 <h3 className="text-lg font-semibold">Enter Group Code</h3>
-                <p className="text-sm text-muted-foreground">From customer's M-Pesa message</p>
+                <p className="text-sm text-muted-foreground">From customer&apos;s M-Pesa message</p>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Group Code *</label>
+                  <label className="block text-sm font-medium mb-2">Group Code</label>
                   <input
                     type="text"
                     value={manualGroupCode}
@@ -495,15 +486,13 @@ export default function ScanEventsPage() {
               className={`bg-card border-2 rounded-2xl shadow-xl overflow-hidden ${
                 ticketInfo.status === "valid" ? "border-green-500" :
                 ticketInfo.status === "invalid" ? "border-red-500" :
-                ticketInfo.status === "used" ? "border-orange-500" :
-                "border-yellow-500"
+                "border-orange-500"
               }`}
             >
               <div className={`px-6 py-4 ${
                 ticketInfo.status === "valid" ? "bg-green-500/10" :
                 ticketInfo.status === "invalid" ? "bg-red-500/10" :
-                ticketInfo.status === "used" ? "bg-orange-500/10" :
-                "bg-yellow-500/10"
+                "bg-orange-500/10"
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -511,19 +500,16 @@ export default function ScanEventsPage() {
                       <CheckCircle className="w-6 h-6 text-green-500" />
                     ) : ticketInfo.status === "invalid" ? (
                       <XCircle className="w-6 h-6 text-red-500" />
-                    ) : ticketInfo.status === "used" ? (
-                      <XCircle className="w-6 h-6 text-orange-500" />
                     ) : (
-                      <CreditCard className="w-6 h-6 text-yellow-500" />
+                      <XCircle className="w-6 h-6 text-orange-500" />
                     )}
                     <div>
                       <h3 className="font-bold text-lg">
                         {ticketInfo.status === "valid" ? "Valid Ticket" :
                          ticketInfo.status === "invalid" ? "Invalid Ticket" :
-                         ticketInfo.status === "used" ? "Already Used" :
-                         "Payment Required"}
+                         "Already Used"}
                       </h3>
-                      <p className="text-sm text-muted-foreground">Barcode: {ticketInfo.barcode}</p>
+                      <p className="text-sm text-muted-foreground">Group Code: {ticketInfo.groupCode}</p>
                     </div>
                   </div>
                   {ticketInfo.isGroupTicket && (
@@ -555,7 +541,7 @@ export default function ScanEventsPage() {
                   </div>
                 </div>
 
-                {ticketInfo.isGroupTicket && ticketInfo.groupBarcodes && ticketInfo.groupBarcodes.length > 0 && ticketInfo.isPaid && (
+                {ticketInfo.isGroupTicket && ticketInfo.groupBarcodes && ticketInfo.groupBarcodes.length > 0 && ticketInfo.status === "valid" && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
