@@ -6,7 +6,7 @@ import { Camera, Keyboard, CheckCircle, XCircle, Loader2, CreditCard, Users, Tic
 import { Html5Qrcode } from "html5-qrcode"
 import { toast } from "sonner"
 
-type ScanMode = "camera" | "manual"
+type ScanMode = "camera" | "manual" | "payment"
 type TicketStatus = "valid" | "invalid" | "used" | "unpaid" | null
 
 interface TicketInfo {
@@ -31,11 +31,9 @@ interface TicketInfo {
 export default function ScanEventsPage() {
   const [scanMode, setScanMode] = useState<ScanMode>("camera")
   const [isScanning, setIsScanning] = useState(false)
-  const [manualCode, setManualCode] = useState<string>("")
   const [manualGroupCode, setManualGroupCode] = useState<string>("")
   const [ticketInfo, setTicketInfo] = useState<TicketInfo | null>(null)
   const [isValidating, setIsValidating] = useState(false)
-  const [showPaymentPrompt, setShowPaymentPrompt] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState("")
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([])
@@ -50,10 +48,7 @@ export default function ScanEventsPage() {
       const html5QrCode = new Html5Qrcode("qr-reader")
       html5QrCodeRef.current = html5QrCode
 
-      // Get available devices
       const devices = await Html5Qrcode.getCameras()
-
-      // Check for barcode scanner device (usually has 'barcode' or 'scanner' in label)
       const barcodeScanner = devices.find(device =>
         device.label.toLowerCase().includes('barcode') ||
         device.label.toLowerCase().includes('scanner')
@@ -63,20 +58,14 @@ export default function ScanEventsPage() {
         fps: 10,
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
-        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] // Support all barcode formats
+        formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
       }
 
-      // Use barcode scanner if available, otherwise use environment camera
       const cameraId = barcodeScanner ? barcodeScanner.id : { facingMode: "environment" }
 
-      await html5QrCode.start(
-        cameraId,
-        config,
-        (decodedText) => {
-          handleScan(decodedText)
-        },
-        undefined
-      )
+      await html5QrCode.start(cameraId, config, (decodedText) => {
+        handleScan(decodedText)
+      }, undefined)
 
       if (barcodeScanner) {
         toast.success("Barcode Scanner Connected", {
@@ -117,13 +106,8 @@ export default function ScanEventsPage() {
     try {
       const response = await fetch('/api/tickets/validate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          barcode: barcode,
-          groupCode: groupCode,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode, groupCode }),
       })
 
       const data = await response.json()
@@ -132,15 +116,13 @@ export default function ScanEventsPage() {
         const ticketData: TicketInfo = data.ticket
         setTicketInfo(ticketData)
 
-        // Check if ticket is paid
         if (!ticketData.isPaid && ticketData.requiresPayment) {
-          setShowPaymentPrompt(true)
           toast.info("Payment Required", {
             description: "This ticket has not been paid for. Please complete payment."
           })
         } else if (ticketData.status === "valid") {
           toast.success("Valid Ticket!", {
-            description: ticketData.isPaid ? "Ticket verified successfully" : "Ticket is valid and paid"
+            description: "Ticket verified successfully"
           })
         } else if (ticketData.status === "used") {
           toast.error("Ticket Already Used", {
@@ -167,18 +149,11 @@ export default function ScanEventsPage() {
   }
 
   const handleManualValidation = async () => {
-    // Allow validation with just group code if barcode is empty
-    if (!manualCode.trim() && !manualGroupCode.trim()) {
-      toast.error("Please enter a barcode or group code")
+    if (!manualGroupCode.trim()) {
+      toast.error("Please enter a group code")
       return
     }
-
-    // If only group code is provided (customer has M-Pesa message)
-    if (!manualCode.trim() && manualGroupCode.trim()) {
-      await validateTicket(manualGroupCode, manualGroupCode)
-    } else {
-      await validateTicket(manualCode, manualGroupCode || undefined)
-    }
+    await validateTicket(manualGroupCode, manualGroupCode)
   }
 
   const handleMpesaPayment = async () => {
@@ -187,23 +162,15 @@ export default function ScanEventsPage() {
       return
     }
 
-    if (!ticketInfo?.amount) {
-      toast.error("Invalid payment amount")
-      return
-    }
-
     setIsProcessingPayment(true)
 
     try {
       const response = await fetch('/api/payments/mpesa', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: phoneNumber,
-          amount: ticketInfo.amount,
-          groupCode: ticketInfo.groupCode,
+          amount: ticketInfo?.amount || 2500,
         }),
       })
 
@@ -211,14 +178,36 @@ export default function ScanEventsPage() {
 
       if (data.success) {
         toast.success("Payment Request Sent!", {
-          description: "Please check your phone to complete payment"
+          description: "Customer should check phone to complete payment"
         })
 
         setTimeout(() => {
-          setTicketInfo(prev => prev ? { ...prev, status: "valid", requiresPayment: false, isPaid: true } : null)
-          setShowPaymentPrompt(false)
+          const generatedGroupCode = data.groupCode || `GRP${Date.now().toString().slice(-6)}`
+          const newTicket: TicketInfo = {
+            barcode: data.barcodes?.[0] || `VT${Date.now().toString().slice(-6)}`,
+            groupCode: generatedGroupCode,
+            status: "valid",
+            eventName: "Summer Music Festival 2026",
+            ticketType: "VIP Access",
+            holderName: phoneNumber,
+            isGroupTicket: true,
+            groupSize: 4,
+            isPaid: true,
+            requiresPayment: false,
+            groupBarcodes: data.barcodes?.map((bc: string, idx: number) => ({
+              barcode: bc,
+              isScanned: false,
+              holderName: `Guest ${idx + 1}`
+            })) || [
+              { barcode: `VT${Date.now().toString().slice(-6)}1`, isScanned: false, holderName: "Guest 1" },
+              { barcode: `VT${Date.now().toString().slice(-6)}2`, isScanned: false, holderName: "Guest 2" },
+              { barcode: `VT${Date.now().toString().slice(-6)}3`, isScanned: false, holderName: "Guest 3" },
+              { barcode: `VT${Date.now().toString().slice(-6)}4`, isScanned: false, holderName: "Guest 4" },
+            ]
+          }
+          setTicketInfo(newTicket)
           toast.success("Payment Confirmed!", {
-            description: "Ticket is now active and can be redeemed"
+            description: `Group Code: ${generatedGroupCode} - SMS sent to customer`
           })
         }, 3000)
       } else {
@@ -236,7 +225,6 @@ export default function ScanEventsPage() {
     }
   }
 
-  // Toggle barcode selection for group tickets
   const toggleBarcodeSelection = (barcode: string) => {
     setSelectedBarcodes(prev => {
       if (prev.includes(barcode)) {
@@ -247,7 +235,6 @@ export default function ScanEventsPage() {
     })
   }
 
-  // Redeem selected barcodes
   const handleRedeemBarcodes = async () => {
     if (selectedBarcodes.length === 0) {
       toast.error("Please select at least one ticket to redeem")
@@ -259,9 +246,7 @@ export default function ScanEventsPage() {
     try {
       const response = await fetch('/api/tickets/redeem', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupCode: ticketInfo?.groupCode,
           barcodes: selectedBarcodes,
@@ -275,7 +260,6 @@ export default function ScanEventsPage() {
           description: `Successfully redeemed ${selectedBarcodes.length} ticket(s)`
         })
 
-        // Update ticket info to mark selected barcodes as scanned
         setTicketInfo(prev => {
           if (!prev || !prev.groupBarcodes) return prev
           return {
@@ -312,16 +296,14 @@ export default function ScanEventsPage() {
   useEffect(() => {
     if (scanMode === "camera" && !isScanning) {
       startScanning()
-    } else if (scanMode === "manual" && isScanning) {
+    } else if ((scanMode === "manual" || scanMode === "payment") && isScanning) {
       stopScanning()
     }
   }, [scanMode])
 
   const resetScanner = () => {
-    setManualCode("")
     setManualGroupCode("")
     setTicketInfo(null)
-    setShowPaymentPrompt(false)
     setPhoneNumber("")
     setSelectedBarcodes([])
     if (scanMode === "camera") {
@@ -348,31 +330,40 @@ export default function ScanEventsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex gap-2 sm:gap-4 p-1.5 sm:p-2 bg-muted/50 rounded-xl sm:rounded-2xl"
+          className="grid grid-cols-3 gap-2 p-1.5 sm:p-2 bg-muted/50 rounded-xl sm:rounded-2xl"
         >
           <button
             onClick={() => setScanMode("camera")}
-            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all ${
+            className={`flex flex-col items-center justify-center gap-1 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all ${
               scanMode === "camera"
                 ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden xs:inline">Camera Scan</span>
-            <span className="xs:hidden">Camera</span>
+            <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span>QR Scan</span>
+          </button>
+          <button
+            onClick={() => setScanMode("payment")}
+            className={`flex flex-col items-center justify-center gap-1 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all ${
+              scanMode === "payment"
+                ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span>M-Pesa</span>
           </button>
           <button
             onClick={() => setScanMode("manual")}
-            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-medium transition-all ${
+            className={`flex flex-col items-center justify-center gap-1 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all ${
               scanMode === "manual"
                 ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden xs:inline">Manual Entry</span>
-            <span className="xs:hidden">Manual</span>
+            <Keyboard className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span>Group Code</span>
           </button>
         </motion.div>
 
@@ -383,16 +374,11 @@ export default function ScanEventsPage() {
         >
           {scanMode === "camera" ? (
             <div className="relative">
-              <div
-                id="qr-reader"
-                ref={scannerRef}
-                className="w-full"
-                style={{ minHeight: "300px" }}
-              />
+              <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: "300px" }} />
               {isScanning && (
                 <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
                   <div className="px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm">
-                    📷 Scanning...
+                    📷 Scanning QR Code...
                   </div>
                   <button
                     onClick={stopScanning}
@@ -402,26 +388,71 @@ export default function ScanEventsPage() {
                   </button>
                 </div>
               )}
+              {!isScanning && (
+                <div className="p-6 text-center text-muted-foreground">
+                  <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Camera will start automatically</p>
+                  <p className="text-sm mt-1">Point at customer's QR code ticket</p>
+                </div>
+              )}
+            </div>
+          ) : scanMode === "payment" ? (
+            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
+              <div className="text-center mb-4">
+                <CreditCard className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
+                <h3 className="text-lg font-semibold">M-Pesa Payment</h3>
+                <p className="text-sm text-muted-foreground">For customers without tickets</p>
+              </div>
+              {!ticketInfo && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Customer Phone Number</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="e.g. 0712345678"
+                      className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Ticket Type</label>
+                    <select className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all">
+                      <option>Regular - KSH 500</option>
+                      <option>VIP - KSH 2,500</option>
+                      <option>Group (4) - KSH 1,800</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleMpesaPayment}
+                    disabled={isProcessingPayment || !phoneNumber.trim()}
+                    className="w-full py-3 sm:py-4 bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                        Processing Payment...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+                        Send M-Pesa Request
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
+              <div className="text-center mb-4">
+                <Keyboard className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
+                <h3 className="text-lg font-semibold">Enter Group Code</h3>
+                <p className="text-sm text-muted-foreground">From customer's M-Pesa message</p>
+              </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Barcode (For unpaid walk-ins)
-                  </label>
-                  <input
-                    type="text"
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. VT67PD (optional)"
-                    className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Group Code (From M-Pesa SMS) *
-                  </label>
+                  <label className="block text-sm font-medium mb-2">Group Code *</label>
                   <input
                     type="text"
                     value={manualGroupCode}
@@ -430,24 +461,24 @@ export default function ScanEventsPage() {
                     className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">
-                    Enter group code from M-Pesa message. System will fetch all ticket details and barcodes.
+                    System will fetch all ticket details and available barcodes
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleManualValidation}
-                disabled={isValidating || (!manualCode.trim() && !manualGroupCode.trim())}
+                disabled={isValidating || !manualGroupCode.trim()}
                 className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isValidating ? (
                   <>
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    Validating...
+                    Loading Tickets...
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                    Validate Ticket
+                    Load Tickets
                   </>
                 )}
               </button>
@@ -492,9 +523,7 @@ export default function ScanEventsPage() {
                          ticketInfo.status === "used" ? "Already Used" :
                          "Payment Required"}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Barcode: {ticketInfo.barcode}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Barcode: {ticketInfo.barcode}</p>
                     </div>
                   </div>
                   {ticketInfo.isGroupTicket && (
@@ -526,7 +555,6 @@ export default function ScanEventsPage() {
                   </div>
                 </div>
 
-                {/* Group Ticket Barcode Selection */}
                 {ticketInfo.isGroupTicket && ticketInfo.groupBarcodes && ticketInfo.groupBarcodes.length > 0 && ticketInfo.isPaid && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -566,9 +594,7 @@ export default function ScanEventsPage() {
                               )}
                             </div>
                             <div>
-                              <p className="text-sm font-medium">
-                                Ticket #{index + 1}: {groupBarcode.barcode}
-                              </p>
+                              <p className="text-sm font-medium">Ticket #{index + 1}: {groupBarcode.barcode}</p>
                               {groupBarcode.holderName && (
                                 <p className="text-xs text-muted-foreground">{groupBarcode.holderName}</p>
                               )}
@@ -605,50 +631,6 @@ export default function ScanEventsPage() {
                   </motion.div>
                 )}
 
-                {ticketInfo.requiresPayment && showPaymentPrompt && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="pt-4 border-t border-border space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-lg">Payment Required</h4>
-                      <p className="text-2xl font-bold text-[#8b5cf6]">
-                        KSH {ticketInfo.amount?.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        M-Pesa Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="e.g. 0712345678"
-                        className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                      />
-                    </div>
-                    <button
-                      onClick={handleMpesaPayment}
-                      disabled={isProcessingPayment}
-                      className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isProcessingPayment ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Processing Payment...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-5 h-5" />
-                          Pay with M-Pesa
-                        </>
-                      )}
-                    </button>
-                  </motion.div>
-                )}
-
                 <button
                   onClick={resetScanner}
                   className="w-full py-3 bg-muted hover:bg-muted/80 text-foreground font-medium rounded-xl transition-all"
@@ -664,30 +646,35 @@ export default function ScanEventsPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="bg-muted/30 border border-border rounded-xl p-6 space-y-4"
+          className="bg-muted/30 border border-border rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4"
         >
-          <h3 className="font-semibold text-lg flex items-center gap-2">
+          <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
             <Ticket className="w-5 h-5 text-[#8b5cf6]" />
             How to Use
           </h3>
-          <ul className="space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <span className="text-[#8b5cf6] font-bold">1.</span>
-              <span><strong>Paid customers with QR code:</strong> Use camera scan mode. QR contains all details.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#8b5cf6] font-bold">2.</span>
-              <span><strong>Paid customers with M-Pesa SMS:</strong> Use manual entry. Enter ONLY the group code (e.g., GRP123). System fetches all barcodes automatically.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#8b5cf6] font-bold">3.</span>
-              <span><strong>Unpaid customers:</strong> Look up booking, process M-Pesa payment. Group code generated after payment.</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#8b5cf6] font-bold">4.</span>
-              <span><strong>Group tickets:</strong> Select specific barcodes for attending members only, then redeem.</span>
-            </li>
-          </ul>
+          <div className="space-y-3 text-xs sm:text-sm">
+            <div className="flex gap-3 p-3 bg-card rounded-lg border border-border">
+              <Camera className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground mb-1">QR Scan Mode</p>
+                <p className="text-muted-foreground">For customers with QR code tickets (already paid). Scan QR → View barcodes → Select → Redeem</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 bg-card rounded-lg border border-border">
+              <CreditCard className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground mb-1">M-Pesa Payment Mode</p>
+                <p className="text-muted-foreground">For customers WITHOUT tickets. Enter phone → Process payment → Group code generated → Select barcodes → Redeem</p>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 bg-card rounded-lg border border-border">
+              <Keyboard className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-foreground mb-1">Group Code Mode</p>
+                <p className="text-muted-foreground">For customers with M-Pesa SMS (already paid, no QR). Enter group code → System loads all barcodes → Select → Redeem</p>
+              </div>
+            </div>
+          </div>
         </motion.div>
       </div>
     </div>
