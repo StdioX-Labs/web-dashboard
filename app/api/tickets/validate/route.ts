@@ -26,31 +26,31 @@ export async function POST(request: NextRequest) {
     // 4. Check ticket validity period
     // 5. Check if tickets have been used/scanned
 
-    // Mock validation response
-    const isGroupTicket = true // Group codes always mean group tickets
-    const isPaid = Math.random() > 0.2 // Most are paid since they have group code
+    // Mock validation response with proper test data
+    const isGroupTicket = true
+    const isPaid = true
+    const isComplementary = Math.random() > 0.7 // 30% chance of complementary
 
     const mockTicket = {
-      barcode: barcode,
-      groupCode: groupCode || barcode,
-      status: isPaid ? 'valid' : 'unpaid', // valid, invalid, used, unpaid
-      eventName: 'Summer Music Festival 2026',
-      ticketType: 'VIP Access',
+      barcode: `VT${Date.now().toString().slice(-6)}`,
+      groupCode: groupCode || `GRP${Date.now().toString().slice(-6)}`,
+      status: 'valid', // valid, invalid, used
+      eventName: 'Nairobi Tech Summit 2026',
+      ticketType: isGroupTicket ? 'VIP Group Pass' : 'Regular Entry',
       holderName: 'John Doe',
+      price: isComplementary ? 0 : (isGroupTicket ? 2500 : 500),
+      isComplementary: isComplementary,
       isGroupTicket: isGroupTicket,
-      groupSize: isGroupTicket ? Math.floor(Math.random() * 4) + 2 : 1,
-      requiresPayment: !isPaid,
-      isPaid: isPaid,
-      amount: 2500,
+      groupSize: isGroupTicket ? 4 : 1,
       eventDate: '2026-06-15T18:00:00Z',
-      venue: 'Uhuru Gardens',
+      venue: 'KICC, Nairobi',
       // Add group barcodes if it's a group ticket
       groupBarcodes: isGroupTicket ? [
-        { barcode: 'VT67PD', isScanned: false, holderName: 'John Doe' },
-        { barcode: 'VT68PD', isScanned: false, holderName: 'Jane Smith' },
-        { barcode: 'VT69PD', isScanned: Math.random() > 0.5, holderName: 'Bob Johnson' },
-        { barcode: 'VT70PD', isScanned: false, holderName: 'Alice Williams' },
-      ].slice(0, isGroupTicket ? Math.floor(Math.random() * 3) + 2 : 1) : undefined
+        { barcode: 'VT123001', isScanned: false, holderName: 'John Doe' },
+        { barcode: 'VT123002', isScanned: false, holderName: 'Jane Smith' },
+        { barcode: 'VT123003', isScanned: Math.random() > 0.7, holderName: 'Bob Johnson' },
+        { barcode: 'VT123004', isScanned: false, holderName: 'Alice Williams' },
+      ] : undefined
     }
 
     return NextResponse.json({

@@ -16,6 +16,8 @@ interface TicketInfo {
   eventName?: string
   ticketType?: string
   holderName?: string
+  price?: number
+  isComplementary?: boolean
   isGroupTicket: boolean
   groupSize?: number
   groupBarcodes?: Array<{
@@ -91,8 +93,13 @@ export default function ScanEventsPage() {
   }
 
   const handleScan = async (code: string) => {
+    if (!code || code.trim().length === 0) return
+    
     await stopScanning()
-    await validateTicket(code)
+    
+    setTimeout(async () => {
+      await validateTicket(code)
+    }, 200)
   }
 
   const validateTicket = async (code: string) => {
@@ -114,8 +121,12 @@ export default function ScanEventsPage() {
         setTicketInfo(ticketData)
 
         if (ticketData.status === "valid") {
+          const priceText = ticketData.isComplementary 
+            ? "Complementary" 
+            : `KSH ${ticketData.price?.toLocaleString()}`
+          
           toast.success("Valid Ticket!", {
-            description: "Ticket verified successfully"
+            description: `${ticketData.eventName} - ${ticketData.ticketType} (${priceText})`
           })
         } else if (ticketData.status === "used") {
           toast.error("Ticket Already Used", {
@@ -180,9 +191,11 @@ export default function ScanEventsPage() {
             barcode: data.barcodes?.[0] || `VT${Date.now().toString().slice(-6)}`,
             groupCode: generatedGroupCode,
             status: "valid",
-            eventName: "Summer Music Festival 2026",
-            ticketType: "VIP Access",
+            eventName: "Nairobi Tech Summit 2026",
+            ticketType: "VIP Group Pass",
             holderName: phoneNumber,
+            price: 2500,
+            isComplementary: false,
             isGroupTicket: true,
             groupSize: 4,
             groupBarcodes: data.barcodes?.map((bc: string, idx: number) => ({
@@ -419,15 +432,16 @@ export default function ScanEventsPage() {
                     disabled={isProcessingPayment || !phoneNumber.trim()}
                     className="w-full py-3 sm:py-4 bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isProcessingPayment ? (
+                    {isProcessingPayment && (
                       <>
                         <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                        Processing Payment...
+                        <span>Processing Payment...</span>
                       </>
-                    ) : (
+                    )}
+                    {!isProcessingPayment && (
                       <>
                         <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
-                        Send M-Pesa Request
+                        <span>Send M-Pesa Request</span>
                       </>
                     )}
                   </button>
@@ -461,15 +475,16 @@ export default function ScanEventsPage() {
                 disabled={isValidating || !manualGroupCode.trim()}
                 className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isValidating ? (
+                {isValidating && (
                   <>
                     <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    Loading Tickets...
+                    <span>Loading Tickets...</span>
                   </>
-                ) : (
+                )}
+                {!isValidating && (
                   <>
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                    Load Tickets
+                    <span>Load Tickets</span>
                   </>
                 )}
               </button>
@@ -532,13 +547,25 @@ export default function ScanEventsPage() {
                     <p className="font-semibold">{ticketInfo.ticketType}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Holder</p>
-                    <p className="font-semibold">{ticketInfo.holderName}</p>
+                    <p className="text-sm text-muted-foreground">Price</p>
+                    <p className="font-semibold">
+                      {ticketInfo.isComplementary ? (
+                        <span className="text-[#8b5cf6]">Complementary</span>
+                      ) : (
+                        `KSH ${ticketInfo.price?.toLocaleString()}`
+                      )}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Group Code</p>
                     <p className="font-semibold">{ticketInfo.groupCode}</p>
                   </div>
+                  {ticketInfo.holderName && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-muted-foreground">Holder</p>
+                      <p className="font-semibold">{ticketInfo.holderName}</p>
+                    </div>
+                  )}
                 </div>
 
                 {ticketInfo.isGroupTicket && ticketInfo.groupBarcodes && ticketInfo.groupBarcodes.length > 0 && ticketInfo.status === "valid" && (
@@ -601,15 +628,16 @@ export default function ScanEventsPage() {
                         disabled={isRedeeming}
                         className="w-full py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        {isRedeeming ? (
+                        {isRedeeming && (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Redeeming...
+                            <span>Redeeming...</span>
                           </>
-                        ) : (
+                        )}
+                        {!isRedeeming && (
                           <>
                             <CheckCircle className="w-5 h-5" />
-                            Redeem {selectedBarcodes.length} Ticket{selectedBarcodes.length > 1 ? 's' : ''}
+                            <span>Redeem {selectedBarcodes.length} Ticket{selectedBarcodes.length > 1 ? 's' : ''}</span>
                           </>
                         )}
                       </button>
