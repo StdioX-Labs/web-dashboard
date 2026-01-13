@@ -189,7 +189,6 @@ export default function CreateEventPage() {
                 selected={eventDate}
                 onChange={(date) => setEventDate(date)}
                 placeholderText="Select event date and time"
-                minDate={new Date()}
               />
             </div>
 
