@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign, ScanLine } from "lucide-react"
+import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign, ScanLine, Compass } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
@@ -19,9 +19,9 @@ const navItems: NavItem[] = [
   { name: "Home", icon: Home, href: "/dashboard" },
   { name: "Events", icon: Calendar, href: "/dashboard/events" },
   { name: "Scan Events", icon: ScanLine, href: "/dashboard/scan" },
+  { name: "Discover", icon: Compass, href: "/dashboard/discover" },
   { name: "Promotions", icon: Megaphone, href: "/dashboard/promotions" },
   { name: "Users", icon: Users, href: "/dashboard/users" },
-  { name: "Payouts", icon: DollarSign, href: "/dashboard/payouts" },
 ]
 
 // Mock user data - replace with actual user data
