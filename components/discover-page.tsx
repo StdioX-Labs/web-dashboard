@@ -63,7 +63,7 @@ const products = [
 
 export default function DiscoverPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pt-20 sm:pt-24 lg:pt-0">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
@@ -169,7 +169,7 @@ export default function DiscoverPage() {
             </h2>
 
             <p className="text-lg text-white/90 max-w-2xl mx-auto mb-8">
-              We're building something incredible. These powerful tools and features will revolutionize how you create, manage, and grow your events.
+              We&apos;re building something incredible. These powerful tools and features will revolutionize how you create, manage, and grow your events.
             </p>
 
             <div className="inline-flex flex-col sm:flex-row gap-4">

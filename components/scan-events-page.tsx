@@ -316,7 +316,7 @@ export default function ScanEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-3 sm:p-4 md:p-6 lg:p-8 pt-20 sm:pt-24 lg:pt-8">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
