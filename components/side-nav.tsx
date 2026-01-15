@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign, ScanLine, Compass } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -8,6 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { sessionManager } from "@/lib/session-manager"
 
 type NavItem = {
   name: string
@@ -24,13 +25,6 @@ const navItems: NavItem[] = [
   { name: "Users", icon: Users, href: "/dashboard/users" },
 ]
 
-// Mock user data - replace with actual user data
-const user = {
-  name: "John Doe",
-  email: "john@example.com",
-  avatar: "/placeholder-user.jpg",
-}
-
 type NavContentProps = {
   isCollapsed: boolean
   setIsCollapsed: (value: boolean) => void
@@ -41,23 +35,24 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
   const pathname = usePathname()
   const router = useRouter()
 
+  // Get user from session
+  const [userName, setUserName] = useState("User")
+  const [userEmail, setUserEmail] = useState("")
+
+  useEffect(() => {
+    const user = sessionManager.getUser()
+    if (user) {
+      setUserName(user.company_name || user.email.split('@')[0])
+      setUserEmail(user.email)
+    }
+  }, [])
+
   const handleLogout = () => {
     // Close mobile menu
     setIsMobileOpen(false)
 
-    // Clear any stored authentication data
-    if (typeof window !== 'undefined') {
-      // Clear localStorage
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('user')
-      localStorage.removeItem('sessionId')
-
-      // Clear sessionStorage
-      sessionStorage.clear()
-
-      // You can also clear specific items if you know their keys
-      // localStorage.removeItem('yourAuthKeyHere')
-    }
+    // Clear session
+    sessionManager.clearSession()
 
     // Show success message
     toast.success("Logged out successfully!", {
@@ -157,14 +152,14 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
         >
           <div className="relative flex-shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm sm:text-base">
-              {user.name.charAt(0)}
+              {userName.charAt(0).toUpperCase()}
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              <p className="text-sm font-semibold truncate">{userName}</p>
+              <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
             </div>
           )}
         </Link>

@@ -5,10 +5,15 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Mail, ArrowRight, Calendar, Ticket, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { api, ApiError } from "@/lib/api-client"
+import { sessionManager, UserSession } from "@/lib/session-manager"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 type AuthMode = "signin" | "signup"
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [mode, setMode] = useState<AuthMode>("signin")
   const [isFocused, setIsFocused] = useState(false)
@@ -25,6 +30,10 @@ export default function LoginPage() {
   const [otpTouched, setOtpTouched] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const otpInputRef = useRef<HTMLInputElement>(null)
+
+  // Store user data and server OTP
+  const [userData, setUserData] = useState<UserSession | null>(null)
+  const [serverOtp, setServerOtp] = useState<string>("")
 
   // Update cursor style
   useEffect(() => {
@@ -96,20 +105,65 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
 
-    // Simulate API call to send OTP
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Call the API to request OTP
+      const response = await api.auth.requestOtp(email, 'email')
 
-    if (mode === "signin") {
-      // For sign in, show OTP input
-      setShowOtpInput(true)
+      if (response.status && response.user) {
+        // Store user data and OTP
+        setUserData(response.user)
+        setServerOtp(response.otp)
+
+        // Show success message
+        toast.success(response.message || "OTP sent to email", {
+          description: `Please check your email for the verification code.`,
+        })
+
+        if (mode === "signin") {
+          // For sign in, show OTP input
+          setShowOtpInput(true)
+          setIsSubmitting(false)
+          // Focus on OTP input
+          setTimeout(() => otpInputRef.current?.focus(), 100)
+        } else {
+          // For sign up, proceed with registration
+          setIsSubmitting(false)
+          console.log(`Sign up with email:`, email)
+          // TODO: Implement sign up flow
+        }
+      } else {
+        toast.error("Failed to send OTP", {
+          description: response.message || "Please try again.",
+        })
+        setIsSubmitting(false)
+      }
+    } catch (error) {
+      console.error('Error requesting OTP:', error)
+      console.error('Error type:', error instanceof ApiError ? 'ApiError' : typeof error)
+
+      if (error instanceof ApiError) {
+        console.error('ApiError details:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          response: error.response
+        })
+
+        // Check if there's a rawResponse in the error response
+        const errorResponse = error.response as any
+        if (errorResponse && errorResponse.rawResponse) {
+          console.error('Raw API response:', errorResponse.rawResponse)
+        }
+
+        toast.error("Failed to send OTP", {
+          description: errorResponse?.rawResponse || error.message,
+        })
+      } else {
+        toast.error("Failed to send OTP", {
+          description: "Please check your connection and try again.",
+        })
+      }
+
       setIsSubmitting(false)
-      // Focus on OTP input
-      setTimeout(() => otpInputRef.current?.focus(), 100)
-    } else {
-      // For sign up, proceed with registration
-      setIsSubmitting(false)
-      console.log(`Sign up with email:`, email)
-      // TODO: Implement sign up flow
     }
   }
 
@@ -122,18 +176,42 @@ export default function LoginPage() {
       return
     }
 
+    if (!userData || !serverOtp) {
+      toast.error("Session expired", {
+        description: "Please request a new OTP.",
+      })
+      handleBackToEmail()
+      return
+    }
+
     setIsVerifyingOtp(true)
 
-    // Simulate API call to verify OTP
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    // Verify OTP matches the server OTP
+    if (otp === serverOtp) {
+      try {
+        // Create session with user data
+        sessionManager.createSession(userData)
 
-    // Test OTP verification - only "0000" is valid
-    if (otp === "0000") {
-      console.log(`OTP verified successfully for email:`, email)
-      // Redirect to dashboard
-      window.location.href = "/dashboard"
+        toast.success("Login successful!", {
+          description: `Welcome back, ${userData.company_name}!`,
+        })
+
+        // Redirect to dashboard
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 500)
+      } catch (error) {
+        console.error('Error creating session:', error)
+        toast.error("Login failed", {
+          description: "Failed to create session. Please try again.",
+        })
+        setIsVerifyingOtp(false)
+      }
     } else {
       setOtpError("Invalid OTP. Please try again.")
+      toast.error("Invalid OTP", {
+        description: "The code you entered is incorrect.",
+      })
       setIsVerifyingOtp(false)
     }
   }
@@ -156,13 +234,45 @@ export default function LoginPage() {
 
   const handleResendOtp = async () => {
     setIsSubmitting(true)
-    // Simulate API call to resend OTP
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSubmitting(false)
-    setOtp("")
-    setOtpError("")
-    setOtpTouched(false)
-    console.log(`Resent OTP to:`, email)
+
+    try {
+      // Call the API to resend OTP
+      const response = await api.auth.requestOtp(email, 'email')
+
+      if (response.status && response.user) {
+        // Update stored data
+        setUserData(response.user)
+        setServerOtp(response.otp)
+
+        toast.success("OTP resent successfully", {
+          description: "Please check your email for the new code.",
+        })
+
+        setIsSubmitting(false)
+        setOtp("")
+        setOtpError("")
+        setOtpTouched(false)
+      } else {
+        toast.error("Failed to resend OTP", {
+          description: response.message || "Please try again.",
+        })
+        setIsSubmitting(false)
+      }
+    } catch (error) {
+      console.error('Error resending OTP:', error)
+
+      if (error instanceof ApiError) {
+        toast.error("Failed to resend OTP", {
+          description: error.message,
+        })
+      } else {
+        toast.error("Failed to resend OTP", {
+          description: "Please check your connection and try again.",
+        })
+      }
+
+      setIsSubmitting(false)
+    }
   }
 
   const handleBackToEmail = () => {
