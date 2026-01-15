@@ -6,6 +6,13 @@ const API_BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+/**
+ * Login API Route
+ *
+ * Security Note:
+ * - In DEVELOPMENT: Returns full API response including OTP and user data (for testing)
+ * - In PRODUCTION: Returns only status and message (hides OTP and user data for security)
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -90,14 +97,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // In production, remove the OTP from the response for security
-      if (process.env.NODE_ENV === 'production' && data.otp) {
-        const { otp, ...sanitizedData } = data
-        console.log('Login proxy - OTP removed from response in production')
-        return NextResponse.json(sanitizedData, { status: response.status })
+      // In production, hide sensitive data (OTP and user details) for security
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Login proxy - Sensitive data removed from response in production')
+        const sanitizedResponse = {
+          status: data.status || true,
+          message: data.message || 'OTP sent successfully. Please check your email.'
+        }
+        return NextResponse.json(sanitizedResponse, { status: response.status })
       }
 
-      // Return the response from external API with the same status code
+      // Return the full response in development mode for testing
       return NextResponse.json(data, { status: response.status })
     } catch (fetchError) {
       clearTimeout(timeoutId)
