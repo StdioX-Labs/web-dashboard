@@ -6,7 +6,7 @@ import { Mail, ArrowRight, Calendar, Ticket, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { api, ApiError } from "@/lib/api-client"
-import { sessionManager, UserSession } from "@/lib/session-manager"
+import { sessionManager } from "@/lib/session-manager"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -31,8 +31,7 @@ export default function LoginPage() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const otpInputRef = useRef<HTMLInputElement>(null)
 
-  // Store user data and server OTP
-  const [userData, setUserData] = useState<UserSession | null>(null)
+  // Store server OTP (only available in development)
   const [serverOtp, setServerOtp] = useState<string>("")
 
   // Update cursor style
@@ -109,10 +108,11 @@ export default function LoginPage() {
       // Call the API to request OTP
       const response = await api.auth.requestOtp(email, 'email')
 
-      if (response.status && response.user) {
-        // Store user data and OTP
-        setUserData(response.user)
-        setServerOtp(response.otp)
+      if (response.status) {
+        // In development, store OTP if available for local verification
+        if (response.otp) {
+          setServerOtp(response.otp)
+        }
 
         // Show success message
         toast.success(response.message || "OTP sent to email", {
@@ -149,7 +149,7 @@ export default function LoginPage() {
         })
 
         // Check if there's a rawResponse in the error response
-        const errorResponse = error.response as any
+        const errorResponse = error.response as { rawResponse?: string } | undefined
         if (errorResponse && errorResponse.rawResponse) {
           console.error('Raw API response:', errorResponse.rawResponse)
         }
@@ -176,42 +176,57 @@ export default function LoginPage() {
       return
     }
 
-    if (!userData || !serverOtp) {
-      toast.error("Session expired", {
-        description: "Please request a new OTP.",
-      })
-      handleBackToEmail()
-      return
-    }
-
     setIsVerifyingOtp(true)
 
-    // Verify OTP matches the server OTP
-    if (otp === serverOtp) {
-      try {
-        // Create session with user data
-        sessionManager.createSession(userData)
+    try {
+      // In development with serverOtp available, verify locally
+      // In production, always verify via API
+      if (serverOtp && otp !== serverOtp) {
+        // Local verification failed (development mode)
+        setOtpError("Invalid OTP. Please try again.")
+        setIsVerifyingOtp(false)
+        toast.error("Invalid OTP", {
+          description: "The OTP you entered is incorrect.",
+        })
+        return
+      }
+
+      // Verify OTP via API (works in both dev and production)
+      const response = await api.auth.verifyOtp(email, otp, 'email')
+
+      if (response.status && response.user) {
+        // Create session with user data from verification response
+        sessionManager.createSession(response.user)
 
         toast.success("Login successful!", {
-          description: `Welcome back, ${userData.company_name}!`,
+          description: `Welcome back, ${response.user.company_name}!`,
         })
 
         // Redirect to dashboard
         setTimeout(() => {
           router.push('/dashboard')
         }, 500)
-      } catch (error) {
-        console.error('Error creating session:', error)
-        toast.error("Login failed", {
-          description: "Failed to create session. Please try again.",
+      } else {
+        setOtpError("Invalid OTP. Please try again.")
+        toast.error("Verification failed", {
+          description: response.message || "Please try again.",
         })
         setIsVerifyingOtp(false)
       }
-    } else {
-      setOtpError("Invalid OTP. Please try again.")
-      toast.error("Invalid OTP", {
-        description: "The code you entered is incorrect.",
-      })
+    } catch (error) {
+      console.error('Error verifying OTP:', error)
+
+      if (error instanceof ApiError) {
+        toast.error("Verification failed", {
+          description: error.message,
+        })
+      } else {
+        toast.error("Verification failed", {
+          description: "Please check your connection and try again.",
+        })
+      }
+
+      setOtpError("Verification failed. Please try again.")
       setIsVerifyingOtp(false)
     }
   }
@@ -239,10 +254,11 @@ export default function LoginPage() {
       // Call the API to resend OTP
       const response = await api.auth.requestOtp(email, 'email')
 
-      if (response.status && response.user) {
-        // Update stored data
-        setUserData(response.user)
-        setServerOtp(response.otp)
+      if (response.status) {
+        // In development, store OTP if available for local verification
+        if (response.otp) {
+          setServerOtp(response.otp)
+        }
 
         toast.success("OTP resent successfully", {
           description: "Please check your email for the new code.",
