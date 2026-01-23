@@ -2,19 +2,8 @@
   command = "pnpm build"
   publish = ".next"
 
+# Essential: Use the Next.js plugin for Netlify
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# Redirect all API routes to Next.js serverless functions
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/___netlify-handler"
-  status = 200
-
-# Environment-specific settings
-[context.production.environment]
-  NEXT_PUBLIC_ENV = "production"
-
-[context.deploy-preview.environment]
-  NEXT_PUBLIC_ENV = "preview"
 
