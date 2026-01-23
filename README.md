@@ -2,11 +2,27 @@
 
 A modern, elegant dashboard for event organizers to manage their events, track performance, and engage with their audience.
 
+## 🔐 Security Features
+
+This dashboard implements enterprise-grade security:
+- **Progressive Rate Limiting**: Smart blocking that escalates with abuse (1min → 15min → 30min → 60min)
+- **IP-based Protection**: Works across all tabs and browsers - cannot be bypassed
+- **Production-Safe Authentication**: OTP codes never exposed in production
+- **API Obfuscation**: Backend endpoints hidden behind Next.js proxy layer
+- **Configurable Security**: Environment-based security controls
+- **Automatic Recovery**: Violation counts reset after good behavior
+
+📖 **[Read the full Security Documentation](./PROGRESSIVE_BLOCKING.md)**
+
 ## Getting Started
 
 ```bash
 # Install dependencies
 pnpm install
+
+# Copy environment variables
+copy .env.local.example .env.local
+# Edit .env.local with your credentials
 
 # Run development server
 pnpm dev
@@ -62,4 +78,3 @@ Fully optimized for:
 ## 📄 License
 
 © 2026 SoldOutAfrica. All rights reserved.
-

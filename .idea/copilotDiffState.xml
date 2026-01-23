@@ -3,22 +3,6 @@
   <component name="CopilotDiffPersistence">
     <option name="pendingDiffs">
       <map>
-        <entry key="$PROJECT_DIR$/../../../../../../src/app/api/tickets/lookup/route.ts">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/../../../../../../src/app/api/tickets/lookup/route.ts" />
-              <option name="updatedContent" value="import { NextRequest, NextResponse } from 'next/server'&#10;&#10;export async function POST(request: NextRequest) {&#10;  try {&#10;    const { groupCode, barcode } = await request.json()&#10;&#10;    // TODO: Implement actual lookup logic with your database&#10;    // This is a mock implementation&#10;    const mockResult = {&#10;      groupCode,&#10;      tickets: [&#10;        {&#10;          barcode: barcode || 'VT67PD',&#10;          eventName: 'Sample Event 2024',&#10;          status: 'valid'&#10;        }&#10;      ]&#10;    }&#10;&#10;    return NextResponse.json(mockResult)&#10;  } catch (error) {&#10;    return NextResponse.json(&#10;      { error: 'Failed to lookup ticket' },&#10;      { status: 500 }&#10;    )&#10;  }&#10;}&#10;" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
-        <entry key="$PROJECT_DIR$/../../../../../../src/app/api/tickets/validate/route.ts">
-          <value>
-            <PendingDiffInfo>
-              <option name="filePath" value="$PROJECT_DIR$/../../../../../../src/app/api/tickets/validate/route.ts" />
-              <option name="updatedContent" value="import { NextRequest, NextResponse } from 'next/server'&#10;&#10;export async function POST(request: NextRequest) {&#10;  try {&#10;    const { barcode, groupCode } = await request.json()&#10;&#10;    // TODO: Implement actual validation logic with your database&#10;    // This is a mock implementation&#10;    const mockTicketInfo = {&#10;      status: 'Valid',&#10;      eventName: 'Sample Event 2024',&#10;      ticketCount: 1,&#10;      barcode,&#10;      groupCode,&#10;      validated: true&#10;    }&#10;&#10;    return NextResponse.json(mockTicketInfo)&#10;  } catch (error) {&#10;    return NextResponse.json(&#10;      { error: 'Failed to validate ticket' },&#10;      { status: 500 }&#10;    )&#10;  }&#10;}&#10;" />
-            </PendingDiffInfo>
-          </value>
-        </entry>
         <entry key="$PROJECT_DIR$/../../../../../../src/app/layout.tsx">
           <value>
             <PendingDiffInfo>

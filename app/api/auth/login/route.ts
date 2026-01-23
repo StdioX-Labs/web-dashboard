@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp, getRateLimitConfig } from '@/lib/rate-limiter'
 
 const API_BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 
@@ -7,18 +8,53 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Login API Route
+ * Login API Route with IP-based Rate Limiting
  *
- * Security Note:
- * - In DEVELOPMENT: Returns full API response including OTP and user data (for testing)
- * - In PRODUCTION: Returns only status and message (hides OTP and user data for security)
+ * Security Features:
+ * - IP-based rate limiting (works across tabs and browsers)
+ * - OTP and user data hidden in production (controlled by HIDE_OTP_IN_RESPONSE env var)
+ * - Request logging for security auditing
+ *
+ * Rate Limiting:
+ * - Configurable via environment variables
+ * - Default: 3 requests per 5 minutes
+ * - Block duration: 15 minutes after exceeding limit
  */
 export async function POST(request: NextRequest) {
   try {
+    // Get client IP for rate limiting
+    const clientIp = getClientIp(request)
+    console.log('Login proxy - Client IP:', clientIp)
+
+    // Check rate limit
+    const rateLimitConfig = getRateLimitConfig()
+    const rateLimitResult = checkRateLimit(clientIp, rateLimitConfig)
+
+    // If rate limit exceeded, return 429 response
+    if (!rateLimitResult.allowed) {
+      console.warn(`Login proxy - Rate limit exceeded for IP: ${clientIp}`)
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Too many requests. Please try again later.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
+            'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          }
+        }
+      )
+    }
+
     const body = await request.json()
     const { id, method } = body
 
-    console.log('Login proxy - Received request:', { id, method })
+    console.log('Login proxy - Received request:', { id, method, ip: clientIp, remaining: rateLimitResult.remaining })
 
     if (!id || !method) {
       return NextResponse.json(
@@ -97,18 +133,35 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // In production, hide sensitive data (OTP and user details) for security
-      if (process.env.NODE_ENV === 'production') {
-        console.log('Login proxy - Sensitive data removed from response in production')
-        const sanitizedResponse = {
-          status: data.status || true,
-          message: data.message || 'OTP sent successfully. Please check your email.'
+      // Check if we should hide OTP in production
+      const hideOtpInResponse = process.env.HIDE_OTP_IN_RESPONSE !== 'false'
+
+      // Prepare response data
+      let responseData
+      if (hideOtpInResponse) {
+        // Production mode: Hide OTP and user data
+        console.log('Login proxy - Hiding OTP and user data (production mode)')
+        responseData = {
+          status: data.status,
+          message: data.message || 'Verification code sent successfully. Please check your email.',
         }
-        return NextResponse.json(sanitizedResponse, { status: response.status })
+      } else {
+        // Development mode: Return full response including OTP and user data
+        console.log('Login proxy - Returning full response including OTP and user data (development mode)')
+        responseData = data
       }
 
-      // Return the full response in development mode for testing
-      return NextResponse.json(data, { status: response.status })
+      // Add rate limit headers to response
+      const responseHeaders = {
+        'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+      }
+
+      return NextResponse.json(responseData, {
+        status: response.status,
+        headers: responseHeaders
+      })
     } catch (fetchError) {
       clearTimeout(timeoutId)
 
