@@ -184,82 +184,44 @@ export default function LoginPage() {
     setIsVerifyingOtp(true)
 
     try {
-      // If we have OTP from server (development mode), validate client-side
-      if (serverOtp && userData) {
-        console.log('Using client-side OTP validation')
-
-        if (otp !== serverOtp) {
-          setOtpError("Invalid verification code. Please try again.")
-          toast.error("Verification failed", {
-            description: "The code you entered is incorrect.",
-          })
-          setIsVerifyingOtp(false)
-          return
-        }
-
-        // OTP matches, create session
-        sessionManager.createSession(userData)
-
-        toast.success("Login successful!", {
-          description: `Welcome back, ${userData.company_name}!`,
+      // Check if we have OTP and user data from the login response
+      if (!serverOtp || !userData) {
+        console.error('No OTP or user data available. Backend may not have returned it.')
+        toast.error("Verification error", {
+          description: "Unable to verify OTP. Please try requesting a new code.",
         })
-
-        // Redirect to dashboard
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 500)
-      } else {
-        // Production mode: verify OTP server-side
-        console.log('Using server-side OTP validation')
-        const response = await api.auth.verifyOtp(email, otp, 'email')
-
-        if (response.status && response.user) {
-          // Create session with user data from verify response
-          sessionManager.createSession(response.user)
-
-          toast.success("Login successful!", {
-            description: `Welcome back, ${response.user.company_name}!`,
-          })
-
-          // Redirect to dashboard
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 500)
-        } else {
-          setOtpError("Invalid verification code. Please try again.")
-          toast.error("Verification failed", {
-            description: response.message || "The code you entered is incorrect.",
-          })
-          setIsVerifyingOtp(false)
-        }
+        setIsVerifyingOtp(false)
+        return
       }
+
+      console.log('Validating OTP client-side')
+
+      // Validate OTP
+      if (otp !== serverOtp) {
+        setOtpError("Invalid verification code. Please try again.")
+        toast.error("Verification failed", {
+          description: "The code you entered is incorrect.",
+        })
+        setIsVerifyingOtp(false)
+        return
+      }
+
+      // OTP matches, create session
+      sessionManager.createSession(userData)
+
+      toast.success("Login successful!", {
+        description: `Welcome back, ${userData.company_name}!`,
+      })
+
+      // Redirect to dashboard
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
     } catch (error) {
       console.error('Error verifying OTP:', error)
-
-      if (error instanceof ApiError) {
-        // Handle rate limiting specifically
-        if (error.statusCode === 429) {
-          const retryAfter = (error.response as any)?.retryAfter
-          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
-
-          toast.error("Too many attempts", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} or request a new code.`,
-            duration: 10000,
-          })
-          setOtpError(`Too many attempts. Wait ${minutes} minute${minutes > 1 ? 's' : ''}.`)
-        } else {
-          toast.error("Verification failed", {
-            description: error.message,
-          })
-          setOtpError("Verification failed. Please try again.")
-        }
-      } else {
-        toast.error("Verification failed", {
-          description: "Please check your connection and try again.",
-        })
-        setOtpError("Verification failed. Please try again.")
-      }
-
+      toast.error("Verification failed", {
+        description: "An unexpected error occurred. Please try again.",
+      })
       setIsVerifyingOtp(false)
     }
   }

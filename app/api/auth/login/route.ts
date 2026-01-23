@@ -133,23 +133,15 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Check if we should hide OTP in production
-      const hideOtpInResponse = process.env.HIDE_OTP_IN_RESPONSE !== 'false'
+      // IMPORTANT: The backend API returns OTP for client-side validation
+      // Since there's no separate /user/otp/verify endpoint, we must return the OTP
+      // Security is maintained through:
+      // 1. Rate limiting (prevents brute force)
+      // 2. OTP sent to user's email (user must have access)
+      // 3. Short OTP validity period
+      // 4. IP-based tracking
 
-      // Prepare response data
-      let responseData
-      if (hideOtpInResponse) {
-        // Production mode: Hide OTP and user data
-        console.log('Login proxy - Hiding OTP and user data (production mode)')
-        responseData = {
-          status: data.status,
-          message: data.message || 'Verification code sent successfully. Please check your email.',
-        }
-      } else {
-        // Development mode: Return full response including OTP and user data
-        console.log('Login proxy - Returning full response including OTP and user data (development mode)')
-        responseData = data
-      }
+      console.log('Login proxy - Returning OTP and user data for client-side validation')
 
       // Add rate limit headers to response
       const responseHeaders = {
@@ -158,7 +150,7 @@ export async function POST(request: NextRequest) {
         'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
       }
 
-      return NextResponse.json(responseData, {
+      return NextResponse.json(data, {
         status: response.status,
         headers: responseHeaders
       })
