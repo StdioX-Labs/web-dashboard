@@ -58,25 +58,33 @@ export default function DashboardHome() {
   const [transactionsLoading, setTransactionsLoading] = useState(true)
 
   useEffect(() => {
-    const fetchData = async () => {
+    const user = sessionManager.getUser()
+    if (!user || !user.company_id) {
+      setIsLoading(false)
+      setEventsLoading(false)
+      setTransactionsLoading(false)
+      return
+    }
+
+    setCurrency(user.currency || "KES")
+
+    // Stage 1: Fetch summary (critical data) - loads first to show main dashboard
+    const fetchSummary = async () => {
       try {
-        const user = sessionManager.getUser()
-        if (!user || !user.company_id) {
-          setIsLoading(false)
-          setEventsLoading(false)
-          setTransactionsLoading(false)
-          return
-        }
-
-        setCurrency(user.currency || "KES")
-
-        // Fetch summary
         const summaryResponse = await api.company.getSummary(user.company_id)
         if (summaryResponse.status && summaryResponse.summary) {
           setSummary(summaryResponse.summary)
         }
+      } catch (error) {
+        console.error("Failed to fetch summary:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-        // Fetch events
+    // Stage 2: Fetch upcoming events (background) - loads independently
+    const fetchUpcomingEvents = async () => {
+      try {
         const eventsResponse = await api.company.getEvents()
         if (eventsResponse.events) {
           // Filter events for the current user's company
@@ -93,8 +101,16 @@ export default function DashboardHome() {
 
           setUpcomingEvents(upcoming)
         }
+      } catch (error) {
+        console.error("Failed to fetch events:", error)
+      } finally {
+        setEventsLoading(false)
+      }
+    }
 
-        // Fetch recent transactions
+    // Stage 3: Fetch recent transactions (background) - loads independently
+    const fetchRecentTransactions = async () => {
+      try {
         const transactionsResponse = await api.transactions.fetchDetailed({
           id: user.company_id,
           idType: 'company',
@@ -130,15 +146,16 @@ export default function DashboardHome() {
           setRecentTransactions(transformedTransactions)
         }
       } catch (error) {
-        console.error("Failed to fetch data:", error)
+        console.error("Failed to fetch transactions:", error)
       } finally {
-        setIsLoading(false)
-        setEventsLoading(false)
         setTransactionsLoading(false)
       }
     }
 
-    fetchData()
+    // Execute: Summary first (shows main dashboard), then events and transactions in parallel (background)
+    fetchSummary()
+    fetchUpcomingEvents()
+    fetchRecentTransactions()
   }, [])
 
   const totalRevenue = summary?.totalRevenue || 0
