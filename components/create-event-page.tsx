@@ -61,6 +61,23 @@ export default function CreateEventPage() {
     { id: "1", name: "", price: "", quantity: "", description: "", saleStartDate: undefined, saleEndDate: undefined },
   ])
 
+  // Auto-generate slug from event name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 50) // Limit length
+  }
+
+  const handleEventNameChange = (name: string) => {
+    setEventName(name)
+    // Auto-generate slug if it's empty or matches the previous auto-generated value
+    if (!slug || slug === generateSlug(eventName)) {
+      setSlug(generateSlug(name))
+    }
+  }
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -130,6 +147,20 @@ export default function CreateEventPage() {
         return
       }
 
+      // Validate slug
+      if (!slug) {
+        toast.error("Please provide a URL slug for your event")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validate slug format
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        toast.error("Slug can only contain lowercase letters, numbers, and hyphens")
+        setIsSubmitting(false)
+        return
+      }
+
       // Validate sale period
       if (!saleStartDateTime || !saleEndDateTime) {
         toast.error("Please set the ticket sales period")
@@ -144,10 +175,16 @@ export default function CreateEventPage() {
         return
       }
 
-      // Generate slug from event name if not provided
-      const eventSlug = slug || eventName.toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
+      // Validate at least one ticket type
+      const validTickets = ticketTypes.filter(
+        (ticket) => ticket.name && ticket.price && ticket.quantity
+      )
+
+      if (validTickets.length === 0) {
+        toast.error("Please add at least one valid ticket type")
+        setIsSubmitting(false)
+        return
+      }
 
       // Step 1: Upload image to Contabo
       setIsUploading(true)
@@ -176,7 +213,7 @@ export default function CreateEventPage() {
         percentageComission: parseFloat(commission),
         users: { id: user.user_id },
         company: { id: user.company_id },
-        slug: eventSlug,
+        slug: slug,
         currency: currency,
       })
 
@@ -356,11 +393,37 @@ export default function CreateEventPage() {
               <input
                 type="text"
                 value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
+                onChange={(e) => handleEventNameChange(e.target.value)}
                 placeholder="e.g., Summer Music Festival 2026"
                 className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
                 required
               />
+            </div>
+
+            {/* Event Slug */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Event URL Slug <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                placeholder="e.g., summer-music-festival-2026"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all font-mono"
+                required
+              />
+              <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
+                <p className="text-xs text-blue-800 dark:text-blue-300">
+                  <span className="font-semibold">Your event will be accessible at:</span><br />
+                  <span className="font-mono text-blue-600 dark:text-blue-400">
+                    https://soldoutafrica.com/{slug || 'your-event-slug'}
+                  </span>
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                  Use only lowercase letters, numbers, and hyphens. This will be your event&apos;s unique URL.
+                </p>
+              </div>
             </div>
 
             {/* Category */}

@@ -24,6 +24,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Share2,
+  ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -648,6 +652,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [addTicketSaleStart, setAddTicketSaleStart] = useState<Date | undefined>(undefined)
   const [addTicketSaleEnd, setAddTicketSaleEnd] = useState<Date | undefined>(undefined)
 
+  // Share state
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
+
   // Pagination state
   const [transactionsPage, setTransactionsPage] = useState(1)
   const [attendeesPage, setAttendeesPage] = useState(1)
@@ -722,6 +730,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 totalTicketsSold: calculatedTicketsSold,
                 eventStartDate: foundActiveEvent.eventStartDate,
                 eventEndDate: foundActiveEvent.eventEndDate,
+                slug: foundActiveEvent.slug,
               }
               setEventData(transformedEvent)
               setIsLoading(false)
@@ -767,6 +776,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               totalTicketsSold: foundEvent.totalTicketsSold || 0,
               eventStartDate: foundEvent.eventStartDate,
               eventEndDate: foundEvent.eventEndDate,
+              slug: foundEvent.slug,
             }
             setEventData(transformedEvent)
           }
@@ -2451,6 +2461,59 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>Edit Event</span>
               </Link>
+
+              {/* View Event Button */}
+              {eventData.slug && (
+                <button
+                  onClick={() => window.open(`https://soldoutafrica.com/${eventData.slug}`, '_blank')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-200 dark:hover:bg-blue-950/50 transition-all cursor-pointer border border-blue-200 dark:border-blue-900"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="hidden sm:inline">View Event</span>
+                </button>
+              )}
+
+              {/* Share Event Button */}
+              {eventData.slug && (
+                <button
+                  onClick={async () => {
+                    const url = `https://soldoutafrica.com/${eventData.slug}`
+                    const shareData = {
+                      title: eventData.name,
+                      text: `Check out ${eventData.name} on SoldOut Africa!`,
+                      url: url
+                    }
+
+                    try {
+                      // Check if Web Share API is supported
+                      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                        await navigator.share(shareData)
+                        toast.success("Event shared successfully!")
+                      } else {
+                        // Fallback to clipboard
+                        await navigator.clipboard.writeText(url)
+                        toast.success("Event link copied to clipboard!")
+                      }
+                    } catch (error) {
+                      // If share was cancelled or failed, try clipboard as fallback
+                      if (error instanceof Error && error.name === 'AbortError') {
+                        // User cancelled the share, no need to show error
+                        return
+                      }
+                      try {
+                        await navigator.clipboard.writeText(url)
+                        toast.success("Event link copied to clipboard!")
+                      } catch (clipboardError) {
+                        toast.error("Failed to share event")
+                      }
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-semibold hover:bg-green-200 dark:hover:bg-green-950/50 transition-all cursor-pointer border border-green-200 dark:border-green-900"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Share</span>
+                </button>
+              )}
             </div>
           )}
         </div>
