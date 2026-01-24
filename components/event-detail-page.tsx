@@ -611,6 +611,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     totalTicketsSold: number
     eventStartDate: string
     eventEndDate: string
+    slug?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currency, setCurrency] = useState("KES")
