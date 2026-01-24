@@ -275,258 +275,6 @@ const ticketTypesData: { [key: number]: TicketType[] } = {
   ],
 }
 
-const transactions = [
-  {
-    id: "TXN001",
-    buyer: "John Doe",
-    email: "john@example.com",
-    ticketType: "VIP Pass",
-    quantity: 2,
-    amount: 10000,
-    date: "2026-01-05 14:30",
-    status: "completed",
-  },
-  {
-    id: "TXN002",
-    buyer: "Jane Smith",
-    email: "jane@example.com",
-    ticketType: "General Admission",
-    quantity: 4,
-    amount: 8000,
-    date: "2026-01-05 12:15",
-    status: "completed",
-  },
-  {
-    id: "TXN003",
-    buyer: "Mike Johnson",
-    email: "mike@example.com",
-    ticketType: "VIP Pass",
-    quantity: 1,
-    amount: 5000,
-    date: "2026-01-04 18:45",
-    status: "pending",
-  },
-  {
-    id: "TXN004",
-    buyer: "Sarah Williams",
-    email: "sarah@example.com",
-    ticketType: "General Admission",
-    quantity: 2,
-    amount: 4000,
-    date: "2026-01-04 10:20",
-    status: "completed",
-  },
-  {
-    id: "TXN005",
-    buyer: "David Brown",
-    email: "david@example.com",
-    ticketType: "VIP Pass",
-    quantity: 3,
-    amount: 15000,
-    date: "2026-01-03 16:30",
-    status: "completed",
-  },
-  {
-    id: "TXN006",
-    buyer: "Emily Davis",
-    email: "emily@example.com",
-    ticketType: "General Admission",
-    quantity: 1,
-    amount: 2000,
-    date: "2026-01-03 14:20",
-    status: "completed",
-  },
-  {
-    id: "TXN007",
-    buyer: "Robert Wilson",
-    email: "robert@example.com",
-    ticketType: "VIP Pass",
-    quantity: 2,
-    amount: 10000,
-    date: "2026-01-03 09:45",
-    status: "pending",
-  },
-  {
-    id: "TXN008",
-    buyer: "Lisa Anderson",
-    email: "lisa@example.com",
-    ticketType: "General Admission",
-    quantity: 5,
-    amount: 10000,
-    date: "2026-01-02 20:15",
-    status: "completed",
-  },
-  {
-    id: "TXN009",
-    buyer: "James Taylor",
-    email: "james@example.com",
-    ticketType: "VIP Pass",
-    quantity: 1,
-    amount: 5000,
-    date: "2026-01-02 18:30",
-    status: "completed",
-  },
-  {
-    id: "TXN010",
-    buyer: "Mary Thomas",
-    email: "mary@example.com",
-    ticketType: "General Admission",
-    quantity: 3,
-    amount: 6000,
-    date: "2026-01-02 15:45",
-    status: "completed",
-  },
-  {
-    id: "TXN011",
-    buyer: "William Moore",
-    email: "william@example.com",
-    ticketType: "VIP Pass",
-    quantity: 2,
-    amount: 10000,
-    date: "2026-01-02 11:20",
-    status: "pending",
-  },
-  {
-    id: "TXN012",
-    buyer: "Patricia Martin",
-    email: "patricia@example.com",
-    ticketType: "General Admission",
-    quantity: 2,
-    amount: 4000,
-    date: "2026-01-01 19:30",
-    status: "completed",
-  },
-  {
-    id: "TXN013",
-    buyer: "Richard Jackson",
-    email: "richard@example.com",
-    ticketType: "VIP Pass",
-    quantity: 1,
-    amount: 5000,
-    date: "2026-01-01 16:45",
-    status: "completed",
-  },
-  {
-    id: "TXN014",
-    buyer: "Jennifer White",
-    email: "jennifer@example.com",
-    ticketType: "General Admission",
-    quantity: 4,
-    amount: 8000,
-    date: "2026-01-01 14:10",
-    status: "completed",
-  },
-  {
-    id: "TXN015",
-    buyer: "Thomas Harris",
-    email: "thomas@example.com",
-    ticketType: "VIP Pass",
-    quantity: 3,
-    amount: 15000,
-    date: "2025-12-31 22:30",
-    status: "completed",
-  },
-  {
-    id: "TXN016",
-    buyer: "Linda Clark",
-    email: "linda@example.com",
-    ticketType: "General Admission",
-    quantity: 1,
-    amount: 2000,
-    date: "2025-12-31 20:15",
-    status: "pending",
-  },
-  {
-    id: "TXN017",
-    buyer: "Charles Lewis",
-    email: "charles@example.com",
-    ticketType: "VIP Pass",
-    quantity: 2,
-    amount: 10000,
-    date: "2025-12-31 18:45",
-    status: "completed",
-  },
-  {
-    id: "TXN018",
-    buyer: "Barbara Walker",
-    email: "barbara@example.com",
-    ticketType: "General Admission",
-    quantity: 6,
-    amount: 12000,
-    date: "2025-12-31 15:30",
-    status: "completed",
-  },
-  {
-    id: "TXN019",
-    buyer: "Christopher Hall",
-    email: "christopher@example.com",
-    ticketType: "VIP Pass",
-    quantity: 1,
-    amount: 5000,
-    date: "2025-12-30 21:20",
-    status: "completed",
-  },
-  {
-    id: "TXN020",
-    buyer: "Susan Allen",
-    email: "susan@example.com",
-    ticketType: "General Admission",
-    quantity: 2,
-    amount: 4000,
-    date: "2025-12-30 19:45",
-    status: "pending",
-  },
-  {
-    id: "TXN021",
-    buyer: "Daniel Young",
-    email: "daniel@example.com",
-    ticketType: "VIP Pass",
-    quantity: 4,
-    amount: 20000,
-    date: "2025-12-30 17:10",
-    status: "completed",
-  },
-  {
-    id: "TXN022",
-    buyer: "Jessica King",
-    email: "jessica@example.com",
-    ticketType: "General Admission",
-    quantity: 3,
-    amount: 6000,
-    date: "2025-12-30 14:30",
-    status: "completed",
-  },
-  {
-    id: "TXN023",
-    buyer: "Matthew Wright",
-    email: "matthew@example.com",
-    ticketType: "VIP Pass",
-    quantity: 1,
-    amount: 5000,
-    date: "2025-12-29 20:15",
-    status: "completed",
-  },
-  {
-    id: "TXN024",
-    buyer: "Nancy Lopez",
-    email: "nancy@example.com",
-    ticketType: "General Admission",
-    quantity: 5,
-    amount: 10000,
-    date: "2025-12-29 18:45",
-    status: "pending",
-  },
-  {
-    id: "TXN025",
-    buyer: "Anthony Hill",
-    email: "anthony@example.com",
-    ticketType: "VIP Pass",
-    quantity: 2,
-    amount: 10000,
-    date: "2025-12-29 16:20",
-    status: "completed",
-  },
-]
 
 const attendees = [
   {
@@ -905,6 +653,28 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [attendeesPage, setAttendeesPage] = useState(1)
   const itemsPerPage = 10
 
+  // Transactions state
+  const [transactions, setTransactions] = useState<Array<{
+    id: string
+    buyer: string
+    email: string
+    ticketType: string
+    quantity: number
+    amount: number
+    date: string
+    status: string
+    barcode: string
+    platformFee: number
+  }>>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [transactionsStats, setTransactionsStats] = useState<{
+    ticketsSold: number
+    platformLiability: number
+    totalSales: number
+  } | null>(null)
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1)
+  const [transactionsTotalElements, setTransactionsTotalElements] = useState(0)
+
   // Fetch event data from API
   useEffect(() => {
     const fetchEvent = async () => {
@@ -1011,6 +781,69 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
     fetchEvent()
   }, [eventId])
+
+  // Fetch transactions when transactions tab is active
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      if (activeTab !== 'transactions' || !eventData) return
+
+      setTransactionsLoading(true)
+      try {
+        const response = await api.transactions.fetchDetailed({
+          id: eventId,
+          idType: 'event',
+          transactionType: 'TICKET_SALE',
+          page: transactionsPage - 1, // API uses 0-based indexing
+          size: itemsPerPage,
+        })
+
+        if (response.status && response.data) {
+          // Transform API data to match component format
+          const transformedTransactions = response.data.data.map((txn) => {
+            const buyerName = txn.buyer.firstName && txn.buyer.lastName
+              ? `${txn.buyer.firstName} ${txn.buyer.lastName}`
+              : txn.buyer.firstName || txn.buyer.lastName || 'Unknown'
+
+            return {
+              id: txn.transactionId,
+              buyer: buyerName,
+              email: txn.buyer.email || 'N/A',
+              ticketType: txn.ticket.ticketName,
+              quantity: 1, // Each transaction is for 1 ticket based on API response
+              amount: txn.transactionAmount,
+              date: new Date(txn.createdAt).toLocaleString('en-US', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }).replace(',', ''),
+              status: 'completed', // All fetched transactions are completed
+              barcode: txn.barcode,
+              platformFee: txn.platformFee,
+            }
+          })
+
+          setTransactions(transformedTransactions)
+          setTransactionsTotalPages(response.data.totalPages)
+          setTransactionsTotalElements(response.data.totalElements)
+
+          // Set stats if available
+          if (response.stats) {
+            setTransactionsStats(response.stats)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error)
+        toast.error('Failed to load transactions')
+      } finally {
+        setTransactionsLoading(false)
+      }
+    }
+
+    fetchTransactions()
+  }, [activeTab, transactionsPage, eventId, eventData])
 
   // Get ticket types from event data
   const ticketTypes = eventData?.tickets?.map((ticket: any) => ({
@@ -1325,9 +1158,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   }
 
   // Paginated data
-  const paginatedTransactions = getPaginatedData(transactions, transactionsPage)
+  // Transactions are paginated from API, use state directly
+  const paginatedTransactions = transactions
   const paginatedAttendees = getPaginatedData(attendees, attendeesPage)
-  const transactionsTotalPages = getTotalPages(transactions.length)
+  // Use API-provided total pages for transactions
   const attendeesTotalPages = getTotalPages(attendees.length)
 
   // Export functions
@@ -3006,16 +2840,18 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             transition={{ duration: 0.3 }}
             className="space-y-6"
           >
-            {eventData.status === "pending" || transactions.length === 0 ? (
+            {transactionsLoading ? (
+              <div className="text-center py-16 rounded-2xl border border-dashed border-border bg-card/50">
+                <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Loading transactions...</p>
+              </div>
+            ) : transactions.length === 0 ? (
               <div className="text-center py-16 rounded-2xl border border-dashed border-border bg-card/50">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
                   <Download className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">No Transactions Yet</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  {eventData.status === "pending"
-                    ? "Transactions will appear here once your event is approved and tickets start selling."
-                    : "Transactions will appear here once tickets are sold."}
                 </p>
               </div>
             ) : (
@@ -3145,10 +2981,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 </div>
 
                 {/* Pagination - Bottom Only */}
-                {transactions.length > itemsPerPage && (
+                {transactionsTotalElements > 0 && (
                   <div className="pagination-container">
                     <p className="pagination-info">
-                      Showing <span className="font-semibold text-foreground">{((transactionsPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-foreground">{Math.min(transactionsPage * itemsPerPage, transactions.length)}</span> of <span className="font-semibold text-foreground">{transactions.length}</span> transactions
+                      Showing <span className="font-semibold text-foreground">{((transactionsPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-foreground">{Math.min(transactionsPage * itemsPerPage, transactionsTotalElements)}</span> of <span className="font-semibold text-foreground">{transactionsTotalElements}</span> transactions
                     </p>
                     <div className="pagination-controls">
                       <button
@@ -3159,7 +2995,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: transactionsTotalPages }, (_, i) => i + 1).map((page) => (
+                        {Array.from({ length: Math.min(transactionsTotalPages, 10) }, (_, i) => i + 1).map((page) => (
                           <button
                             key={page}
                             onClick={() => setTransactionsPage(page)}
