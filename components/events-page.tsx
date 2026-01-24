@@ -70,7 +70,7 @@ export default function EventsPage() {
           // Wait for pending request to complete
           const pendingRequest = eventCache.getPendingRequest(cacheKey)
           if (pendingRequest) {
-            const cachedData = await pendingRequest
+            const cachedData = await pendingRequest as { events?: any[] }
             if (cachedData && cachedData.events) {
               // Filter to only this company's events (security)
               const companyEvents = cachedData.events.filter(
