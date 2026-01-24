@@ -326,6 +326,76 @@ export const api = {
 
       return { message: 'No events found', events: [], pagination: undefined }
     },
+    createEvent: async (eventData: {
+      eventName: string
+      eventDescription: string
+      eventPosterUrl: string
+      eventCategory: { id: number }
+      ticketSaleStartDate: string
+      ticketSaleEndDate: string
+      eventLocation: string
+      eventStartDate: string
+      eventEndDate: string
+      percentageComission: number
+      users: { id: number }
+      company: { id: number }
+      slug: string
+      currency: string
+    }) => {
+      return apiRequest<{
+        message: string
+        event_id?: number
+        event?: {
+          id: number
+          eventName: string
+          eventDescription: string
+          eventPosterUrl: string
+          eventLocation: string
+          eventStartDate: string
+          eventEndDate: string
+          ticketSaleStartDate: string
+          ticketSaleEndDate: string
+          slug: string
+          currency: string
+        }
+        status: boolean
+      }>('/event/create', {
+        method: 'POST',
+        body: JSON.stringify(eventData),
+      }, true)
+    },
+    createTicket: async (ticketData: {
+      event: { id: number }
+      ticketName: string
+      ticketPrice: number
+      quantityAvailable: number
+      ticketsToIssue: number
+      ticketLimitPerPerson: number
+      numberOfComplementary: number
+      ticketSaleStartDate: string
+      ticketSaleEndDate: string
+      isFree: boolean
+    }) => {
+      return apiRequest<{
+        message: string
+        ticket: {
+          id: number
+          ticketName: string
+          ticketPrice: number
+          quantityAvailable: number
+          ticketsToIssue: number
+          ticketLimitPerPerson: number
+          numberOfComplementary: number
+          ticketSaleStartDate: string
+          ticketSaleEndDate: string
+          isFree: boolean
+        }
+        status: boolean
+      }>('/event/ticket/create', {
+        method: 'POST',
+        body: JSON.stringify(ticketData),
+      }, true)
+    },
   },
 
   // Transactions endpoints

@@ -12,11 +12,16 @@ import {
   Minus,
   Image as ImageIcon,
   Info,
+  Loader2,
+  Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DateTimePicker, DatePicker, TimePicker } from "@/components/ui/date-time-picker"
+import { api } from "@/lib/api-client"
+import { sessionManager } from "@/lib/session-manager"
+import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
 
 interface TicketType {
   id: string
@@ -32,13 +37,24 @@ export default function CreateEventPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
+  // Step management
+  const [currentStep, setCurrentStep] = useState<'event' | 'tickets' | 'complete'>('event')
+  const [createdEventId, setCreatedEventId] = useState<number | null>(null)
+  const [createdEventName, setCreatedEventName] = useState<string>("")
 
   // Form state
   const [eventName, setEventName] = useState("")
-  const [eventDate, setEventDate] = useState<Date | undefined>(undefined)
+  const [eventStartDate, setEventStartDate] = useState<Date | undefined>(undefined)
+  const [eventEndDate, setEventEndDate] = useState<Date | undefined>(undefined)
   const [venue, setVenue] = useState("")
   const [description, setDescription] = useState("")
-  const [category, setCategory] = useState("")
+  const [category, setCategory] = useState("1")
+  const [commission, setCommission] = useState("5.0")
+  const [slug, setSlug] = useState("")
+  const [currency, setCurrency] = useState("KES")
   const [saleStartDateTime, setSaleStartDateTime] = useState<Date | undefined>(undefined)
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
@@ -48,6 +64,14 @@ export default function CreateEventPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      // Validate file
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        toast.error(validation.error)
+        return
+      }
+
+      setUploadedImageFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
@@ -79,40 +103,186 @@ export default function CreateEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (currentStep === 'event') {
+      await handleCreateEvent()
+    } else if (currentStep === 'tickets') {
+      await handleAddTickets()
+    }
+  }
+
+  const handleCreateEvent = async () => {
     setIsSubmitting(true)
 
-    // Validation
-    if (!eventName || !eventDate || !venue || !description || !category) {
-      toast.error("Please fill in all required fields")
-      setIsSubmitting(false)
-      return
-    }
+    try {
+      // Get user session
+      const user = sessionManager.getUser()
+      if (!user) {
+        toast.error("Please log in to create an event")
+        router.push("/")
+        return
+      }
 
-    // Validate sale period
-    if (!saleStartDateTime || !saleEndDateTime) {
-      toast.error("Please set the ticket sales period")
-      setIsSubmitting(false)
-      return
-    }
+      // Validation
+      if (!eventName || !eventStartDate || !eventEndDate || !venue || !description) {
+        toast.error("Please fill in all required fields")
+        setIsSubmitting(false)
+        return
+      }
 
-    // Validate at least one ticket type
-    const validTickets = ticketTypes.filter(
-      (ticket) => ticket.name && ticket.price && ticket.quantity
-    )
-    if (validTickets.length === 0) {
-      toast.error("Please add at least one valid ticket type")
-      setIsSubmitting(false)
-      return
-    }
+      // Validate sale period
+      if (!saleStartDateTime || !saleEndDateTime) {
+        toast.error("Please set the ticket sales period")
+        setIsSubmitting(false)
+        return
+      }
 
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("Event created successfully!", {
-        description: "Your event has been submitted for review and will be live once approved.",
+      // Validate image
+      if (!uploadedImageFile) {
+        toast.error("Please upload an event poster image")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Generate slug from event name if not provided
+      const eventSlug = slug || eventName.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+
+      // Step 1: Upload image to Contabo
+      setIsUploading(true)
+      toast.info("Uploading event poster...")
+      const uploadResult = await uploadToContabo(uploadedImageFile)
+      setIsUploading(false)
+
+      if (!uploadResult.success || !uploadResult.url) {
+        toast.error(uploadResult.error || "Failed to upload image")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Step 2: Create the event
+      toast.info("Creating event...")
+      const eventResponse = await api.company.createEvent({
+        eventName,
+        eventDescription: description,
+        eventPosterUrl: uploadResult.url,
+        eventCategory: { id: parseInt(category) },
+        ticketSaleStartDate: saleStartDateTime.toISOString(),
+        ticketSaleEndDate: saleEndDateTime.toISOString(),
+        eventLocation: venue,
+        eventStartDate: eventStartDate.toISOString(),
+        eventEndDate: eventEndDate.toISOString(),
+        percentageComission: parseFloat(commission),
+        users: { id: user.user_id },
+        company: { id: user.company_id },
+        slug: eventSlug,
+        currency: currency,
       })
+
+      console.log("Event creation response:", eventResponse)
+
+      if (!eventResponse.status) {
+        throw new Error(eventResponse.message || "Failed to create event")
+      }
+
+      // The API returns event_id instead of event.id
+      const eventId = (eventResponse as any).event_id || eventResponse.event?.id
+
+      if (!eventId) {
+        throw new Error("Event created but no event ID was returned")
+      }
+
+      setCreatedEventId(eventId)
+      setCreatedEventName(eventName)
+      toast.success("✅ Event created successfully!")
+
+      // Move to tickets step
+      setCurrentStep('tickets')
       setIsSubmitting(false)
-      router.push("/dashboard/events")
-    }, 1500)
+    } catch (error) {
+      console.error("Error creating event:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create event. Please try again."
+      )
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleAddTickets = async () => {
+    setIsSubmitting(true)
+
+    try {
+      if (!createdEventId) {
+        toast.error("Event ID is missing")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Validate at least one ticket type
+      const validTickets = ticketTypes.filter(
+        (ticket) => ticket.name && ticket.price && ticket.quantity
+      )
+
+      if (validTickets.length === 0) {
+        toast.error("Please add at least one valid ticket type")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Create tickets one by one
+      toast.info(`Creating ${validTickets.length} ticket type(s)...`)
+      let ticketsCreated = 0
+
+      for (let i = 0; i < validTickets.length; i++) {
+        const ticket = validTickets[i]
+        try {
+          toast.info(`Creating ticket ${i + 1}/${validTickets.length}: ${ticket.name}`)
+
+          await api.company.createTicket({
+            event: { id: createdEventId },
+            ticketName: ticket.name,
+            ticketPrice: parseFloat(ticket.price),
+            quantityAvailable: parseInt(ticket.quantity),
+            ticketsToIssue: 1,
+            ticketLimitPerPerson: 0,
+            numberOfComplementary: 0,
+            ticketSaleStartDate: (ticket.saleStartDate || saleStartDateTime!).toISOString(),
+            ticketSaleEndDate: (ticket.saleEndDate || saleEndDateTime!).toISOString(),
+            isFree: parseFloat(ticket.price) === 0,
+          })
+
+          ticketsCreated++
+          toast.success(`✓ Ticket created: ${ticket.name}`)
+        } catch (ticketError) {
+          console.error(`Error creating ticket "${ticket.name}":`, ticketError)
+          toast.error(`Failed to create ticket: ${ticket.name}`)
+        }
+      }
+
+      if (ticketsCreated === 0) {
+        toast.warning("No tickets were added. You can add tickets later from the event page.")
+      } else if (ticketsCreated < validTickets.length) {
+        toast.warning(`${ticketsCreated}/${validTickets.length} ticket type(s) created. Some tickets failed.`)
+      } else {
+        toast.success(`🎉 All done! ${ticketsCreated} ticket type(s) created successfully!`)
+      }
+
+      // Move to complete step
+      setCurrentStep('complete')
+      setIsSubmitting(false)
+
+      // Redirect after a moment
+      setTimeout(() => {
+        router.push("/dashboard/events")
+      }, 2000)
+    } catch (error) {
+      console.error("Error adding tickets:", error)
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add tickets. Please try again."
+      )
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -128,11 +298,47 @@ export default function CreateEventPage() {
         </Link>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Create New Event</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-2">
-          Fill in the details below to create your event. It will be reviewed before going live.
+          {currentStep === 'event' && "Step 1: Fill in the event details"}
+          {currentStep === 'tickets' && `Step 2: Add tickets for "${createdEventName}"`}
+          {currentStep === 'complete' && "Event created successfully!"}
         </p>
       </div>
 
+      {/* Progress Indicator */}
+      <div className="mb-8">
+        <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+              currentStep === 'event' ? 'bg-[#8b5cf6] text-white' : 'bg-green-500 text-white'
+            }`}>
+              {currentStep === 'event' ? '1' : <Check className="w-5 h-5" />}
+            </div>
+            <span className={`text-sm font-medium ${currentStep === 'event' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Event Details
+            </span>
+          </div>
+          <div className={`h-0.5 w-16 sm:w-24 transition-all ${
+            currentStep === 'event' ? 'bg-border' : 'bg-[#8b5cf6]'
+          }`} />
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
+              currentStep === 'event' ? 'bg-border text-muted-foreground' : 
+              currentStep === 'tickets' ? 'bg-[#8b5cf6] text-white' : 
+              'bg-green-500 text-white'
+            }`}>
+              {currentStep === 'complete' ? <Check className="w-5 h-5" /> : '2'}
+            </div>
+            <span className={`text-sm font-medium ${currentStep === 'tickets' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              Add Tickets
+            </span>
+          </div>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Step 1: Event Details */}
+        {currentStep === 'event' && (
+          <>
         {/* Event Details Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -169,26 +375,49 @@ export default function CreateEventPage() {
                 required
               >
                 <option value="">Select a category</option>
-                <option value="music">Music & Concerts</option>
-                <option value="sports">Sports & Fitness</option>
-                <option value="food">Food & Drink</option>
-                <option value="arts">Arts & Culture</option>
-                <option value="business">Business & Networking</option>
-                <option value="tech">Technology</option>
-                <option value="education">Education</option>
-                <option value="other">Other</option>
+                <option value="1">Music Events</option>
+                <option value="2">Sports Events</option>
+                <option value="3">Cultural & Community Events</option>
+                <option value="4">Business & Networking Events</option>
+                <option value="5">Entertainment & Arts</option>
+                <option value="6">Food & Drink Events</option>
+                <option value="7">Workshops & Training</option>
+                <option value="8">Family & Kids</option>
+                <option value="9">Conventions & Expos</option>
+                <option value="10">Virtual & Online Events</option>
+                <option value="11">Health & Wellness Events</option>
+                <option value="12">Fashion & Beauty</option>
+                <option value="13">Nightlife & Social Events</option>
+                <option value="14">Academic & Educational Events</option>
+                <option value="15">Private Events</option>
+                <option value="16">Seasonal & Holiday Events</option>
+                <option value="17">Adventure & Outdoor Events</option>
+                <option value="18">Fundraisers & Charity Events</option>
+                <option value="19">Professional Competitions</option>
               </select>
             </div>
 
-            {/* Date and Time */}
+            {/* Event Start Date & Time */}
             <div>
               <label className="text-sm font-medium mb-2 block">
-                Event Date & Time <span className="text-red-500">*</span>
+                Event Start Date & Time <span className="text-red-500">*</span>
               </label>
               <DateTimePicker
-                selected={eventDate}
-                onChange={(date) => setEventDate(date)}
-                placeholderText="Select event date and time"
+                selected={eventStartDate}
+                onChange={(date) => setEventStartDate(date)}
+                placeholderText="Select event start date and time"
+              />
+            </div>
+
+            {/* Event End Date & Time */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Event End Date & Time <span className="text-red-500">*</span>
+              </label>
+              <DateTimePicker
+                selected={eventEndDate}
+                onChange={(date) => setEventEndDate(date)}
+                placeholderText="Select event end date and time"
               />
             </div>
 
@@ -241,7 +470,6 @@ export default function CreateEventPage() {
                     selected={saleStartDateTime}
                     onChange={(date) => setSaleStartDateTime(date)}
                     placeholderText="Select start date & time"
-                    maxDate={eventDate}
                   />
                 </div>
                 <div>
@@ -250,8 +478,6 @@ export default function CreateEventPage() {
                     selected={saleEndDateTime}
                     onChange={(date) => setSaleEndDateTime(date)}
                     placeholderText="Select end date & time"
-                    minDate={saleStartDateTime}
-                    maxDate={eventDate}
                   />
                 </div>
               </div>
@@ -262,28 +488,54 @@ export default function CreateEventPage() {
 
             {/* Event Image */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Event Image</label>
+              <label className="text-sm font-medium mb-2 block">
+                Event Poster <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 {imagePreview ? (
-                  <div className="relative w-full h-64 rounded-xl overflow-hidden border border-border">
-                    <img
-                      src={imagePreview}
-                      alt="Event preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImagePreview(null)}
-                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                  <div className="space-y-3">
+                    <div className="relative w-full rounded-xl overflow-hidden border-2 border-[#8b5cf6] bg-black">
+                      <img
+                        src={imagePreview}
+                        alt="Event poster preview"
+                        className="w-full h-auto object-contain max-h-[600px]"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview(null)
+                          setUploadedImageFile(null)
+                        }}
+                        className="flex-1 px-4 py-2 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-950/50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <X className="w-4 h-4" />
+                        Remove Image
+                      </button>
+                      <label className="flex-1 px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 transition-colors cursor-pointer text-center flex items-center justify-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        Change Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      ✓ Your poster will be displayed exactly as shown above
+                    </p>
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center w-full h-64 rounded-xl border-2 border-dashed border-border hover:border-[#8b5cf6] transition-colors cursor-pointer bg-secondary/30">
                     <ImageIcon className="w-12 h-12 text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium mb-1">Click to upload image</p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                    <p className="text-sm font-medium mb-1">Click to upload event poster</p>
+                    <p className="text-xs text-muted-foreground">PNG, JPG, WebP up to 10MB</p>
+                    <p className="text-xs text-muted-foreground mt-2 px-4 text-center">
+                      Recommended: 1080x1080px or 1920x1080px
+                    </p>
                     <input
                       type="file"
                       accept="image/*"
@@ -297,11 +549,38 @@ export default function CreateEventPage() {
           </div>
         </motion.div>
 
+        {/* Form Actions for Event Step */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-3 pt-4"
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/events")}
+            className="flex-1 sm:flex-none px-6 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Creating Event..." : "Create Event & Continue"}
+          </button>
+        </motion.div>
+        </>
+        )}
+
+        {/* Step 2: Add Tickets */}
+        {currentStep === 'tickets' && (
+          <>
         {/* Ticket Types Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
           className="rounded-2xl border border-border bg-card p-4 sm:p-6"
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
@@ -422,7 +701,6 @@ export default function CreateEventPage() {
                           selected={ticket.saleEndDate}
                           onChange={(date) => updateTicketType(ticket.id, "saleEndDate", date)}
                           placeholderText="Select end date & time"
-                          minDate={ticket.saleStartDate}
                           className="h-9 text-xs"
                         />
                       </div>
@@ -455,16 +733,40 @@ export default function CreateEventPage() {
             onClick={() => router.push("/dashboard/events")}
             className="flex-1 sm:flex-none px-6 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
           >
-            Cancel
+            Skip & Finish
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
             className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Creating Event..." : "Create Event"}
+            {isSubmitting ? "Adding Tickets..." : "Add Tickets & Complete"}
           </button>
         </motion.div>
+        </>
+        )}
+
+        {/* Step 3: Complete */}
+        {currentStep === 'complete' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-2xl border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/20 p-8 text-center"
+          >
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Event Created Successfully!</h2>
+            <p className="text-muted-foreground mb-6">
+              Your event &ldquo;{createdEventName}&rdquo; is now live and ready for ticket sales.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Redirecting you to events page...
+            </p>
+          </motion.div>
+        )}
       </form>
     </div>
   )
