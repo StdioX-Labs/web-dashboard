@@ -1164,6 +1164,27 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   // Use API-provided total pages for transactions
   const attendeesTotalPages = getTotalPages(attendees.length)
 
+  // Helper function to check if event is past or inactive
+  const isEventPastOrInactive = () => {
+    if (!eventData) return false
+
+    // Check if event status is inactive
+    if (eventData.status === 'inactive' || eventData.status === 'cancelled') {
+      return true
+    }
+
+    // Check if event date has passed
+    if (eventData.eventEndDate) {
+      const eventEndDate = new Date(eventData.eventEndDate)
+      const now = new Date()
+      if (eventEndDate < now) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   // Export functions
   // Export functions - Professional PDF reports using /report page
   const exportTransactionsToPDF = () => {
@@ -2406,7 +2427,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               </div>
             </div>
           </div>
-          {eventData.status !== "pending" && (
+          {eventData.status !== "pending" && !isEventPastOrInactive() && (
             <div className="flex flex-wrap gap-2 sm:gap-3">
               {eventSuspended ? (
                 <button
@@ -2727,22 +2748,24 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             {/* Ticket Types Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-bold">Ticket Types</h2>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleAddTicket}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Ticket
-                </button>
-                <button
-                  onClick={() => setShowComplementaryModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
-                >
-                  <Gift className="w-4 h-4" />
-                  Issue Comp Ticket
-                </button>
-              </div>
+              {!isEventPastOrInactive() && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleAddTicket}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Ticket
+                  </button>
+                  <button
+                    onClick={() => setShowComplementaryModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
+                  >
+                    <Gift className="w-4 h-4" />
+                    Issue Comp Ticket
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Ticket Cards */}
@@ -2807,20 +2830,24 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {suspendedTickets.includes(ticket.id) ? (
-                          <button
-                            onClick={() => handleActivateClick("ticket", ticket.id)}
-                            className="px-3 py-1.5 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium hover:bg-green-200 dark:hover:bg-green-950/50 transition-colors cursor-pointer border border-green-200 dark:border-green-900"
-                          >
-                            Activate Sales
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleSuspendClick("ticket", ticket.id)}
-                            className="px-3 py-1.5 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-950/50 transition-colors cursor-pointer border border-red-200 dark:border-red-900"
-                          >
-                            Suspend Sales
-                          </button>
+                        {!isEventPastOrInactive() && (
+                          <>
+                            {suspendedTickets.includes(ticket.id) ? (
+                              <button
+                                onClick={() => handleActivateClick("ticket", ticket.id)}
+                                className="px-3 py-1.5 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium hover:bg-green-200 dark:hover:bg-green-950/50 transition-colors cursor-pointer border border-green-200 dark:border-green-900"
+                              >
+                                Activate Sales
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleSuspendClick("ticket", ticket.id)}
+                                className="px-3 py-1.5 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-950/50 transition-colors cursor-pointer border border-red-200 dark:border-red-900"
+                              >
+                                Suspend Sales
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
