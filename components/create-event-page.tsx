@@ -29,6 +29,8 @@ interface TicketType {
   price: string
   quantity: string
   description: string
+  complementary: string
+  ticketsToIssue: string
   saleStartDate: Date | undefined
   saleEndDate: Date | undefined
 }
@@ -58,7 +60,7 @@ export default function CreateEventPage() {
   const [saleStartDateTime, setSaleStartDateTime] = useState<Date | undefined>(undefined)
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
-    { id: "1", name: "", price: "", quantity: "", description: "", saleStartDate: undefined, saleEndDate: undefined },
+    { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", saleStartDate: undefined, saleEndDate: undefined },
   ])
 
   // Auto-generate slug from event name
@@ -100,7 +102,7 @@ export default function CreateEventPage() {
   const addTicketType = () => {
     setTicketTypes([
       ...ticketTypes,
-      { id: Date.now().toString(), name: "", price: "", quantity: "", description: "", saleStartDate: undefined, saleEndDate: undefined },
+      { id: Date.now().toString(), name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", saleStartDate: undefined, saleEndDate: undefined },
     ])
   }
 
@@ -175,16 +177,6 @@ export default function CreateEventPage() {
         return
       }
 
-      // Validate at least one ticket type
-      const validTickets = ticketTypes.filter(
-        (ticket) => ticket.name && ticket.price && ticket.quantity
-      )
-
-      if (validTickets.length === 0) {
-        toast.error("Please add at least one valid ticket type")
-        setIsSubmitting(false)
-        return
-      }
 
       // Step 1: Upload image to Contabo
       setIsUploading(true)
@@ -281,9 +273,9 @@ export default function CreateEventPage() {
             ticketName: ticket.name,
             ticketPrice: parseFloat(ticket.price),
             quantityAvailable: parseInt(ticket.quantity),
-            ticketsToIssue: 1,
+            ticketsToIssue: parseInt(ticket.ticketsToIssue || "1"),
             ticketLimitPerPerson: 0,
-            numberOfComplementary: 0,
+            numberOfComplementary: parseInt(ticket.complementary || "0"),
             ticketSaleStartDate: (ticket.saleStartDate || saleStartDateTime!).toISOString(),
             ticketSaleEndDate: (ticket.saleEndDate || saleEndDateTime!).toISOString(),
             isFree: parseFloat(ticket.price) === 0,
@@ -482,6 +474,22 @@ export default function CreateEventPage() {
                 onChange={(date) => setEventEndDate(date)}
                 placeholderText="Select event end date and time"
               />
+            </div>
+
+            {/* Currency */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Currency <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                required
+              >
+                <option value="KES">KES - Kenyan Shilling</option>
+                <option value="USD">USD - US Dollar</option>
+              </select>
             </div>
 
             {/* Venue */}
@@ -697,7 +705,7 @@ export default function CreateEventPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium mb-1.5 block">
-                        Price (KES) <span className="text-red-500">*</span>
+                        Price ({currency}) <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
@@ -707,6 +715,7 @@ export default function CreateEventPage() {
                         }
                         placeholder="e.g., 2500"
                         min="0"
+                        step="0.01"
                         className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                       />
                     </div>
@@ -726,6 +735,41 @@ export default function CreateEventPage() {
                         min="1"
                         className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                       />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1.5 block">
+                        Complementary Tickets
+                      </label>
+                      <input
+                        type="number"
+                        value={ticket.complementary}
+                        onChange={(e) =>
+                          updateTicketType(ticket.id, "complementary", e.target.value)
+                        }
+                        placeholder="e.g., 10"
+                        min="0"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium mb-1.5 block">
+                        Tickets To Issue
+                      </label>
+                      <input
+                        type="number"
+                        value={ticket.ticketsToIssue}
+                        onChange={(e) =>
+                          updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
+                        }
+                        placeholder="e.g., 1"
+                        min="1"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Number of tickets issued per purchase
+                      </p>
                     </div>
                   </div>
                   <div>
