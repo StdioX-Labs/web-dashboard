@@ -223,6 +223,109 @@ export const api = {
         method: 'GET',
       }, true) // Use proxy route
     },
+    getAllEvents: async (companyId: number, page: number = 0, size: number = 300) => {
+      const response = await apiRequest<{
+        data: {
+          data: Array<{
+            eventId: number
+            eventName: string
+            slug: string
+            eventDescription: string
+            eventPosterUrl: string
+            eventCategory: string
+            eventLocation: string
+            ticketSaleStartDate: string
+            ticketSaleEndDate: string
+            eventStartDate: string
+            eventEndDate: string
+            active: boolean
+            status: string
+            companyId: number
+            companyName: string
+            totalTicketsSold: number
+            totalRevenue: number
+            totalPlatformFee: number
+            ticketSummaries: Array<{
+              ticketId: number
+              ticketName: string
+              ticketPrice: number
+              quantityAvailable: number
+              soldQuantity: number
+              uniqueTicketCount: number
+              ticketStatus: string
+            }>
+          }>
+          page?: number
+          size?: number
+          totalElements?: number
+          totalPages?: number
+        }
+      }>(`/admin/events/all?page=${page}&size=${size}&companyId=${companyId}`, {
+        method: 'GET',
+      }, true)
+
+      // Normalize the data to match the expected Event interface
+      if (response.data && response.data.data) {
+        const normalizedEvents = response.data.data.map(event => ({
+          id: event.eventId,
+          eventName: event.eventName,
+          eventDescription: event.eventDescription,
+          eventPosterUrl: event.eventPosterUrl,
+          eventCategoryId: 0,
+          ticketSaleStartDate: event.ticketSaleStartDate,
+          ticketSaleEndDate: event.ticketSaleEndDate,
+          eventLocation: event.eventLocation,
+          eventStartDate: event.eventStartDate,
+          eventEndDate: event.eventEndDate,
+          isActive: event.active,
+          tickets: event.ticketSummaries?.map(ticket => ({
+            id: ticket.ticketId,
+            ticketName: ticket.ticketName,
+            ticketPrice: ticket.ticketPrice,
+            // Use uniqueTicketCount as soldQuantity (this is the actual sold count)
+            quantityAvailable: 0,
+            soldQuantity: ticket.uniqueTicketCount || 0,
+            isActive: ticket.ticketStatus === 'ACTIVE',
+            ticketsToIssue: 1,
+            isSoldOut: false,
+            ticketLimitPerPerson: 0,
+            numberOfComplementary: 0,
+            ticketSaleStartDate: event.ticketSaleStartDate,
+            ticketSaleEndDate: event.ticketSaleEndDate,
+            isFree: ticket.ticketPrice === 0,
+            ticketStatus: ticket.ticketStatus || 'ACTIVE',
+            createAt: new Date().toISOString(),
+          })) || [],
+          createdById: 0,
+          companyId: event.companyId,
+          companyName: event.companyName,
+          comission: 0,
+          category: event.eventCategory,
+          date: event.eventStartDate,
+          time: new Date(event.eventStartDate).toLocaleTimeString(),
+          isFeatured: false,
+          price: event.ticketSummaries?.[0]?.ticketPrice || 0,
+          slug: event.slug,
+          currency: 'KES',
+          // Add the actual totals from event level
+          totalTicketsSold: event.totalTicketsSold,
+          totalRevenue: event.totalRevenue,
+        }))
+
+        return {
+          message: 'Events fetched successfully',
+          events: normalizedEvents,
+          pagination: response.data.page !== undefined ? {
+            page: response.data.page,
+            size: response.data.size || size,
+            totalElements: response.data.totalElements || normalizedEvents.length,
+            totalPages: response.data.totalPages || 1,
+          } : undefined,
+        }
+      }
+
+      return { message: 'No events found', events: [], pagination: undefined }
+    },
   },
 
   // Transactions endpoints
