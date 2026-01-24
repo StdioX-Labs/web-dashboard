@@ -1,78 +1,185 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Search, TrendingUp } from "lucide-react"
+import { Search, TrendingUp, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { api } from "@/lib/api-client"
+import { sessionManager } from "@/lib/session-manager"
 
-// Mock data - replace with actual data from API
-// Generate more transactions for realistic pagination testing
-const generateMockTransactions = () => {
-  const events = ["Nura Fest 2026", "Tech Summit Nairobi", "Jazz Night Live", "Art Exhibition", "Summer Music Festival", "Food & Wine Expo", "Tech Conference 2026", "Business Workshop", "Charity Gala", "Sports Tournament"]
-  const buyers = ["John Doe", "Jane Smith", "Mike Johnson", "Sarah Williams", "David Brown", "Emily Davis", "Robert Wilson", "Lisa Anderson", "James Taylor", "Mary Thomas", "William Moore", "Patricia Martin", "Richard Jackson", "Jennifer White", "Thomas Harris"]
-  const ticketTypes = ["VIP Pass", "General Admission", "Early Bird", "Premium", "Standard", "Student"]
-  const statuses: ("completed" | "pending")[] = ["completed", "completed", "completed", "pending"]
-
-  const transactions = []
-  for (let i = 1; i <= 50; i++) {
-    const randomEvent = events[Math.floor(Math.random() * events.length)]
-    const randomBuyer = buyers[Math.floor(Math.random() * buyers.length)]
-    const randomTicketType = ticketTypes[Math.floor(Math.random() * ticketTypes.length)]
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)]
-    const randomAmount = Math.floor(Math.random() * 25000) + 5000
-    const randomDaysAgo = Math.floor(Math.random() * 60)
-    const date = new Date()
-    date.setDate(date.getDate() - randomDaysAgo)
-
-    transactions.push({
-      id: `TXN-${String(i).padStart(3, '0')}`,
-      event: randomEvent,
-      buyer: randomBuyer,
-      email: `${randomBuyer.toLowerCase().replace(' ', '.')}@example.com`,
-      amount: randomAmount,
-      date: date.toISOString().split('T')[0],
-      status: randomStatus,
-      ticketType: randomTicketType
-    })
+interface Transaction {
+  id: number
+  companyId: number
+  event: {
+    id: number
+    eventName: string
+    currency: string
   }
-
-  return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  ticket: {
+    id: number
+    ticketName: string
+    ticketPrice: number
+  }
+  buyer: {
+    id: number
+    email: string | null
+    mobileNumber: string
+    firstName: string | null
+    lastName: string | null
+    createdAt: string
+  }
+  barcode: string
+  transactionId: string
+  transactionType: string
+  transactionAmount: number
+  platformFee: number
+  createdAt: string
 }
 
-const allTransactions = generateMockTransactions()
+interface TransactionDisplay {
+  id: number
+  amount: number
+  currency: string
+  status: string
+  createdAt: string
+  eventName: string
+  ticketName: string
+  quantity: number
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  reference: string
+  barcode: string
+  platformFee: number
+}
+
+interface PaginationInfo {
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+interface TransactionStats {
+  ticketsSold: number
+  platformLiability: number
+  totalSales: number
+}
 
 export default function TransactionsPage() {
+  const [transactions, setTransactions] = useState<TransactionDisplay[]>([])
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0,
+  })
+  const [stats, setStats] = useState<TransactionStats>({
+    ticketsSold: 0,
+    platformLiability: 0,
+    totalSales: 0,
+  })
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending">("all")
+  const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "success" | "failed">("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10 // Fixed at 10 items per page
+  const [currency, setCurrency] = useState("KES")
+
+  // Fetch transactions
+  const fetchTransactions = async (page: number = 0) => {
+    try {
+      setIsLoading(true)
+      const user = sessionManager.getUser()
+
+      if (!user || !user.company_id) {
+        return
+      }
+
+      setCurrency(user.currency || "KES")
+
+      const response = await api.transactions.fetchDetailed({
+        id: user.company_id,
+        idType: 'company',
+        transactionType: 'TICKET_SALE',
+        page: page,
+        size: 10,
+      })
+
+      console.log('API Response:', response) // Debug log
+
+      if (response.data && response.data.data) {
+        // Transform the API data to match our display format
+        const transformedTransactions: TransactionDisplay[] = response.data.data.map((txn) => {
+          // Get customer name
+          const customerName = txn.buyer.firstName && txn.buyer.lastName
+            ? `${txn.buyer.firstName} ${txn.buyer.lastName}`
+            : txn.buyer.firstName || txn.buyer.lastName || 'Unknown'
+
+          return {
+            id: txn.id,
+            amount: txn.transactionAmount,
+            currency: txn.event.currency,
+            status: 'Completed', // All ticket sales are completed
+            createdAt: txn.createdAt,
+            eventName: txn.event.eventName,
+            ticketName: txn.ticket.ticketName,
+            quantity: 1, // Each transaction is for 1 ticket based on the API structure
+            customerName: customerName,
+            customerEmail: txn.buyer.email || 'N/A',
+            customerPhone: txn.buyer.mobileNumber,
+            reference: txn.transactionId,
+            barcode: txn.barcode,
+            platformFee: txn.platformFee,
+          }
+        })
+
+        setTransactions(transformedTransactions)
+
+        // Set pagination from API response
+        setPagination({
+          page: response.data.page,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages,
+        })
+
+        // Set stats from API response
+        if (response.stats) {
+          setStats(response.stats)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTransactions(currentPage - 1)
+  }, [currentPage])
 
   // Reset to page 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1)
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
   }, [searchQuery, filterStatus])
 
-  // Filter transactions
-  const filteredTransactions = allTransactions.filter(txn => {
+  // Filter transactions (client-side filtering on already fetched data)
+  const filteredTransactions = transactions.filter(txn => {
     const matchesSearch =
-      txn.event.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      txn.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      txn.id.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = filterStatus === "all" || txn.status === filterStatus
+      (txn.eventName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (txn.customerName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (txn.reference?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      txn.id.toString().includes(searchQuery)
+
+    const matchesStatus = filterStatus === "all" ||
+      txn.status.toLowerCase() === filterStatus.toLowerCase()
+
     return matchesSearch && matchesStatus
   })
 
-  // Calculate stats
-  const totalAmount = filteredTransactions.reduce((sum, txn) => sum + txn.amount, 0)
-  const completedCount = filteredTransactions.filter(txn => txn.status === "completed").length
-  const pendingCount = filteredTransactions.filter(txn => txn.status === "pending").length
-
-  // Pagination
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
@@ -96,10 +203,10 @@ export default function TransactionsPage() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
       >
         {[
-          { label: "Total Transactions", value: filteredTransactions.length.toString(), icon: TrendingUp, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
-          { label: "Total Amount", value: `KES ${totalAmount.toLocaleString()}`, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Completed", value: completedCount.toString(), icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Pending", value: pendingCount.toString(), icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
+          { label: "Total Tickets Sold", value: stats.ticketsSold.toString(), icon: TrendingUp, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Total Sales", value: `${currency} ${stats.totalSales.toLocaleString()}`, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+          { label: "Platform Liability", value: `${currency} ${stats.platformLiability.toLocaleString()}`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+          { label: "Total Transactions", value: pagination.totalElements.toString(), icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
         ].map((stat, index) => {
           const Icon = stat.icon
           return (
@@ -135,7 +242,7 @@ export default function TransactionsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="Search by event, buyer, or transaction ID..."
+              placeholder="Search by event, customer, or transaction ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
@@ -176,225 +283,193 @@ export default function TransactionsPage() {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left p-4 text-sm font-semibold">Transaction ID</th>
                 <th className="text-left p-4 text-sm font-semibold">Event</th>
-                <th className="text-left p-4 text-sm font-semibold">Buyer</th>
+                <th className="text-left p-4 text-sm font-semibold">Customer</th>
                 <th className="text-left p-4 text-sm font-semibold">Email</th>
                 <th className="text-left p-4 text-sm font-semibold">Ticket Type</th>
+                <th className="text-left p-4 text-sm font-semibold">Qty</th>
                 <th className="text-left p-4 text-sm font-semibold">Amount</th>
                 <th className="text-left p-4 text-sm font-semibold">Date</th>
                 <th className="text-left p-4 text-sm font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedTransactions.map((txn) => (
-                <tr key={txn.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                  <td className="p-4 text-sm font-mono font-semibold">{txn.id}</td>
-                  <td className="p-4 text-sm font-medium">{txn.event}</td>
-                  <td className="p-4 text-sm">{txn.buyer}</td>
-                  <td className="p-4 text-sm text-muted-foreground">{txn.email}</td>
-                  <td className="p-4 text-sm">{txn.ticketType}</td>
-                  <td className="p-4 text-sm font-bold text-green-600 dark:text-green-400">
-                    KES {txn.amount.toLocaleString()}
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(txn.date).toLocaleDateString()}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                        txn.status === "completed"
-                          ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                          : "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          txn.status === "completed" ? "bg-green-600 dark:bg-green-400" : "bg-orange-600 dark:bg-orange-400"
-                        )}
-                      />
-                      {txn.status === "completed" ? "Completed" : "Pending"}
-                    </span>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center">
+                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Loading transactions...</span>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : filteredTransactions.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                    No transactions found
+                  </td>
+                </tr>
+              ) : (
+                filteredTransactions.map((txn) => (
+                  <tr key={txn.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                    <td className="p-4 text-sm font-mono font-semibold">{txn.reference || `TXN-${txn.id}`}</td>
+                    <td className="p-4 text-sm font-medium">{txn.eventName || 'N/A'}</td>
+                    <td className="p-4 text-sm">{txn.customerName || 'N/A'}</td>
+                    <td className="p-4 text-sm text-muted-foreground">{txn.customerEmail || 'N/A'}</td>
+                    <td className="p-4 text-sm">{txn.ticketName || 'N/A'}</td>
+                    <td className="p-4 text-sm">{txn.quantity || 1}</td>
+                    <td className="p-4 text-sm font-bold text-green-600 dark:text-green-400">
+                      {txn.currency} {txn.amount.toLocaleString()}
+                    </td>
+                    <td className="p-4 text-sm text-muted-foreground">
+                      {new Date(txn.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                          txn.status.toLowerCase() === "completed" || txn.status.toLowerCase() === "success"
+                            ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                            : txn.status.toLowerCase() === "pending"
+                            ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            txn.status.toLowerCase() === "completed" || txn.status.toLowerCase() === "success"
+                              ? "bg-green-600 dark:bg-green-400"
+                              : txn.status.toLowerCase() === "pending"
+                              ? "bg-orange-600 dark:bg-orange-400"
+                              : "bg-red-600 dark:bg-red-400"
+                          )}
+                        />
+                        {txn.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-border">
-          {paginatedTransactions.map((txn) => (
-            <div key={txn.id} className="p-4 space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="font-semibold mb-1">{txn.event}</p>
-                  <p className="text-xs font-mono text-muted-foreground">{txn.id}</p>
-                </div>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                    txn.status === "completed"
-                      ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                      : "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      txn.status === "completed" ? "bg-green-600" : "bg-orange-600"
-                    )}
-                  />
-                  {txn.status === "completed" ? "Completed" : "Pending"}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-xs text-muted-foreground">Buyer</p>
-                  <p className="font-medium">{txn.buyer}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Amount</p>
-                  <p className="font-bold text-green-600">KES {txn.amount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Ticket Type</p>
-                  <p>{txn.ticketType}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Date</p>
-                  <p>{new Date(txn.date).toLocaleDateString()}</p>
-                </div>
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading transactions...</span>
               </div>
             </div>
-          ))}
+          ) : filteredTransactions.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No transactions found
+            </div>
+          ) : (
+            filteredTransactions.map((txn) => (
+              <div key={txn.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="font-semibold mb-1">{txn.eventName || 'N/A'}</p>
+                    <p className="text-xs font-mono text-muted-foreground">{txn.reference || `TXN-${txn.id}`}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                      txn.status.toLowerCase() === "completed" || txn.status.toLowerCase() === "success"
+                        ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                        : txn.status.toLowerCase() === "pending"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+                        : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        txn.status.toLowerCase() === "completed" || txn.status.toLowerCase() === "success"
+                          ? "bg-green-600"
+                          : txn.status.toLowerCase() === "pending"
+                          ? "bg-orange-600"
+                          : "bg-red-600"
+                      )}
+                    />
+                    {txn.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Customer</p>
+                    <p className="font-medium">{txn.customerName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="font-bold text-green-600">{txn.currency} {txn.amount.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Ticket Type</p>
+                    <p>{txn.ticketName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p>{new Date(txn.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Enhanced Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination */}
+        {pagination.totalPages > 1 && !isLoading && (
           <div className="border-t border-border p-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              {/* Transaction count info */}
               <p className="text-sm text-muted-foreground">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of{" "}
-                {filteredTransactions.length} transactions
+                Showing {pagination.page * pagination.size + 1} to{" "}
+                {Math.min((pagination.page + 1) * pagination.size, pagination.totalElements)} of{" "}
+                {pagination.totalElements} transactions
               </p>
 
-              {/* Page numbers and navigation */}
               <div className="flex items-center gap-2">
-                {/* First page */}
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="First page"
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  ««
+                  First
                 </button>
 
-                {/* Previous */}
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
 
-                {/* Page numbers */}
-                <div className="hidden sm:flex items-center gap-1">
-                  {(() => {
-                    const pageNumbers = []
-                    const maxVisible = 5
-                    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2))
-                    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
-
-                    if (endPage - startPage < maxVisible - 1) {
-                      startPage = Math.max(1, endPage - maxVisible + 1)
-                    }
-
-                    if (startPage > 1) {
-                      pageNumbers.push(
-                        <button
-                          key={1}
-                          onClick={() => setCurrentPage(1)}
-                          className="w-9 h-9 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary transition-colors cursor-pointer"
-                        >
-                          1
-                        </button>
-                      )
-                      if (startPage > 2) {
-                        pageNumbers.push(
-                          <span key="ellipsis1" className="px-2 text-muted-foreground">
-                            ...
-                          </span>
-                        )
-                      }
-                    }
-
-                    for (let i = startPage; i <= endPage; i++) {
-                      pageNumbers.push(
-                        <button
-                          key={i}
-                          onClick={() => setCurrentPage(i)}
-                          className={cn(
-                            "w-9 h-9 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
-                            currentPage === i
-                              ? "bg-[#8b5cf6] text-white border-[#8b5cf6]"
-                              : "border-border bg-background hover:bg-secondary"
-                          )}
-                        >
-                          {i}
-                        </button>
-                      )
-                    }
-
-                    if (endPage < totalPages) {
-                      if (endPage < totalPages - 1) {
-                        pageNumbers.push(
-                          <span key="ellipsis2" className="px-2 text-muted-foreground">
-                            ...
-                          </span>
-                        )
-                      }
-                      pageNumbers.push(
-                        <button
-                          key={totalPages}
-                          onClick={() => setCurrentPage(totalPages)}
-                          className="w-9 h-9 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary transition-colors cursor-pointer"
-                        >
-                          {totalPages}
-                        </button>
-                      )
-                    }
-
-                    return pageNumbers
-                  })()}
+                <div className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium">
+                  {currentPage} / {pagination.totalPages}
                 </div>
 
-                {/* Mobile page indicator */}
-                <div className="sm:hidden px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium">
-                  {currentPage} / {totalPages}
-                </div>
-
-                {/* Next */}
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
+                  disabled={currentPage === pagination.totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                 </button>
 
-                {/* Last page */}
                 <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                  title="Last page"
+                  onClick={() => setCurrentPage(pagination.totalPages)}
+                  disabled={currentPage === pagination.totalPages}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  »»
+                  Last
                 </button>
               </div>
             </div>

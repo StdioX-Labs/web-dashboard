@@ -157,5 +157,170 @@ export const api = {
       }, true) // Use proxy
     },
   },
+
+  // Company endpoints
+  company: {
+    getSummary: async (companyId: number) => {
+      return apiRequest<{
+        summary: {
+          totalFees: number
+          totalTicketsSold: number
+          totalEvents: number
+          activeEvents: number
+          totalRevenue: number
+        }
+        message: string
+        status: boolean
+      }>(`/company/summary?companyId=${companyId}`, {
+        method: 'GET',
+      }, true) // Use proxy route
+    },
+    getEvents: async () => {
+      return apiRequest<{
+        message: string
+        events: Array<{
+          id: number
+          eventName: string
+          eventDescription: string
+          eventPosterUrl: string
+          eventCategoryId: number
+          ticketSaleStartDate: string
+          ticketSaleEndDate: string
+          eventLocation: string
+          eventStartDate: string
+          eventEndDate: string
+          isActive: boolean
+          tickets: Array<{
+            id: number
+            ticketName: string
+            ticketPrice: number
+            quantityAvailable: number
+            soldQuantity: number
+            isActive: boolean
+            ticketsToIssue: number
+            isSoldOut: boolean
+            ticketLimitPerPerson: number
+            numberOfComplementary: number
+            ticketSaleStartDate: string
+            ticketSaleEndDate: string
+            isFree: boolean
+            ticketStatus: string
+            createAt: string
+          }>
+          createdById: number
+          companyId: number
+          companyName: string
+          comission: number
+          category: string
+          date: string
+          time: string
+          isFeatured: boolean
+          price: number
+          slug: string
+          currency: string
+        }>
+      }>('/company/events', {
+        method: 'GET',
+      }, true) // Use proxy route
+    },
+  },
+
+  // Transactions endpoints
+  transactions: {
+    fetchDetailed: async (params: {
+      id: number
+      idType: 'company' | 'event' | 'user'
+      transactionType?: string
+      page?: number
+      size?: number
+    }) => {
+      return apiRequest<{
+        data: {
+          data: Array<{
+            id: number
+            companyId: number
+            event: {
+              id: number
+              eventName: string
+              eventDescription: string
+              eventPosterUrl: string
+              eventCategoryId: number
+              ticketSaleStartDate: string
+              ticketSaleEndDate: string
+              eventLocation: string
+              eventStartDate: string
+              eventEndDate: string
+              isActive: boolean
+              createdById: number
+              companyName: string
+              comission: number
+              category: string
+              date: string
+              time: string
+              isFeatured: boolean
+              price: number
+              slug: string
+              currency: string
+            }
+            ticket: {
+              id: number
+              ticketName: string
+              ticketPrice: number
+              quantityAvailable: number
+              soldQuantity: number
+              isActive: boolean
+              ticketsToIssue: number
+              isSoldOut: boolean
+              ticketLimitPerPerson: number
+              numberOfComplementary: number
+              ticketSaleStartDate: string
+              ticketSaleEndDate: string
+              isFree: boolean
+              ticketStatus: string
+              createAt: string
+            }
+            buyer: {
+              id: number
+              email: string | null
+              mobileNumber: string
+              firstName: string | null
+              lastName: string | null
+              createdAt: string
+            }
+            barcode: string
+            transactionId: string
+            transactionType: string
+            transactionAmount: number
+            cashAccountBalance: number
+            ticketSaleBalance: number
+            platformFee: number
+            createdAt: string
+          }>
+          page: number
+          size: number
+          totalElements: number
+          totalPages: number
+          hasNext: boolean
+          hasPrevious: boolean
+        }
+        stats: {
+          ticketsSold: number
+          platformLiability: number
+          totalSales: number
+        }
+        message: string
+        status: boolean
+      }>('/transactions/detailed', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: params.id,
+          idType: params.idType,
+          transactionType: params.transactionType || 'TICKET_SALE',
+          page: params.page || 0,
+          size: params.size || 50,
+        }),
+      }, true) // Use proxy route
+    },
+  },
 }
 
