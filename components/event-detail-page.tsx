@@ -2706,7 +2706,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               {/* Breakdown */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-white/20">
                 <div className="pb-4 border-b border-white/10 sm:border-b-0">
-                  <p className="text-xs opacity-75 mb-1">Commission & Fees (12.5%)</p>
+                  <p className="text-xs opacity-75 mb-1">Commission & Fees</p>
                   <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-semibold break-words">
                     {showBalance
                       ? `- ${eventData.currency || currency} ${(eventData.totalRevenue * 0.125).toLocaleString()}`
