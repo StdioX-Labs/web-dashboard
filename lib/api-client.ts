@@ -245,12 +245,17 @@ export const api = {
             totalTicketsSold: number
             totalRevenue: number
             totalPlatformFee: number
+            analytics?: {
+              dailySalesGraph: string
+              currentWeekSales: number
+              totalAttendees: number
+              totalTicketTypes: number
+            }
             ticketSummaries: Array<{
               ticketId: number
               ticketName: string
+              totalTicketSaleBalance: number
               ticketPrice: number
-              quantityAvailable: number
-              soldQuantity: number
               uniqueTicketCount: number
               ticketStatus: string
             }>
@@ -259,7 +264,11 @@ export const api = {
           size?: number
           totalElements?: number
           totalPages?: number
+          hasNext?: boolean
+          hasPrevious?: boolean
         }
+        message: string
+        status: boolean
       }>(`/admin/events/all?page=${page}&size=${size}&companyId=${companyId}`, {
         method: 'GET',
       }, true)
@@ -278,6 +287,7 @@ export const api = {
           eventStartDate: event.eventStartDate,
           eventEndDate: event.eventEndDate,
           isActive: event.active,
+          status: event.status, // Add status field (ACTIVE, ONHOLD, etc.)
           tickets: event.ticketSummaries?.map(ticket => ({
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
@@ -287,7 +297,7 @@ export const api = {
             soldQuantity: ticket.uniqueTicketCount || 0,
             isActive: ticket.ticketStatus === 'ACTIVE',
             ticketsToIssue: 1,
-            isSoldOut: false,
+            isSoldOut: ticket.ticketStatus === 'SOLDOUT',
             ticketLimitPerPerson: 0,
             numberOfComplementary: 0,
             ticketSaleStartDate: event.ticketSaleStartDate,
@@ -295,6 +305,8 @@ export const api = {
             isFree: ticket.ticketPrice === 0,
             ticketStatus: ticket.ticketStatus || 'ACTIVE',
             createAt: new Date().toISOString(),
+            // Include totalTicketSaleBalance for revenue calculation
+            totalTicketSaleBalance: ticket.totalTicketSaleBalance,
           })) || [],
           createdById: 0,
           companyId: event.companyId,
@@ -307,19 +319,23 @@ export const api = {
           price: event.ticketSummaries?.[0]?.ticketPrice || 0,
           slug: event.slug,
           currency: 'KES',
-          // Add the actual totals from event level
+          // Add the actual totals from event level (most important for display)
           totalTicketsSold: event.totalTicketsSold,
           totalRevenue: event.totalRevenue,
+          totalPlatformFee: event.totalPlatformFee,
+          analytics: event.analytics,
         }))
 
         return {
-          message: 'Events fetched successfully',
+          message: response.message || 'Events fetched successfully',
           events: normalizedEvents,
           pagination: response.data.page !== undefined ? {
             page: response.data.page,
             size: response.data.size || size,
             totalElements: response.data.totalElements || normalizedEvents.length,
             totalPages: response.data.totalPages || 1,
+            hasNext: response.data.hasNext,
+            hasPrevious: response.data.hasPrevious,
           } : undefined,
         }
       }
@@ -394,6 +410,34 @@ export const api = {
       }>('/event/ticket/create', {
         method: 'POST',
         body: JSON.stringify(ticketData),
+      }, true)
+    },
+    getAttendees: async (eventId: number) => {
+      return apiRequest<{
+        attendees: Array<{
+          firstName: string
+          lastName: string
+          mobileNumber: string
+          ticketName: string
+          ticketPrice: number
+          ticketId: string
+          ticketIdLong: number
+          email: string
+          ticketGroupCode: string
+          lastTimeUpdated: string
+          scannedBy: string | null
+          issuedBy: string | null
+          eventName: string
+          purchaseTime: string
+          customerTicketId: number
+          transactionId: string
+          scanned: boolean
+          complementary: boolean
+        }>
+        message: string
+        status: boolean
+      }>(`/gl/event/attendees/list?eventId=${eventId}`, {
+        method: 'GET',
       }, true)
     },
   },

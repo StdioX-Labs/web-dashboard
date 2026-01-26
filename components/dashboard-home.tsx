@@ -85,7 +85,7 @@ export default function DashboardHome() {
     // Stage 2: Fetch upcoming events (background) - loads independently
     const fetchUpcomingEvents = async () => {
       try {
-        const eventsResponse = await api.company.getEvents()
+        const eventsResponse = await api.company.getAllEvents(user.company_id, 0, 300)
         if (eventsResponse.events) {
           // Filter events for the current user's company
           const companyEvents = eventsResponse.events.filter(

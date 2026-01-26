@@ -36,90 +36,8 @@ import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
 
-// Mock data - replace with actual API data
-const allEventsData = [
-  {
-    id: 1,
-    name: "Summer Music Festival 2026",
-    date: "2026-02-15",
-    time: "18:00",
-    venue: "Uhuru Gardens, Nairobi",
-    description: "Join us for an unforgettable evening of music, culture, and celebration.",
-    status: "active",
-    balance: 135000,
-    pendingBalance: 12000,
-    totalRevenue: 147000,
-    image: "/placeholder.jpg",
-  },
-  {
-    id: 2,
-    name: "Tech Conference Nairobi",
-    date: "2026-02-20",
-    time: "09:00",
-    venue: "KICC, Nairobi",
-    description: "The premier technology conference bringing together innovators, developers, and entrepreneurs from across East Africa.",
-    status: "active",
-    balance: 96000,
-    pendingBalance: 8000,
-    totalRevenue: 104000,
-    image: "/placeholder.jpg",
-  },
-  {
-    id: 3,
-    name: "Food & Wine Expo",
-    date: "2026-03-01",
-    time: "12:00",
-    venue: "Sarit Centre, Nairobi",
-    description: "Experience the finest culinary delights and premium wines from local and international vendors.",
-    status: "pending",
-    balance: 0,
-    pendingBalance: 0,
-    totalRevenue: 0,
-    image: "/placeholder.jpg",
-  },
-  {
-    id: 4,
-    name: "Art Gallery Exhibition",
-    date: "2026-03-10",
-    time: "15:00",
-    venue: "National Museum, Nairobi",
-    description: "A showcase of contemporary African art featuring emerging and established artists.",
-    status: "pending",
-    balance: 0,
-    pendingBalance: 0,
-    totalRevenue: 0,
-    image: "/placeholder.jpg",
-  },
-  {
-    id: 5,
-    name: "Jazz Night Live",
-    date: "2026-01-02",
-    time: "20:00",
-    venue: "Alliance Française, Nairobi",
-    description: "An intimate evening of smooth jazz featuring renowned local and international jazz musicians.",
-    status: "active",
-    balance: 60000,
-    pendingBalance: 5000,
-    totalRevenue: 65000,
-    image: "/placeholder.jpg",
-  },
-  {
-    id: 6,
-    name: "Comedy Night Special",
-    date: "2026-02-25",
-    time: "19:30",
-    venue: "Kenya National Theatre, Nairobi",
-    description: "A hilarious night of stand-up comedy featuring the best comedians from Kenya and East Africa.",
-    status: "suspended",
-    balance: 45000,
-    pendingBalance: 0,
-    totalRevenue: 45000,
-    image: "/placeholder.jpg",
-  },
-]
-
-// Define ticket type interface
-type TicketType = {
+// Type definitions
+interface TicketType {
   id: number
   name: string
   price: number
@@ -129,468 +47,8 @@ type TicketType = {
   status: "active" | "sold_out" | "suspended"
 }
 
-const ticketTypesData: { [key: number]: TicketType[] } = {
-  1: [
-    {
-      id: 1,
-      name: "VIP Pass",
-      price: 5000,
-      totalAvailable: 100,
-      sold: 85,
-      revenue: 425000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "General Admission",
-      price: 2000,
-      totalAvailable: 300,
-      sold: 265,
-      revenue: 530000,
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Early Bird",
-      price: 1500,
-      totalAvailable: 100,
-      sold: 100,
-      revenue: 150000,
-      status: "sold_out",
-    },
-  ],
-  2: [
-    {
-      id: 1,
-      name: "Conference Pass",
-      price: 3500,
-      totalAvailable: 250,
-      sold: 210,
-      revenue: 735000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Workshop Bundle",
-      price: 5000,
-      totalAvailable: 100,
-      sold: 85,
-      revenue: 425000,
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Student Pass",
-      price: 1500,
-      totalAvailable: 50,
-      sold: 25,
-      revenue: 37500,
-      status: "active",
-    },
-  ],
-  3: [
-    {
-      id: 1,
-      name: "VIP Experience",
-      price: 4000,
-      totalAvailable: 50,
-      sold: 30,
-      revenue: 120000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "General Entry",
-      price: 1500,
-      totalAvailable: 200,
-      sold: 120,
-      revenue: 180000,
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Tasting Pass",
-      price: 2500,
-      totalAvailable: 50,
-      sold: 30,
-      revenue: 75000,
-      status: "active",
-    },
-  ],
-  4: [
-    {
-      id: 1,
-      name: "Opening Night",
-      price: 2500,
-      totalAvailable: 100,
-      sold: 60,
-      revenue: 150000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "General Admission",
-      price: 1500,
-      totalAvailable: 50,
-      sold: 25,
-      revenue: 37500,
-      status: "active",
-    },
-  ],
-  5: [
-    {
-      id: 1,
-      name: "Premium Seating",
-      price: 3500,
-      totalAvailable: 80,
-      sold: 80,
-      revenue: 280000,
-      status: "sold_out",
-    },
-    {
-      id: 2,
-      name: "Standard Entry",
-      price: 2000,
-      totalAvailable: 120,
-      sold: 120,
-      revenue: 240000,
-      status: "sold_out",
-    },
-  ],
-  6: [
-    {
-      id: 1,
-      name: "VIP Experience",
-      price: 2500,
-      totalAvailable: 100,
-      sold: 60,
-      revenue: 150000,
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "General Admission",
-      price: 1500,
-      totalAvailable: 200,
-      sold: 90,
-      revenue: 135000,
-      status: "active",
-    },
-  ],
-}
+// Mock attendees data removed - now fetched from API
 
-
-const attendees = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+254712345001",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-001",
-    purchaseDate: "2026-01-05",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 18:15",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "+254712345002",
-    ticketType: "General Admission",
-    ticketNumber: "GA-045",
-    purchaseDate: "2026-01-05",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 18:30",
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    email: "mike@example.com",
-    phone: "+254712345003",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-012",
-    purchaseDate: "2026-01-04",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 4,
-    name: "Sarah Williams",
-    email: "sarah@example.com",
-    phone: "+254712345004",
-    ticketType: "General Admission",
-    ticketNumber: "GA-023",
-    purchaseDate: "2026-01-04",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 18:45",
-  },
-  {
-    id: 5,
-    name: "David Brown",
-    email: "david@example.com",
-    phone: "+254712345005",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-002",
-    purchaseDate: "2026-01-03",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 6,
-    name: "Emily Davis",
-    email: "emily@example.com",
-    phone: "+254712345006",
-    ticketType: "General Admission",
-    ticketNumber: "GA-067",
-    purchaseDate: "2026-01-03",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 19:00",
-  },
-  {
-    id: 7,
-    name: "Robert Wilson",
-    email: "robert@example.com",
-    phone: "+254712345007",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-003",
-    purchaseDate: "2026-01-03",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 8,
-    name: "Lisa Anderson",
-    email: "lisa@example.com",
-    phone: "+254712345008",
-    ticketType: "General Admission",
-    ticketNumber: "GA-089",
-    purchaseDate: "2026-01-02",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 19:15",
-  },
-  {
-    id: 9,
-    name: "James Taylor",
-    email: "james@example.com",
-    phone: "+254712345009",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-004",
-    purchaseDate: "2026-01-02",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 19:30",
-  },
-  {
-    id: 10,
-    name: "Mary Thomas",
-    email: "mary@example.com",
-    phone: "+254712345010",
-    ticketType: "General Admission",
-    ticketNumber: "GA-101",
-    purchaseDate: "2026-01-02",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 11,
-    name: "William Moore",
-    email: "william@example.com",
-    phone: "+254712345011",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-005",
-    purchaseDate: "2026-01-02",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 19:45",
-  },
-  {
-    id: 12,
-    name: "Patricia Martin",
-    email: "patricia@example.com",
-    phone: "+254712345012",
-    ticketType: "General Admission",
-    ticketNumber: "GA-112",
-    purchaseDate: "2026-01-01",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 13,
-    name: "Richard Jackson",
-    email: "richard@example.com",
-    phone: "+254712345013",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-006",
-    purchaseDate: "2026-01-01",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 20:00",
-  },
-  {
-    id: 14,
-    name: "Jennifer White",
-    email: "jennifer@example.com",
-    phone: "+254712345014",
-    ticketType: "General Admission",
-    ticketNumber: "GA-134",
-    purchaseDate: "2026-01-01",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 20:15",
-  },
-  {
-    id: 15,
-    name: "Thomas Harris",
-    email: "thomas@example.com",
-    phone: "+254712345015",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-007",
-    purchaseDate: "2025-12-31",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 16,
-    name: "Linda Clark",
-    email: "linda@example.com",
-    phone: "+254712345016",
-    ticketType: "General Admission",
-    ticketNumber: "GA-156",
-    purchaseDate: "2025-12-31",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 20:30",
-  },
-  {
-    id: 17,
-    name: "Charles Lewis",
-    email: "charles@example.com",
-    phone: "+254712345017",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-008",
-    purchaseDate: "2025-12-31",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 20:45",
-
-  },
-  {
-    id: 18,
-    name: "Barbara Walker",
-    email: "barbara@example.com",
-    phone: "+254712345018",
-    ticketType: "General Admission",
-    ticketNumber: "GA-178",
-    purchaseDate: "2025-12-31",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 19,
-    name: "Christopher Hall",
-    email: "christopher@example.com",
-    phone: "+254712345019",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-009",
-    purchaseDate: "2025-12-30",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 21:00",
-  },
-  {
-    id: 20,
-    name: "Susan Allen",
-    email: "susan@example.com",
-    phone: "+254712345020",
-    ticketType: "General Admission",
-    ticketNumber: "GA-190",
-    purchaseDate: "2025-12-30",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 21,
-    name: "Daniel Young",
-    email: "daniel@example.com",
-    phone: "+254712345021",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-010",
-    purchaseDate: "2025-12-30",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 21:15",
-  },
-  {
-    id: 22,
-    name: "Jessica King",
-    email: "jessica@example.com",
-    phone: "+254712345022",
-    ticketType: "General Admission",
-    ticketNumber: "GA-201",
-    purchaseDate: "2025-12-30",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 21:30",
-  },
-  {
-    id: 23,
-    name: "Matthew Wright",
-    email: "matthew@example.com",
-    phone: "+254712345023",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-011",
-    purchaseDate: "2025-12-29",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 24,
-    name: "Nancy Lopez",
-    email: "nancy@example.com",
-    phone: "+254712345024",
-    ticketType: "General Admission",
-    ticketNumber: "GA-223",
-    purchaseDate: "2025-12-29",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 21:45",
-  },
-  {
-    id: 25,
-    name: "Anthony Hill",
-    email: "anthony@example.com",
-    phone: "+254712345025",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-013",
-    purchaseDate: "2025-12-29",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-  {
-    id: 26,
-    name: "Karen Scott",
-    email: "karen@example.com",
-    phone: "+254712345026",
-    ticketType: "General Admission",
-    ticketNumber: "GA-245",
-    purchaseDate: "2025-12-28",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 22:00",
-  },
-  {
-    id: 27,
-    name: "Mark Green",
-    email: "mark@example.com",
-    phone: "+254712345027",
-    ticketType: "VIP Pass",
-    ticketNumber: "VIP-014",
-    purchaseDate: "2025-12-28",
-    checkedIn: true,
-    checkedInTime: "2026-02-15 22:15",
-  },
-  {
-    id: 28,
-    name: "Betty Adams",
-    email: "betty@example.com",
-    phone: "+254712345028",
-    ticketType: "General Admission",
-    ticketNumber: "GA-267",
-    purchaseDate: "2025-12-28",
-    checkedIn: false,
-    checkedInTime: null,
-  },
-]
 
 export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   // API Data State
@@ -602,6 +60,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     venue: string
     description: string
     status: string
+    apiStatus?: string
     balance: number
     pendingBalance: number
     totalRevenue: number
@@ -662,6 +121,61 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [attendeesPage, setAttendeesPage] = useState(1)
   const itemsPerPage = 10
 
+  // Smart pagination helper - shows elegant page ranges
+  const getPageNumbers = (currentPage: number, totalPages: number) => {
+    const pages: (number | string)[] = []
+    const maxVisible = 7 // Maximum number of page buttons to show
+
+    if (totalPages <= maxVisible) {
+      // Show all pages if total is small
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
+
+    // Always show first page
+    pages.push(1)
+
+    if (currentPage <= 3) {
+      // Near start: show 1, 2, 3, 4, 5, ..., last
+      for (let i = 2; i <= Math.min(5, totalPages - 1); i++) {
+        pages.push(i)
+      }
+      if (totalPages > 6) pages.push('...')
+      pages.push(totalPages)
+    } else if (currentPage >= totalPages - 2) {
+      // Near end: show 1, ..., last-4, last-3, last-2, last-1, last
+      pages.push('...')
+      for (let i = Math.max(2, totalPages - 4); i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Middle: show 1, ..., current-1, current, current+1, ..., last
+      pages.push('...')
+      pages.push(currentPage - 1)
+      pages.push(currentPage)
+      pages.push(currentPage + 1)
+      pages.push('...')
+      pages.push(totalPages)
+    }
+
+    return pages
+  }
+
+  // Attendees state
+  const [attendees, setAttendees] = useState<Array<{
+    firstName: string
+    lastName: string
+    mobileNumber: string
+    ticketName: string
+    ticketPrice: number
+    ticketId: string
+    email: string
+    purchaseTime: string
+    scanned: boolean
+    complementary: boolean
+    transactionId: string
+  }>>([])
+  const [attendeesLoading, setAttendeesLoading] = useState(false)
+
   // Transactions state
   const [transactions, setTransactions] = useState<Array<{
     id: string
@@ -689,76 +203,73 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     const fetchEvent = async () => {
       try {
         const user = sessionManager.getUser()
+        console.log("=== Event Detail Fetch Start ===")
+        console.log("Event ID:", eventId, "Type:", typeof eventId)
+        console.log("User:", user)
+
         if (!user || !user.company_id) {
+          console.log("No user or company_id, exiting")
           setIsLoading(false)
           return
         }
 
         setCurrency(user.currency || "KES")
 
-        // Stage 1: Try to load from active events API first (fast)
-        try {
-          const activeEventsResponse = await api.company.getEvents()
-          if (activeEventsResponse.events) {
-            const foundActiveEvent = activeEventsResponse.events.find(
-              (e) => e.id === eventId && e.companyId === user.company_id
-            )
-
-            if (foundActiveEvent) {
-              // Calculate totals from tickets for active events
-              const calculatedRevenue = foundActiveEvent.tickets?.reduce((sum, ticket) =>
-                sum + (ticket.ticketPrice * ticket.soldQuantity), 0
-              ) || 0
-              const calculatedTicketsSold = foundActiveEvent.tickets?.reduce((sum, ticket) =>
-                sum + ticket.soldQuantity, 0
-              ) || 0
-
-              // Transform and set active event data immediately
-              const transformedEvent = {
-                id: foundActiveEvent.id,
-                name: foundActiveEvent.eventName,
-                date: new Date(foundActiveEvent.eventStartDate).toISOString().split('T')[0],
-                time: new Date(foundActiveEvent.eventStartDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-                venue: foundActiveEvent.eventLocation,
-                description: foundActiveEvent.eventDescription,
-                status: foundActiveEvent.isActive ? 'active' : 'inactive',
-                balance: calculatedRevenue,
-                pendingBalance: 0,
-                totalRevenue: calculatedRevenue,
-                image: foundActiveEvent.eventPosterUrl,
-                currency: foundActiveEvent.currency || currency,
-                tickets: foundActiveEvent.tickets || [],
-                totalTicketsSold: calculatedTicketsSold,
-                eventStartDate: foundActiveEvent.eventStartDate,
-                eventEndDate: foundActiveEvent.eventEndDate,
-                slug: foundActiveEvent.slug,
-              }
-              setEventData(transformedEvent)
-              setIsLoading(false)
-              return // Exit early if found in active events
-            }
-          }
-        } catch (activeError) {
-          console.log("Active events not found, checking all events...")
-        }
-
-        // Stage 2: If not found in active events, check all events (includes past events)
+        // Use getAllEvents API with caching
         const cacheKey = 'all-events-300'
+        console.log("Fetching events with cache key:", cacheKey)
+
         const eventsData = await eventCache.getOrFetch(
           cacheKey,
           user.company_id,
           async () => {
+            console.log("Cache miss, fetching from API...")
             const response = await api.company.getAllEvents(user.company_id, 0, 300)
+            console.log("API Response:", response)
             return response
           }
         )
 
+        console.log("Events Data received:", eventsData)
+        console.log("Total events:", eventsData?.events?.length)
+
         if (eventsData && eventsData.events) {
+          console.log("First 3 events:", eventsData.events.slice(0, 3).map(e => ({
+            id: e.id,
+            name: e.eventName,
+            companyId: e.companyId
+          })))
+
           const foundEvent = eventsData.events.find(
-            (e) => e.id === eventId && e.companyId === user.company_id
+            (e) => {
+              const eventIdMatch = Number(e.id) === Number(eventId)
+              console.log(`Comparing event ${e.id} (${typeof e.id}) with ${eventId} (${typeof eventId}):`, eventIdMatch)
+              return eventIdMatch && e.companyId === user.company_id
+            }
           )
 
+          console.log("Found Event:", foundEvent)
+
           if (foundEvent) {
+            console.log("✅ Event Found:", foundEvent.eventName)
+            console.log("Event Tickets:", foundEvent.tickets)
+            console.log("API Total Revenue:", foundEvent.totalRevenue)
+            console.log("API Total Tickets Sold:", foundEvent.totalTicketsSold)
+
+            // Use API totals if available, otherwise calculate from tickets
+            const revenue = foundEvent.totalRevenue !== undefined
+              ? foundEvent.totalRevenue
+              : foundEvent.tickets?.reduce((sum, ticket) =>
+                  sum + ((ticket.ticketPrice || 0) * (ticket.soldQuantity || 0)), 0) || 0
+
+            const ticketsSold = foundEvent.totalTicketsSold !== undefined
+              ? foundEvent.totalTicketsSold
+              : foundEvent.tickets?.reduce((sum, ticket) =>
+                  sum + (ticket.soldQuantity || 0), 0) || 0
+
+            console.log("Using Revenue:", revenue)
+            console.log("Using Tickets Sold:", ticketsSold)
+
             // Transform API data to component format
             const transformedEvent = {
               id: foundEvent.id,
@@ -768,20 +279,28 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               venue: foundEvent.eventLocation,
               description: foundEvent.eventDescription,
               status: foundEvent.isActive ? 'active' : 'inactive',
-              balance: foundEvent.totalRevenue || 0,
+              apiStatus: foundEvent.status, // Store API status (ONHOLD, ACTIVE, etc.)
+              balance: revenue,
               pendingBalance: 0,
-              totalRevenue: foundEvent.totalRevenue || 0,
+              totalRevenue: revenue,
               image: foundEvent.eventPosterUrl,
               currency: foundEvent.currency || currency,
               tickets: foundEvent.tickets || [],
-              totalTicketsSold: foundEvent.totalTicketsSold || 0,
+              totalTicketsSold: ticketsSold,
               eventStartDate: foundEvent.eventStartDate,
               eventEndDate: foundEvent.eventEndDate,
               slug: foundEvent.slug,
             }
+            console.log("Transformed Event:", transformedEvent)
             setEventData(transformedEvent)
+          } else {
+            console.log("❌ Event not found with ID:", eventId)
+            console.log("Available event IDs:", eventsData.events.map(e => `${e.id} (${e.eventName})`))
           }
+        } else {
+          console.log("No events data received")
         }
+        console.log("=== Event Detail Fetch End ===")
       } catch (error) {
         console.error("Failed to fetch event:", error)
         toast.error("Failed to load event details")
@@ -855,6 +374,34 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
     fetchTransactions()
   }, [activeTab, transactionsPage, eventId, eventData])
+
+  // Fetch attendees when attendees tab is active
+  useEffect(() => {
+    const fetchAttendees = async () => {
+      if (activeTab !== 'attendees' || !eventData) return
+
+      setAttendeesLoading(true)
+      try {
+        const response = await api.company.getAttendees(eventId)
+
+        console.log('Attendees Response:', response)
+
+        if (response.status && response.attendees) {
+          setAttendees(response.attendees)
+        } else {
+          setAttendees([])
+        }
+      } catch (error) {
+        console.error('Failed to fetch attendees:', error)
+        toast.error('Failed to load attendees')
+        setAttendees([])
+      } finally {
+        setAttendeesLoading(false)
+      }
+    }
+
+    fetchAttendees()
+  }, [activeTab, eventId, eventData])
 
   // Get ticket types from event data
   const ticketTypes = eventData?.tickets?.map((ticket: any) => ({
@@ -1928,7 +1475,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
   const exportAttendeesToPDF = () => {
     try {
-      const checkedInCount = attendees.filter(a => a.checkedIn).length
+      const checkedInCount = attendees.filter(a => a.scanned).length
       const notCheckedInCount = attendees.length - checkedInCount
 
       // Generate unique report ID
@@ -1936,72 +1483,174 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
       const html = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
           <meta charset="UTF-8">
           <title>Attendees Report - ${eventData?.name ?? 'Untitled Event'}</title>
           <style>
-            @page { margin: 20mm; size: A4; }
+            @page { margin: 15mm; size: A4; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.4;
               color: #1a1a1a;
               background: #ffffff;
-              padding: 20px;
+              padding: 0;
             }
             
-            /* Header with logo and branding */
+            /* Professional Header - Enhanced Design */
             .report-header {
-              border-bottom: 3px solid #8b5cf6;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
+              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+              padding: 30px 35px;
+              margin-bottom: 0;
+              color: white;
+              position: relative;
+              overflow: hidden;
+            }
+            /* Elegant pattern overlay */
+            .report-header::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              right: 0;
+              width: 300px;
+              height: 100%;
+              background: radial-gradient(circle at 80% 50%, rgba(255,255,255,0.1) 0%, transparent 70%);
+              pointer-events: none;
+            }
+            .header-top {
               display: flex;
               justify-content: space-between;
-              align-items: flex-start;
+              align-items: center;
+              margin-bottom: 18px;
+              padding-bottom: 18px;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+              position: relative;
+              z-index: 1;
             }
             .brand-section {
-              flex: 1;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
             }
             .brand-name {
-              font-size: 28px;
-              font-weight: 700;
-              color: #8b5cf6;
-              margin-bottom: 4px;
-              letter-spacing: -0.5px;
+              font-size: 26px;
+              font-weight: 800;
+              letter-spacing: 1.2px;
+              text-transform: uppercase;
+              background: linear-gradient(to right, #ffffff 0%, rgba(255,255,255,0.9) 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
             }
             .brand-tagline {
+              font-size: 10px;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+              opacity: 0.85;
+              font-weight: 500;
+            }
+            .report-meta {
+              text-align: right;
               font-size: 11px;
+              opacity: 0.9;
+            }
+            .report-meta-date {
+              margin-bottom: 4px;
+              font-weight: 500;
+            }
+            .report-id {
+              font-size: 10px;
+              font-family: 'Courier New', monospace;
+              opacity: 0.75;
+              font-weight: 400;
+            }
+            .header-title {
+              display: flex;
+              justify-content: space-between;
+              align-items: baseline;
+              position: relative;
+              z-index: 1;
+            }
+            .report-title {
+              font-size: 30px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+
+            /* Event Information Card */
+            .event-info {
+              background: #f8f9fa;
+              border-left: 4px solid #8b5cf6;
+              padding: 20px 25px;
+              margin: 25px 30px;
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px 30px;
+            }
+            .info-item {
+              display: flex;
+              flex-direction: column;
+            }
+            .info-label {
+              font-size: 10px;
               color: #6b7280;
               text-transform: uppercase;
               letter-spacing: 1px;
+              font-weight: 600;
+              margin-bottom: 5px;
             }
-            .report-info {
-              text-align: right;
-            }
-            .report-title {
-              font-size: 24px;
-              font-weight: 700;
+            .info-value {
+              font-size: 15px;
               color: #1a1a1a;
-              margin-bottom: 4px;
-            }
-            .report-date {
-              font-size: 12px;
-              color: #6b7280;
-            }
-            .report-id {
-              font-size: 11px;
-              color: #9ca3af;
-              font-family: 'Courier New', monospace;
+              font-weight: 600;
             }
 
-            /* Event details box */
-            .info-section {
-              background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 20px;
-              margin-bottom: 30px;
+            /* Summary stats - Single row compact */
+            .summary-section {
+              background: #ffffff;
+              border: 2px solid #e5e7eb;
+              border-radius: 0;
+              margin: 0 30px 30px 30px;
+              overflow: hidden;
+            }
+            .summary-content {
+              padding: 20px 25px;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 50px;
+              border-bottom: 1px solid #e5e7eb;
+            }
+            .summary-item {
+              display: flex;
+              align-items: baseline;
+              gap: 10px;
+              flex: 1;
+            }
+            .summary-label {
+              font-size: 11px;
+              color: #6b7280;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              font-weight: 600;
+              white-space: nowrap;
+            }
+            .summary-value {
+              font-size: 32px;
+              font-weight: 700;
+              color: #8b5cf6;
+              line-height: 1;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            }
+            .summary-footer {
+              background: #fafbfc;
+              padding: 8px 20px;
+              font-size: 10px;
+              color: #6b7280;
+              text-align: right;
+            }
             }
             .info-grid {
               display: grid;
@@ -2055,22 +1704,23 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
             /* Table styling */
             .table-section {
-              margin-bottom: 30px;
+              margin: 0 30px 30px 30px;
             }
             .section-title {
-              font-size: 16px;
-              font-weight: 700;
-              color: #1a1a1a;
+              font-size: 13px;
+              font-weight: 600;
+              color: #374151;
               margin-bottom: 15px;
               padding-bottom: 8px;
               border-bottom: 2px solid #e5e7eb;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
             }
             table {
               width: 100%;
               border-collapse: collapse;
               background: #ffffff;
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
+              border: 2px solid #e5e7eb;
               overflow: hidden;
             }
             thead {
@@ -2114,16 +1764,24 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               background: #fee2e2;
               color: #991b1b;
             }
+            .comp-badge {
+              background: #dbeafe;
+              color: #1e40af;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 9px;
+              margin-left: 6px;
+            }
 
             /* Footer */
             .report-footer {
-              margin-top: 40px;
+              margin: 40px 30px 0 30px;
               padding-top: 20px;
               border-top: 1px solid #e5e7eb;
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 11px;
+              font-size: 10px;
               color: #6b7280;
             }
             .footer-text {
@@ -2136,154 +1794,291 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
             /* Mobile responsive styles */
             @media (max-width: 768px) {
-              body {
-                padding: 10px;
+              body { padding: 0; }
+              .report-header { padding: 20px; }
+              .header-top { flex-direction: column; align-items: flex-start; gap: 10px; }
+              .report-meta { text-align: left; }
+              .brand-name { font-size: 18px; }
+              .report-title { font-size: 22px; }
+              .event-info { 
+                grid-template-columns: 1fr; 
+                gap: 12px; 
+                margin: 20px;
+                padding: 15px 20px;
               }
-              .report-header {
-                flex-direction: column;
-                gap: 15px;
-                padding-bottom: 15px;
-              }
-              .brand-section {
-                width: 100%;
-              }
-              .brand-name {
-                font-size: 18px;
-              }
-              .brand-tagline {
-                font-size: 10px;
-              }
-              .report-info {
-                text-align: left;
-                width: 100%;
-              }
-              .report-title {
-                font-size: 16px;
-              }
-              .report-date {
-                font-size: 11px;
-              }
-              .report-id {
-                font-size: 10px;
-              }
-              .info-section {
-                padding: 15px;
-              }
-              .info-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-              }
-              .info-value {
-                font-size: 14px;
-              }
-              .summary-section {
-                grid-template-columns: 1fr;
-                gap: 10px;
-              }
-              .summary-card {
-                padding: 12px;
-              }
-              .summary-value {
-                font-size: 18px;
-              }
-              .table-section {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                margin: 0 -10px;
-                padding: 0 10px;
-              }
-              table {
-                min-width: 800px;
-                font-size: 12px;
-              }
-              th, td {
-                padding: 8px 6px;
-                font-size: 11px;
-              }
-              .report-footer {
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
+              .summary-section { margin: 0 20px 25px 20px; }
+              .summary-grid { flex-direction: column; }
+              .summary-item { border-right: none; border-bottom: 1px solid #e5e7eb; }
+              .summary-item:last-child { border-bottom: none; }
+              .summary-value { font-size: 28px; }
+              .table-section { margin: 0 20px 25px 20px; }
+              table { min-width: 800px; font-size: 12px; }
+              th, td { padding: 8px 6px; font-size: 11px; }
+              .report-footer { 
+                margin: 30px 20px 0 20px; 
+                flex-direction: column; 
+                gap: 10px; 
+                text-align: center; 
               }
             }
 
             /* Print styles */
             @media print {
-              body { padding: 0; }
-              .report-header { page-break-after: avoid; }
-              table { page-break-inside: auto; }
-              tr { page-break-inside: avoid; page-break-after: auto; }
-              thead { display: table-header-group; }
+              @page {
+                size: A4 landscape;  /* Landscape for better table view */
+                margin: 12mm 15mm;
+              }
+              
+              body { 
+                padding: 0;
+                margin: 0;
+                width: 100%;
+                max-width: 100%;
+              }
+              
+              * {
+                box-sizing: border-box;
+                max-width: 100%;
+              }
+              
+              /* Compact Header - Single Row */
+              .report-header { 
+                page-break-after: avoid;
+                break-after: avoid;
+                width: 100%;
+                margin: 0;
+                padding: 15px 20px;
+              }
+              
+              .header-top {
+                display: flex !important;
+                justify-content: space-between;
+                align-items: center;
+                padding-bottom: 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+              }
+              
+              .brand-name {
+                font-size: 18px;
+              }
+              
+              .report-meta {
+                text-align: right;
+                font-size: 10px;
+              }
+              
+              .header-title {
+                margin-top: 8px;
+              }
+              
+              .report-title {
+                font-size: 22px;
+              }
+              
+              /* Compact Event Info - Horizontal Layout */
+              .event-info {
+                page-break-after: avoid;
+                break-after: avoid;
+                width: 100%;
+                margin: 15px 0;
+                padding: 12px 20px;
+                display: flex !important;
+                flex-wrap: wrap;
+                gap: 20px;
+                grid-template-columns: none !important;
+              }
+              
+              .info-item {
+                flex: 0 1 auto;
+                min-width: 150px;
+              }
+              
+              .info-label {
+                font-size: 9px;
+                margin-bottom: 3px;
+              }
+              
+              .info-value {
+                font-size: 13px;
+              }
+              
+              /* Compact Summary - Horizontal */
+              .summary-section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                width: 100%;
+                margin: 15px 0;
+              }
+              
+              .summary-header {
+                padding: 8px 15px;
+              }
+              
+              .summary-header-title {
+                font-size: 11px;
+              }
+              
+              .summary-grid {
+                display: flex;
+                width: 100%;
+              }
+              
+              .summary-item {
+                flex: 1;
+                min-width: 0;
+                padding: 15px;
+              }
+              
+              .summary-value {
+                font-size: 28px;
+              }
+              
+              .summary-footer {
+                padding: 8px 15px;
+              }
+              
+              /* Optimized Table for Landscape */
+              .table-section {
+                width: 100%;
+                margin: 15px 0;
+              }
+              
+              .section-title {
+                font-size: 11px;
+                margin-bottom: 10px;
+                padding-bottom: 6px;
+              }
+              
+              table { 
+                page-break-inside: auto;
+                width: 100%;
+                max-width: 100%;
+                table-layout: auto;
+                font-size: 11px;
+              }
+              
+              thead { 
+                display: table-header-group;
+                break-inside: avoid;
+              }
+              
+              th {
+                padding: 8px 6px;
+                font-size: 9px;
+              }
+              
+              td {
+                padding: 8px 6px;
+                font-size: 10px;
+              }
+              
+              tbody {
+                width: 100%;
+              }
+              
+              tr { 
+                page-break-inside: avoid;
+                break-inside: avoid;
+                page-break-after: auto;
+                width: 100%;
+              }
+              
+              td, th {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+              }
+              
+              /* Compact Footer */
+              .report-footer {
+                width: 100%;
+                margin: 15px 0 0 0;
+                padding: 10px 0;
+                font-size: 9px;
+              }
+              
+              .footer-company {
+                font-size: 10px;
+              }
+              
+              /* Hide elements that take too much space */
+              .summary-subtext {
+                display: none;
+              }
             }
           </style>
         </head>
         <body>
-          <!-- Header -->
+          <!-- Professional Header -->
           <div class="report-header">
-            <div class="brand-section">
-              <div class="brand-name">SOLDOUTAFRICA</div>
-              <div class="brand-tagline">Event Management Platform</div>
+            <div class="header-top">
+              <div class="brand-name">SoldOutAfrica</div>
+              <div class="report-meta">
+                <div class="report-meta-date">${new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}</div>
+                <div class="report-id">ID: ${reportId}</div>
+              </div>
             </div>
-            <div class="report-info">
+            <div class="header-title">
               <div class="report-title">Attendees Report</div>
-              <div class="report-date">${new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</div>
-              <div class="report-id">Report ID: ${reportId}</div>
             </div>
           </div>
 
           <!-- Event Information -->
-          <div class="info-section">
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Event Name</div>
-                <div class="info-value">${eventData?.name ?? 'Untitled Event'}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Event Date</div>
-                <div class="info-value">${eventData?.date ? new Date(eventData.date).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                }) : 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Venue</div>
-                <div class="info-value">${eventData?.venue ?? 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Report Generated</div>
-                <div class="info-value">${new Date().toLocaleTimeString('en-US', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}</div>
-              </div>
+          <div class="event-info">
+            <div class="info-item">
+              <div class="info-label">Event Name</div>
+              <div class="info-value">${eventData?.name ?? 'Untitled Event'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Event Date</div>
+              <div class="info-value">${eventData?.date ? new Date(eventData.date).toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              }) : 'N/A'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Venue</div>
+              <div class="info-value">${eventData?.venue ?? 'N/A'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Generated</div>
+              <div class="info-value">${new Date().toLocaleTimeString('en-US', { 
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              })}</div>
             </div>
           </div>
 
           <!-- Summary Statistics -->
           <div class="summary-section">
-            <div class="summary-card">
-              <div class="summary-label">Total Attendees</div>
-              <div class="summary-value">${attendees.length}</div>
+            <div class="summary-content">
+              <div class="summary-item">
+                <div class="summary-label">Total Registered:</div>
+                <div class="summary-value">${attendees.length}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Checked In:</div>
+                <div class="summary-value">${checkedInCount}</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-label">Attendance Rate:</div>
+                <div class="summary-value">${attendees.length > 0 ? Math.round((checkedInCount / attendees.length) * 100) : 0}%</div>
+              </div>
             </div>
-            <div class="summary-card">
-              <div class="summary-label">Checked In</div>
-              <div class="summary-value">${checkedInCount}</div>
-            </div>
-            <div class="summary-card">
-              <div class="summary-label">Check-in Rate</div>
-              <div class="summary-value">${Math.round((checkedInCount / attendees.length) * 100)}%</div>
+            <div class="summary-footer">
+              Last updated: ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
             </div>
           </div>
 
           <!-- Attendees Table -->
           <div class="table-section">
-            <div class="section-title">Attendee Details</div>
+            <div class="section-title">Attendee Details (${attendees.length} Total)</div>
             <table>
               <thead>
                 <tr>
@@ -2292,28 +2087,34 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <th>Ticket Details</th>
                   <th>Purchase Date</th>
                   <th>Check-in Status</th>
-                  <th>Check-in Time</th>
                 </tr>
               </thead>
               <tbody>
                 ${attendees.map(attendee => `
                   <tr>
-                    <td style="font-weight: 600;">${attendee.name}</td>
+                    <td style="font-weight: 600;">${attendee.firstName} ${attendee.lastName}</td>
                     <td>
                       <div style="font-size: 12px;">${attendee.email}</div>
-                      <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">${attendee.phone || 'N/A'}</div>
+                      <div style="font-size: 11px; color: #6b7280; margin-top: 2px;">${attendee.mobileNumber || 'N/A'}</div>
                     </td>
                     <td>
-                      <div style="font-weight: 600;">${attendee.ticketType}</div>
-                      <div style="font-size: 11px; font-family: 'Courier New', monospace; color: #6b7280;">${attendee.ticketNumber}</div>
+                      <div style="font-weight: 600;">
+                        ${attendee.ticketName}
+                        ${attendee.complementary ? '<span class="comp-badge">COMP</span>' : ''}
+                      </div>
+                      <div style="font-size: 11px; font-family: 'Courier New', monospace; color: #6b7280; margin-top: 2px;">#${attendee.ticketId}</div>
+                      <div style="font-size: 11px; color: #8b5cf6; margin-top: 2px;">KES ${attendee.ticketPrice.toFixed(2)}</div>
                     </td>
-                    <td style="font-size: 12px;">${new Date(attendee.purchaseDate).toLocaleDateString()}</td>
+                    <td style="font-size: 12px;">${new Date(attendee.purchaseTime).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}</td>
                     <td>
-                      <span class="status-badge status-${attendee.checkedIn ? 'checked-in' : 'not-checked-in'}">
-                        ${attendee.checkedIn ? '✓ Checked In' : '✗ Not Checked In'}
+                      <span class="status-badge status-${attendee.scanned ? 'checked-in' : 'not-checked-in'}">
+                        ${attendee.scanned ? '✓ Checked In' : '✗ Not Checked In'}
                       </span>
                     </td>
-                    <td style="font-size: 12px;">${attendee.checkedInTime || '—'}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -2323,15 +2124,16 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           <!-- Footer -->
           <div class="report-footer">
             <div class="footer-text">
-              <div class="footer-company">SoldOutAfrica Event Management Platform</div>
-              <div>This is an official attendee report. For inquiries, contact support@soldoutafrica.com</div>
+              <div class="footer-company">SoldOutAfrica</div>
+              <div style="margin-top: 3px;">Official Attendee Report · support@soldoutafrica.com</div>
+            </div>
+            <div style="text-align: right;">
+              <div>© ${new Date().getFullYear()} SoldOutAfrica. All rights reserved.</div>
             </div>
           </div>
 
           <script>
-            // Override about:blank title
             document.title = 'SoldOutAfrica - Attendees Report';
-            
             window.onload = function() {
               setTimeout(() => window.print(), 500);
             }
@@ -2521,25 +2323,25 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       </motion.div>
 
       {/* Pending Approval Notification */}
-      {eventData.status === "pending" && (
+      {eventData.apiStatus === "ONHOLD" && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 p-4 sm:p-6">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30 p-4 sm:p-6">
             <div className="flex items-start gap-3 sm:gap-4">
-              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-base sm:text-lg font-bold text-orange-900 dark:text-orange-200 mb-1">
+                <h3 className="text-base sm:text-lg font-bold text-yellow-900 dark:text-yellow-200 mb-1">
                   Pending Approval
                 </h3>
-                <p className="text-sm sm:text-base text-orange-800 dark:text-orange-300">
-                  The SoldOutAfrica team is currently reviewing your event. You&apos;ll be notified once your event has been approved and is live on the platform.
+                <p className="text-sm sm:text-base text-yellow-800 dark:text-yellow-300">
+                  This event is pending approval and will be active once approved by the administrator. The SoldOutAfrica team is currently reviewing your event.
                 </p>
-                <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm text-orange-700 dark:text-orange-400">
+                <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm text-yellow-700 dark:text-yellow-400">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
                     <span className="font-medium">Under Review</span>
@@ -3086,17 +2888,23 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(transactionsTotalPages, 10) }, (_, i) => i + 1).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => setTransactionsPage(page)}
-                            className={cn(
-                              "pagination-button",
-                              page === transactionsPage && "pagination-button-active"
-                            )}
-                          >
-                            {page}
-                          </button>
+                        {getPageNumbers(transactionsPage, transactionsTotalPages).map((page, index) => (
+                          page === '...' ? (
+                            <span key={`ellipsis-${index}`} className="px-2 py-1 text-muted-foreground">
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => setTransactionsPage(page as number)}
+                              className={cn(
+                                "pagination-button",
+                                page === transactionsPage && "pagination-button-active"
+                              )}
+                            >
+                              {page}
+                            </button>
+                          )
                         ))}
                       </div>
                       <button
@@ -3123,7 +2931,15 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             transition={{ duration: 0.3 }}
             className="space-y-6"
           >
-            {eventData.status === "pending" || attendees.length === 0 ? (
+            {attendeesLoading ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20">
+                <Loader2 className="w-12 h-12 animate-spin text-[#8b5cf6]" />
+                <div className="text-center">
+                  <p className="text-base font-medium text-foreground">Loading attendees...</p>
+                  <p className="text-sm text-muted-foreground mt-1">Please wait while we fetch the data</p>
+                </div>
+              </div>
+            ) : eventData.status === "pending" || attendees.length === 0 ? (
               <div className="text-center py-16 rounded-2xl border border-dashed border-border bg-card/50">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
                   <CheckCircle className="w-8 h-8 text-muted-foreground" />
@@ -3177,34 +2993,60 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {paginatedAttendees.map((attendee) => (
-                          <tr key={attendee.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                            <td className="p-4 text-sm font-medium">{attendee.name}</td>
-                            <td className="p-4 text-sm text-muted-foreground">{attendee.email}</td>
-                            <td className="p-4 text-sm text-muted-foreground">{attendee.phone || 'N/A'}</td>
-                            <td className="p-4 text-sm">{attendee.ticketType}</td>
-                            <td className="p-4 text-sm font-mono">{attendee.ticketNumber}</td>
-                            <td className="p-4 text-sm text-muted-foreground">
-                              {new Date(attendee.purchaseDate).toLocaleDateString()}
+                        {attendeesLoading ? (
+                          <tr>
+                            <td colSpan={7} className="p-12">
+                              <div className="flex flex-col items-center justify-center gap-4">
+                                <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                                <div className="text-center">
+                                  <p className="text-sm font-medium text-foreground">Loading attendees...</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Please wait while we fetch the data</p>
+                                </div>
+                              </div>
                             </td>
-                            <td className="p-4">
-                              {attendee.checkedIn ? (
-                                <div>
+                          </tr>
+                        ) : paginatedAttendees.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                              No attendees found
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedAttendees.map((attendee, index) => (
+                            <tr key={`${attendee.ticketId}-${index}`} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                              <td className="p-4 text-sm font-medium">
+                                {attendee.firstName} {attendee.lastName}
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">{attendee.email}</td>
+                              <td className="p-4 text-sm text-muted-foreground">{attendee.mobileNumber || 'N/A'}</td>
+                              <td className="p-4 text-sm">
+                                {attendee.ticketName}
+                                {attendee.complementary && (
+                                  <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded">
+                                    Comp
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-4 text-sm font-mono">{attendee.ticketId}</td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {new Date(attendee.purchaseTime).toLocaleDateString()}
+                              </td>
+                              <td className="p-4">
+                                {attendee.scanned ? (
                                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium">
                                     <CheckCircle className="w-3 h-3" />
                                     Checked In
                                   </span>
-                                  <p className="text-xs text-muted-foreground mt-1">{attendee.checkedInTime}</p>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-muted-foreground text-xs font-medium">
-                                  <XCircle className="w-3 h-3" />
-                                  Not Checked In
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-muted-foreground text-xs font-medium">
+                                    <XCircle className="w-3 h-3" />
+                                    Not Checked In
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3213,20 +3055,33 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
                 {/* Mobile Cards */}
                 <div className="lg:hidden space-y-4">
-                  {paginatedAttendees.map((attendee) => (
-                    <div key={attendee.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold">{attendee.name}</p>
-                          <p className="text-sm text-muted-foreground">{attendee.email}</p>
-                          <p className="text-sm text-muted-foreground">{attendee.phone || 'N/A'}</p>
-                        </div>
-                        {attendee.checkedIn ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium">
-                            <CheckCircle className="w-3 h-3" />
-                            Checked In
-                          </span>
-                        ) : (
+                  {attendeesLoading ? (
+                    <div className="flex flex-col items-center justify-center gap-4 p-12">
+                      <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-foreground">Loading attendees...</p>
+                        <p className="text-xs text-muted-foreground mt-1">Please wait while we fetch the data</p>
+                      </div>
+                    </div>
+                  ) : paginatedAttendees.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      No attendees found
+                    </div>
+                  ) : (
+                    paginatedAttendees.map((attendee, index) => (
+                      <div key={`${attendee.ticketId}-${index}`} className="rounded-xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold">{attendee.firstName} {attendee.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{attendee.email}</p>
+                            <p className="text-sm text-muted-foreground">{attendee.mobileNumber || 'N/A'}</p>
+                          </div>
+                          {attendee.scanned ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium">
+                              <CheckCircle className="w-3 h-3" />
+                              Checked In
+                            </span>
+                          ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-secondary text-muted-foreground text-xs font-medium">
                             Not Checked In
                           </span>
@@ -3235,27 +3090,32 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Ticket Type</p>
-                          <p className="text-sm">{attendee.ticketType}</p>
+                          <p className="text-sm">
+                            {attendee.ticketName}
+                            {attendee.complementary && (
+                              <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded">
+                                Comp
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Ticket Number</p>
-                          <p className="text-sm font-mono">{attendee.ticketNumber}</p>
+                          <p className="text-sm font-mono">{attendee.ticketId}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Purchase Date</p>
-                          <p className="text-sm">{new Date(attendee.purchaseDate).toLocaleDateString()}</p>
+                          <p className="text-sm">{new Date(attendee.purchaseTime).toLocaleDateString()}</p>
                         </div>
-                        {attendee.checkedIn && attendee.checkedInTime && (
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Check-in Time</p>
-                            <p className="text-sm">{attendee.checkedInTime}</p>
-                          </div>
-                        )}
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Transaction ID</p>
+                          <p className="text-sm font-mono">{attendee.transactionId}</p>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
 
                 {/* Pagination - Bottom Only */}
@@ -3273,17 +3133,23 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         <ChevronLeft className="w-4 h-4" />
                       </button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: attendeesTotalPages }, (_, i) => i + 1).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => setAttendeesPage(page)}
-                            className={cn(
-                              "pagination-button",
-                              page === attendeesPage && "pagination-button-active"
-                            )}
-                          >
-                            {page}
-                          </button>
+                        {getPageNumbers(attendeesPage, attendeesTotalPages).map((page, index) => (
+                          page === '...' ? (
+                            <span key={`ellipsis-${index}`} className="px-2 py-1 text-muted-foreground">
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => setAttendeesPage(page as number)}
+                              className={cn(
+                                "pagination-button",
+                                page === attendeesPage && "pagination-button-active"
+                              )}
+                            >
+                              {page}
+                            </button>
+                          )
                         ))}
                       </div>
                       <button

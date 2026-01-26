@@ -18,6 +18,7 @@ interface Event {
   eventEndDate: string
   eventLocation: string
   isActive: boolean
+  status?: string
   companyId: number
   category: string
   currency: string
@@ -27,23 +28,31 @@ interface Event {
     ticketPrice: number
     soldQuantity: number
     quantityAvailable: number
+    totalTicketSaleBalance?: number
   }>
   totalTicketsSold?: number
   totalRevenue?: number
+  totalPlatformFee?: number
+  analytics?: {
+    dailySalesGraph: string
+    currentWeekSales: number
+    totalAttendees: number
+    totalTicketTypes: number
+  }
 }
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [isLoadingInitial, setIsLoadingInitial] = useState(true)
-  const [isLoadingAll, setIsLoadingAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "upcoming" | "past" | "inactive">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "upcoming" | "past" | "inactive" | "pending">("all")
   const [currency, setCurrency] = useState("KES")
 
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const user = sessionManager.getUser()
+
         if (!user || !user.company_id) {
           setIsLoadingInitial(false)
           return
@@ -51,43 +60,29 @@ export default function EventsPage() {
 
         setCurrency(user.currency || "KES")
 
-        // Stage 1: Load active events quickly (no caching needed for fast endpoint)
-        const activeEventsResponse = await api.company.getEvents()
-        if (activeEventsResponse.events) {
-          const companyEvents = activeEventsResponse.events.filter(
-            (event) => event.companyId === user.company_id
-          )
-          setEvents(companyEvents)
-        }
-        setIsLoadingInitial(false)
-
-        // Stage 2: Load all events with caching (including past events)
-        // Check if already loading to prevent duplicate requests
+        // Only use admin/events/get/all API with caching
         const cacheKey = 'all-events-300'
 
         if (eventCache.isLoading(cacheKey)) {
-          setIsLoadingAll(true)
           // Wait for pending request to complete
           const pendingRequest = eventCache.getPendingRequest(cacheKey)
           if (pendingRequest) {
-            const cachedData = await pendingRequest as { events?: any[] }
+            const cachedData = await pendingRequest as { events?: Event[] }
             if (cachedData && cachedData.events) {
               // Filter to only this company's events (security)
               const companyEvents = cachedData.events.filter(
-                (event: any) => event.companyId === user.company_id
+                (event: Event) => event.companyId === user.company_id
               )
               // Sort by date (newest first)
-              companyEvents.sort((a: any, b: any) =>
+              companyEvents.sort((a: Event, b: Event) =>
                 new Date(b.eventStartDate).getTime() - new Date(a.eventStartDate).getTime()
               )
               setEvents(companyEvents)
             }
           }
-          setIsLoadingAll(false)
+          setIsLoadingInitial(false)
           return
         }
-
-        setIsLoadingAll(true)
 
         // Use cache manager to fetch or retrieve cached data
         const allEventsData = await eventCache.getOrFetch(
@@ -115,7 +110,7 @@ export default function EventsPage() {
       } catch (error) {
         console.error("Failed to fetch events:", error)
       } finally {
-        setIsLoadingAll(false)
+        setIsLoadingInitial(false)
       }
     }
 
@@ -153,6 +148,9 @@ export default function EventsPage() {
 
   // Determine event status
   const getEventStatus = (event: Event) => {
+    // Check API status first (ONHOLD, ACTIVE, etc.)
+    if (event.status === 'ONHOLD') return 'pending'
+
     const now = new Date()
     const startDate = new Date(event.eventStartDate)
     const endDate = new Date(event.eventEndDate)
@@ -178,7 +176,14 @@ export default function EventsPage() {
   const getStatusBadge = (event: Event) => {
     const status = getEventStatus(event)
 
-    if (status === "active") {
+    if (status === "pending") {
+      return (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold border-2 border-yellow-500/50">
+          <Clock className="w-3.5 h-3.5" />
+          Pending Approval
+        </div>
+      )
+    } else if (status === "active") {
       return (
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-medium border border-green-200 dark:border-green-900">
           <CheckCircle className="w-3 h-3" />
@@ -254,22 +259,17 @@ export default function EventsPage() {
 
         {/* Status Filter */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-          {isLoadingAll && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-xs font-medium border border-blue-200 dark:border-blue-900">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Loading all events...
-            </div>
-          )}
           {[
             { label: "All", value: "all" },
             { label: "Active", value: "active" },
             { label: "Upcoming", value: "upcoming" },
+            { label: "Pending", value: "pending" },
             { label: "Past", value: "past" },
             { label: "Inactive", value: "inactive" },
           ].map((filter) => (
             <button
               key={filter.value}
-              onClick={() => setStatusFilter(filter.value as "all" | "active" | "upcoming" | "past" | "inactive")}
+              onClick={() => setStatusFilter(filter.value as "all" | "active" | "upcoming" | "past" | "inactive" | "pending")}
               className={cn(
                 "px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0",
                 statusFilter === filter.value
@@ -329,14 +329,23 @@ export default function EventsPage() {
                 transition={{ delay: 0.5 + index * 0.05 }}
                 className={cn(
                   "group relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card hover:shadow-lg transition-all duration-300",
-                  eventStatus === "upcoming"
+                  eventStatus === "pending"
+                    ? "border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-950/10 hover:border-yellow-500/70"
+                    : eventStatus === "upcoming"
                     ? "border-blue-500/50 bg-blue-50/30 dark:bg-blue-950/10 hover:border-blue-500/70"
                     : eventStatus === "inactive"
                     ? "border-red-500/50 bg-red-50/30 dark:bg-red-950/10 hover:border-red-500/70"
                     : "border-border hover:border-[#8b5cf6]/30"
                 )}
               >
-                <div className="p-4 sm:p-6">
+                {/* Pending Approval Banner */}
+                {eventStatus === "pending" && (
+                  <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-white text-xs font-medium px-4 py-2 flex items-center gap-2 z-10">
+                    <Clock className="w-3.5 h-3.5" />
+                    This event is pending approval and will be active once approved by the administrator
+                  </div>
+                )}
+                <div className={cn("p-4 sm:p-6", eventStatus === "pending" && "pt-14")}>
                   <div className="flex flex-col sm:flex-row gap-4">
                     {/* Event Image */}
                     <div className="relative w-full sm:w-48 h-32 sm:h-32 rounded-lg overflow-hidden bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex-shrink-0">

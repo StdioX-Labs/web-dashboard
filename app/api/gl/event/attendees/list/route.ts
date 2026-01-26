@@ -7,9 +7,14 @@ const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
-    const page = searchParams.get('page') || '0'
-    const size = searchParams.get('size') || '300'
-    const companyId = searchParams.get('companyId') // Get company ID from query params
+    const eventId = searchParams.get('eventId')
+
+    if (!eventId) {
+      return NextResponse.json(
+        { message: 'Event ID is required', status: false },
+        { status: 400 }
+      )
+    }
 
     // Get auth token from request headers
     const authHeader = request.headers.get('Authorization')
@@ -26,29 +31,26 @@ export async function GET(request: NextRequest) {
       headers['Authorization'] = authHeader
     }
 
-    // Add companyId to the API request if provided
-    const apiUrl = companyId
-      ? `${SOLDOUT_API_BASE}/admin/events/get/all?page=${page}&size=${size}&companyId=${companyId}`
-      : `${SOLDOUT_API_BASE}/admin/events/get/all?page=${page}&size=${size}`
-
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers,
-    })
+    const response = await fetch(
+      `${SOLDOUT_API_BASE}/gl/event/attendees/list?eventId=${eventId}`,
+      {
+        method: 'GET',
+        headers,
+      }
+    )
 
     const data = await response.json()
 
     if (!response.ok) {
       return NextResponse.json(
-        { message: data.message || 'Failed to fetch all events', status: false },
+        { message: data.message || 'Failed to fetch attendees', status: false },
         { status: response.status }
       )
     }
 
-    // Return the data as-is since API now filters by companyId
     return NextResponse.json(data)
   } catch (error) {
-    console.error('All events fetch error:', error)
+    console.error('Attendees fetch error:', error)
     return NextResponse.json(
       { message: 'Internal server error', status: false },
       { status: 500 }
