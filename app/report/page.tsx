@@ -31,11 +31,27 @@ export default function ReportPage() {
       // Add mobile-friendly styles (only for screen, not print)
       const style = document.createElement('style')
       style.textContent = `
+        /* Print-specific container reset */
+        @media print {
+          #report-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            overflow: visible !important;
+          }
+        }
+        
         @media screen {
           /* Mobile-friendly container */
           body {
             overflow-x: hidden;
             background: #ffffff;
+          }
+          
+          #report-container {
+            padding: 20px 15px;
+            max-width: 100%;
+            overflow-x: hidden;
           }
           
           /* Responsive tables */
@@ -183,15 +199,100 @@ export default function ReportPage() {
         @media print {
           body {
             overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
           }
           
+          /* Reset all container modifications */
+          .report-header {
+            padding: 20px 35px !important;
+          }
+          
+          .event-info {
+            padding: 20px 25px !important;
+            margin: 25px 30px !important;
+          }
+          
+          .info-section, .summary-section, .table-section {
+            margin: 25px 30px !important;
+            padding: 20px !important;
+          }
+          
+          /* Reset grid layouts */
+          .info-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 15px 30px !important;
+          }
+          
+          .summary-grid, .summary-content {
+            flex-direction: row !important;
+            gap: 50px !important;
+          }
+          
+          .summary-item {
+            flex: 1 !important;
+            padding: 15px !important;
+          }
+          
+          /* Reset header layout */
+          .header-top {
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+          }
+          
+          .report-meta {
+            text-align: right !important;
+          }
+          
+          /* Reset font sizes */
+          .brand-name {
+            font-size: 26px !important;
+          }
+          
+          .report-title {
+            font-size: 30px !important;
+          }
+          
+          .info-label {
+            font-size: 10px !important;
+          }
+          
+          .info-value {
+            font-size: 15px !important;
+          }
+          
+          .summary-value {
+            font-size: 32px !important;
+          }
+          
+          .section-title {
+            font-size: 13px !important;
+          }
+          
+          /* Reset table display */
           table {
             display: table !important;
             min-width: auto !important;
+            font-size: 11px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
           }
           
           th, td {
             white-space: normal !important;
+            word-wrap: break-word !important;
+            padding: 8px 6px !important;
+            font-size: 10px !important;
+          }
+          
+          /* Ensure nothing is cut off */
+          * {
+            overflow: visible !important;
+          }
+          
+          .table-section {
+            overflow: visible !important;
           }
         }
       `
@@ -207,14 +308,9 @@ export default function ReportPage() {
   // Render empty container that will be filled with HTML
   return (
     <div
+      id="report-container"
       ref={containerRef}
       className="w-full min-h-screen"
-      style={{
-        margin: 0,
-        padding: '20px 15px',
-        maxWidth: '100%',
-        overflowX: 'hidden'
-      }}
     />
   )
 }
