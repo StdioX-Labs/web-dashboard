@@ -1029,29 +1029,101 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             /* Print styles */
             @media print {
               @page { size: A4 landscape; margin: 15mm; }
-              body { padding: 0; }
-              .report-header { page-break-after: avoid; }
-              .info-section { page-break-after: avoid; }
-              .info-grid { 
-                grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
+              body { 
+                padding: 0 !important; 
+                margin: 0 !important;
+                overflow: visible !important;
               }
-              .summary-section {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
+              
+              /* Reset header styles */
+              .report-header { 
                 page-break-after: avoid;
+                flex-direction: row !important;
+                gap: initial !important;
+                padding-bottom: 20px !important;
               }
+              
+              .brand-section {
+                flex: 1 !important;
+                width: auto !important;
+              }
+              
+              .brand-name {
+                font-size: 28px !important;
+              }
+              
+              .brand-tagline {
+                font-size: 11px !important;
+              }
+              
+              .report-info {
+                text-align: right !important;
+                width: auto !important;
+              }
+              
+              .report-title {
+                font-size: 24px !important;
+              }
+              
+              .report-date {
+                font-size: 12px !important;
+              }
+              
+              .report-id {
+                font-size: 11px !important;
+              }
+              
+              /* Reset info section */
+              .info-section { 
+                page-break-after: avoid;
+                padding: 20px !important;
+                margin-bottom: 30px !important;
+              }
+              
+              .info-grid { 
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 15px !important;
+              }
+              
+              .info-value {
+                font-size: 16px !important;
+              }
+              
+              /* CRITICAL: Reset summary section to horizontal layout */
+              .summary-section {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 15px !important;
+                page-break-after: avoid;
+                margin-bottom: 30px !important;
+              }
+              
+              .summary-card {
+                padding: 15px !important;
+              }
+              
+              .summary-value {
+                font-size: 22px !important;
+              }
+              
+              /* Reset table section */
+              .table-section {
+                overflow: visible !important;
+                margin: 0 !important;
+              }
+              
               table { 
                 page-break-inside: auto;
-                font-size: 10px;
-                table-layout: fixed;
-                width: 100%;
+                font-size: 10px !important;
+                table-layout: fixed !important;
+                width: 100% !important;
               }
+              
               th, td {
-                padding: 8px 6px;
-                font-size: 10px;
+                padding: 8px 6px !important;
+                font-size: 10px !important;
                 word-wrap: break-word;
               }
+              
               th:nth-child(1), td:nth-child(1) { width: 12%; } /* Transaction ID */
               th:nth-child(2), td:nth-child(2) { width: 20%; } /* Buyer Information */
               th:nth-child(3), td:nth-child(3) { width: 18%; } /* Ticket Type */
@@ -1059,9 +1131,15 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               th:nth-child(5), td:nth-child(5) { width: 12%; } /* Amount */
               th:nth-child(6), td:nth-child(6) { width: 18%; } /* Date & Time */
               th:nth-child(7), td:nth-child(7) { width: 12%; } /* Status */
+              
               tr { page-break-inside: avoid; page-break-after: auto; }
               thead { display: table-header-group; }
               .status-badge { font-size: 8px; padding: 3px 6px; }
+              
+              /* Ensure nothing is cut off */
+              * {
+                overflow: visible !important;
+              }
             }
           </style>
         </head>
