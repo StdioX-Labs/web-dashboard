@@ -745,10 +745,51 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
   // Export functions
   // Export functions - Professional PDF reports using /report page
-  const exportTransactionsToPDF = () => {
+  const exportTransactionsToPDF = async () => {
     try {
+      if (!eventData) {
+        toast.error("No event data available")
+        return
+      }
 
-      const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0)
+      // Show loading toast
+      const loadingToast = toast.loading("Fetching all transactions...")
+
+      // Fetch ALL transactions (not just current page)
+      let allTransactions: typeof transactions = []
+      try {
+        const response = await api.transactions.fetchDetailed({
+          id: eventId,
+          idType: 'event',
+          page: 0, // Start from first page
+          size: 1000, // Fetch up to 1000 transactions at once
+        })
+
+        if (response.data && response.data.data) {
+          allTransactions = response.data.data.map((txn: any) => ({
+            id: txn.transactionId || 'N/A',
+            buyer: `${txn.buyer?.firstName || ''} ${txn.buyer?.lastName || ''}`.trim() || 'N/A',
+            email: txn.buyer?.email || 'N/A',
+            ticketType: txn.ticket?.ticketName || 'N/A',
+            quantity: 1, // Each transaction is for 1 ticket
+            amount: txn.transactionAmount || 0,
+            date: new Date(txn.createdAt).toLocaleString(),
+            status: 'completed',
+            barcode: txn.barcode || '',
+            platformFee: txn.platformFee || 0,
+          }))
+        }
+
+        toast.dismiss(loadingToast)
+      } catch (error) {
+        console.error("Error fetching all transactions:", error)
+        toast.dismiss(loadingToast)
+        toast.error("Failed to fetch all transactions. Using current page data.")
+        // Fallback to current page transactions
+        allTransactions = transactions
+      }
+
+      const totalRevenue = allTransactions.reduce((sum, t) => sum + t.amount, 0)
 
       // Generate unique report ID
       const reportId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
@@ -1196,7 +1237,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           <div class="summary-section">
             <div class="summary-card">
               <div class="summary-label">Total Transactions</div>
-              <div class="summary-value">${transactions.length}</div>
+              <div class="summary-value">${allTransactions.length}</div>
             </div>
             <div class="summary-card">
               <div class="summary-label">Total Revenue</div>
@@ -1204,13 +1245,13 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             </div>
             <div class="summary-card">
               <div class="summary-label">Avg. Transaction</div>
-              <div class="summary-value">KES ${Math.round(totalRevenue / transactions.length).toLocaleString()}</div>
+              <div class="summary-value">KES ${allTransactions.length > 0 ? Math.round(totalRevenue / allTransactions.length).toLocaleString() : '0'}</div>
             </div>
           </div>
 
           <!-- Transactions Table -->
           <div class="table-section">
-            <div class="section-title">Transaction Details</div>
+            <div class="section-title">Transaction Details (${allTransactions.length} Total)</div>
             <table>
               <thead>
                 <tr>
@@ -1224,7 +1265,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 </tr>
               </thead>
               <tbody>
-                ${transactions.map(txn => `
+                ${allTransactions.map(txn => `
                   <tr>
                     <td style="font-family: 'Courier New', monospace; font-weight: 600;">${txn.id}</td>
                     <td>

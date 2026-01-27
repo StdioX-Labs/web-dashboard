@@ -277,14 +277,39 @@ export default function ReportPage() {
             font-size: 11px !important;
             width: 100% !important;
             table-layout: fixed !important;
+            border-collapse: collapse !important;
           }
           
           th, td {
             white-space: normal !important;
             word-wrap: break-word !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
             padding: 8px 6px !important;
             font-size: 10px !important;
+            vertical-align: top !important;
           }
+          
+          /* Specific column widths for transaction report */
+          thead th:nth-child(1), tbody td:nth-child(1) { width: 12% !important; } /* Transaction ID */
+          thead th:nth-child(2), tbody td:nth-child(2) { width: 20% !important; } /* Buyer Information */
+          thead th:nth-child(3), tbody td:nth-child(3) { width: 18% !important; } /* Ticket Type */
+          thead th:nth-child(4), tbody td:nth-child(4) { width: 8% !important; } /* Qty */
+          thead th:nth-child(5), tbody td:nth-child(5) { width: 12% !important; } /* Amount */
+          thead th:nth-child(6), tbody td:nth-child(6) { width: 18% !important; } /* Date & Time */
+          thead th:nth-child(7), tbody td:nth-child(7) { width: 12% !important; } /* Status */
+          
+          /* Specific column widths for attendee report (5 columns) */
+          table:has(th:nth-child(5):not(:nth-child(6))) th:nth-child(1),
+          table:has(th:nth-child(5):not(:nth-child(6))) td:nth-child(1) { width: 15% !important; } /* Name */
+          table:has(th:nth-child(5):not(:nth-child(6))) th:nth-child(2),
+          table:has(th:nth-child(5):not(:nth-child(6))) td:nth-child(2) { width: 25% !important; } /* Contact */
+          table:has(th:nth-child(5):not(:nth-child(6))) th:nth-child(3),
+          table:has(th:nth-child(5):not(:nth-child(6))) td:nth-child(3) { width: 25% !important; } /* Ticket Details */
+          table:has(th:nth-child(5):not(:nth-child(6))) th:nth-child(4),
+          table:has(th:nth-child(5):not(:nth-child(6))) td:nth-child(4) { width: 15% !important; } /* Purchase Date */
+          table:has(th:nth-child(5):not(:nth-child(6))) th:nth-child(5),
+          table:has(th:nth-child(5):not(:nth-child(6))) td:nth-child(5) { width: 20% !important; } /* Check-in Status */
           
           /* Ensure nothing is cut off */
           * {
