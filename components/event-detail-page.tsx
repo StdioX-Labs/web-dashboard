@@ -760,7 +760,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           <meta charset="UTF-8">
           <title>Transaction Report - ${eventData?.name ?? 'Untitled Event'}</title>
           <style>
-            @page { margin: 20mm; size: A4; }
+            @page { margin: 15mm; size: A4 landscape; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -824,7 +824,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             }
             .info-grid {
               display: grid;
-              grid-template-columns: repeat(2, 1fr);
+              grid-template-columns: repeat(4, 1fr);
               gap: 20px;
             }
             .info-item {
@@ -1028,313 +1028,40 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
             /* Print styles */
             @media print {
+              @page { size: A4 landscape; margin: 15mm; }
               body { padding: 0; }
               .report-header { page-break-after: avoid; }
-              table { page-break-inside: auto; }
-              tr { page-break-inside: avoid; page-break-after: auto; }
-              thead { display: table-header-group; }
-            }
-          </style>
-        </head>
-        <body>
-          <!-- Header -->
-          <div class="report-header">
-            <div class="brand-section">
-              <div class="brand-name">SOLDOUTAFRICA</div>
-              <div class="brand-tagline">Event Management Platform</div>
-            </div>
-            <div class="report-info">
-              <div class="report-title">Transaction Report</div>
-              <div class="report-date">${new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</div>
-              <div class="report-id">Report ID: ${reportId}</div>
-            </div>
-          </div>
-
-          <!-- Event Information -->
-          <div class="info-section">
-            <div class="info-grid">
-              <div class="info-item">
-                <div class="info-label">Event Name</div>
-                <div class="info-value">${eventData?.name ?? 'Untitled Event'}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Event Date</div>
-                <div class="info-value">${eventData?.date ? new Date(eventData.date).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                }) : 'N/A'}</div>
-              </div>
-              <div class="info-item">
-                <div class="info-label">Venue</div>
-                <div class="info-value">${eventData?.venue ?? 'N/A'}</div>
-              </div>
-              border-bottom: 3px solid #8b5cf6;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-            }
-            .brand-section {
-              flex: 1;
-            }
-            .brand-name {
-              font-size: 28px;
-              font-weight: 700;
-              color: #8b5cf6;
-              margin-bottom: 4px;
-              letter-spacing: -0.5px;
-            }
-            .brand-tagline {
-              font-size: 11px;
-              color: #6b7280;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
-            .report-info {
-              text-align: right;
-            }
-            .report-title {
-              font-size: 24px;
-              font-weight: 700;
-              color: #1a1a1a;
-              margin-bottom: 4px;
-            }
-            .report-date {
-              font-size: 12px;
-              color: #6b7280;
-            }
-            .report-id {
-              font-size: 11px;
-              color: #9ca3af;
-              font-family: 'Courier New', monospace;
-            }
-
-            /* Event details box */
-            .info-section {
-              background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 20px;
-              margin-bottom: 30px;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
-            }
-            .info-item {
-              border-left: 3px solid #8b5cf6;
-              padding-left: 12px;
-            }
-            .info-label {
-              font-size: 11px;
-              color: #6b7280;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              font-weight: 600;
-              margin-bottom: 4px;
-            }
-            .info-value {
-              font-size: 16px;
-              color: #1a1a1a;
-              font-weight: 600;
-            }
-
-            /* Summary stats */
-            .summary-section {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: 15px;
-              margin-bottom: 30px;
-            }
-            .summary-card {
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 15px;
-              text-align: center;
-            }
-            .summary-label {
-              font-size: 11px;
-              color: #6b7280;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 6px;
-            }
-            .summary-value {
-              font-size: 22px;
-              font-weight: 700;
-              color: #8b5cf6;
-            }
-
-            /* Table styling */
-            .table-section {
-              margin-bottom: 30px;
-            }
-            .section-title {
-              font-size: 16px;
-              font-weight: 700;
-              color: #1a1a1a;
-              margin-bottom: 15px;
-              padding-bottom: 8px;
-              border-bottom: 2px solid #e5e7eb;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              overflow: hidden;
-            }
-            thead {
-              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-            }
-            th {
-              padding: 12px;
-              text-align: left;
-              font-size: 11px;
-              font-weight: 700;
-              color: #ffffff;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            td {
-              padding: 12px;
-              font-size: 13px;
-              border-bottom: 1px solid #f3f4f6;
-              color: #374151;
-            }
-            tbody tr:hover {
-              background: #f9fafb;
-            }
-            tbody tr:last-child td {
-              border-bottom: none;
-            }
-            .status-badge {
-              display: inline-block;
-              padding: 4px 10px;
-              border-radius: 12px;
-              font-size: 10px;
-              font-weight: 700;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .status-completed {
-              background: #d1fae5;
-              color: #065f46;
-            }
-            .status-pending {
-              background: #fef3c7;
-              color: #92400e;
-            }
-
-            /* Footer */
-            .report-footer {
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 1px solid #e5e7eb;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              font-size: 11px;
-              color: #6b7280;
-            }
-            .footer-text {
-              flex: 1;
-            }
-            .footer-company {
-              font-weight: 600;
-              color: #8b5cf6;
-            }
-
-            /* Mobile responsive styles */
-            @media (max-width: 768px) {
-              body {
-                padding: 10px;
-              }
-              .report-header {
-                flex-direction: column;
+              .info-section { page-break-after: avoid; }
+              .info-grid { 
+                grid-template-columns: repeat(4, 1fr);
                 gap: 15px;
-                padding-bottom: 15px;
-              }
-              .brand-section {
-                width: 100%;
-              }
-              .brand-name {
-                font-size: 18px;
-              }
-              .brand-tagline {
-                font-size: 10px;
-              }
-              .report-info {
-                text-align: left;
-                width: 100%;
-              }
-              .report-title {
-                font-size: 16px;
-              }
-              .report-date {
-                font-size: 11px;
-              }
-              .report-id {
-                font-size: 10px;
-              }
-              .info-section {
-                padding: 15px;
-              }
-              .info-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-              }
-              .info-value {
-                font-size: 14px;
               }
               .summary-section {
-                grid-template-columns: 1fr;
-                gap: 10px;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                page-break-after: avoid;
               }
-              .summary-card {
-                padding: 12px;
-              }
-              .summary-value {
-                font-size: 18px;
-              }
-              .table-section {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                margin: 0 -10px;
-                padding: 0 10px;
-              }
-              table {
-                min-width: 800px;
-                font-size: 12px;
+              table { 
+                page-break-inside: auto;
+                font-size: 10px;
+                table-layout: fixed;
+                width: 100%;
               }
               th, td {
                 padding: 8px 6px;
-                font-size: 11px;
+                font-size: 10px;
+                word-wrap: break-word;
               }
-              .report-footer {
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
-              }
-            }
-
-            /* Print styles */
-            @media print {
-              body { padding: 0; }
-              .report-header { page-break-after: avoid; }
-              table { page-break-inside: auto; }
+              th:nth-child(1), td:nth-child(1) { width: 12%; } /* Transaction ID */
+              th:nth-child(2), td:nth-child(2) { width: 20%; } /* Buyer Information */
+              th:nth-child(3), td:nth-child(3) { width: 18%; } /* Ticket Type */
+              th:nth-child(4), td:nth-child(4) { width: 8%; } /* Qty */
+              th:nth-child(5), td:nth-child(5) { width: 12%; } /* Amount */
+              th:nth-child(6), td:nth-child(6) { width: 18%; } /* Date & Time */
+              th:nth-child(7), td:nth-child(7) { width: 12%; } /* Status */
               tr { page-break-inside: avoid; page-break-after: auto; }
               thead { display: table-header-group; }
+              .status-badge { font-size: 8px; padding: 3px 6px; }
             }
           </style>
         </head>
@@ -1356,6 +1083,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               <div class="report-id">Report ID: ${reportId}</div>
             </div>
           </div>
+
 
           <!-- Event Information -->
           <div class="info-section">
@@ -1953,7 +1681,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 page-break-inside: auto;
                 width: 100%;
                 max-width: 100%;
-                table-layout: auto;
+                table-layout: fixed;
                 font-size: 11px;
               }
               
@@ -1971,6 +1699,13 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 padding: 8px 6px;
                 font-size: 10px;
               }
+              
+              /* Column widths for attendees table */
+              th:nth-child(1), td:nth-child(1) { width: 15%; } /* Name */
+              th:nth-child(2), td:nth-child(2) { width: 25%; } /* Contact Information */
+              th:nth-child(3), td:nth-child(3) { width: 25%; } /* Ticket Details */
+              th:nth-child(4), td:nth-child(4) { width: 15%; } /* Purchase Date */
+              th:nth-child(5), td:nth-child(5) { width: 20%; } /* Check-in Status */
               
               tbody {
                 width: 100%;

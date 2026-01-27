@@ -7,7 +7,7 @@ export interface TicketType {
   totalAvailable: number
   sold: number
   revenue: number
-  status: string
+  status: "active" | "sold_out" | "suspended" | "inactive"
   quantityAvailable: number
 }
 
@@ -19,6 +19,7 @@ export interface EventData {
   venue: string
   description: string
   status: string
+  apiStatus?: string
   balance: number
   pendingBalance: number
   totalRevenue: number
@@ -28,6 +29,23 @@ export interface EventData {
   totalTicketsSold: number
   eventStartDate: string
   eventEndDate: string
+  slug?: string
+}
+
+export interface Attendee {
+  firstName: string
+  lastName: string
+  mobileNumber: string
+  ticketName: string
+  ticketPrice: number
+  ticketId: string
+  email: string
+  purchaseTime: string
+  scanned: boolean
+  complementary: boolean
+  transactionId: string
+  checkedIn?: boolean
+  checkedInTime?: string
 }
 
 export interface Transaction {
@@ -39,22 +57,18 @@ export interface Transaction {
   amount: number
   date: string
   status: string
+  barcode: string
+  platformFee: number
 }
 
-export interface Attendee {
-  id: number
-  name: string
-  email: string
-  phone: string
-  ticketType: string
-  ticketNumber: string
-  purchaseDate: string
-  checkedIn: boolean
-  checkedInTime: string | null
+export interface TransactionsStats {
+  ticketsSold: number
+  platformLiability: number
+  totalSales: number
 }
 
 export type TabType = "overview" | "tickets" | "transactions" | "attendees"
-export type ActionType = "suspend" | "activate"
 export type SuspendType = "event" | "ticket"
+export type ActionType = "suspend" | "activate"
 export type SuspendStep = "confirm" | "otp"
 
