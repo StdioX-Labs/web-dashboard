@@ -163,6 +163,21 @@ export default function DashboardHome() {
   const withdrawn = 0
   const availableBalance = totalRevenue - commissionAndFees - withdrawn
 
+  // Helper function to format large numbers for mobile
+  const formatCurrency = (amount: number, compact = false): string => {
+    if (!compact || amount < 100000) {
+      return Math.round(amount).toLocaleString()
+    }
+
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`
+    } else if (amount >= 100000) {
+      return `${(amount / 1000).toFixed(0)}K`
+    }
+
+    return Math.round(amount).toLocaleString()
+  }
+
   const stats = {
     totalEvents: summary?.totalEvents || 0,
     activeEvents: summary?.activeEvents || 0,
@@ -178,7 +193,7 @@ export default function DashboardHome() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6 sm:mb-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-6 lg:p-8 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-5 sm:p-6 lg:p-8 text-white shadow-2xl">
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
@@ -188,24 +203,27 @@ export default function DashboardHome() {
           <button
             type="button"
             onClick={() => setShowBalance(!showBalance)}
-            className="absolute top-6 right-6 p-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all cursor-pointer z-20 border border-white/30"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 sm:p-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all cursor-pointer z-20 border border-white/30"
           >
-            {showBalance ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+            {showBalance ? <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
 
           <div className="relative z-10">
             <div className="mb-6 lg:mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                  <TrendingUp className="w-7 h-7" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm opacity-70 mb-1">Total Revenue</p>
-                  <h2 className="text-4xl lg:text-5xl font-bold">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm opacity-70 mb-1">Total Revenue</p>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">
                     {isLoading ? (
                       <span className="animate-pulse">Loading...</span>
                     ) : showBalance ? (
-                      `${currency} ${Math.round(totalRevenue).toLocaleString()}`
+                      <>
+                        <span className="sm:hidden">{currency} {formatCurrency(totalRevenue, true)}</span>
+                        <span className="hidden sm:inline">{currency} {formatCurrency(totalRevenue)}</span>
+                      </>
                     ) : (
                       "••••••••"
                     )}
@@ -214,36 +232,36 @@ export default function DashboardHome() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
-                <p className="text-sm text-white/70 mb-3">Commission & Fees</p>
-                <p className="text-2xl font-bold">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 min-w-0">
+                <p className="text-xs sm:text-sm text-white/70 mb-2 sm:mb-3">Commission & Fees</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold break-words">
                   {isLoading ? "..." : showBalance ? `- ${currency} ${Math.round(commissionAndFees).toLocaleString()}` : "- ••••••"}
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10">
-                <p className="text-sm text-white/70 mb-3">Withdrawn</p>
-                <p className="text-2xl font-bold">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 min-w-0">
+                <p className="text-xs sm:text-sm text-white/70 mb-2 sm:mb-3">Withdrawn</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold break-words">
                   {isLoading ? "..." : showBalance ? `- ${currency} ${withdrawn.toLocaleString()}` : "- ••••••"}
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30">
-                <p className="text-sm text-green-200 mb-3">Available Balance</p>
-                <p className="text-3xl font-bold text-green-200">
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30 min-w-0">
+                <p className="text-xs sm:text-sm text-green-200 mb-2 sm:mb-3">Available Balance</p>
+                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-200 break-words">
                   {isLoading ? "..." : showBalance ? `${currency} ${Math.round(availableBalance).toLocaleString()}` : "••••••"}
                 </p>
               </div>
 
               <div className="flex flex-col gap-2 justify-center">
-                <button className="w-full px-4 py-3 bg-white text-[#7c3aed] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                  <Send className="w-4 h-4" />
-                  Withdraw
+                <button className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white text-[#7c3aed] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-white/95 transition-colors">
+                  <Send className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Withdraw</span>
                 </button>
-                <button className="w-full px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-white/20">
-                  <Download className="w-4 h-4" />
-                  Report
+                <button className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border border-white/20 transition-colors">
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Report</span>
                 </button>
               </div>
             </div>
