@@ -5,8 +5,8 @@ const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-
-    console.log('=== User Create API Proxy ===')
+    
+    console.log('=== Company Create API Proxy ===')
     console.log('Request body:', JSON.stringify(body, null, 2))
 
     // Build headers with Basic Authentication
@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Calling backend API:', `${BASE_URL}/user/create`)
+    console.log('Calling backend API:', `${BASE_URL}/company/create`)
 
-    const response = await fetch(`${BASE_URL}/user/create`, {
+    const response = await fetch(`${BASE_URL}/company/create`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -82,14 +82,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
-    console.error('User create error:', error)
+    console.error('Company create error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorStack = error instanceof Error ? error.stack : undefined
     console.error('Error details:', errorMessage)
     console.error('Error stack:', errorStack)
 
     return NextResponse.json(
-      { error: 'Failed to create user', status: false, message: errorMessage },
+      { error: 'Failed to create company', status: false, message: errorMessage },
       { status: 500 }
     )
   }

@@ -35,7 +35,16 @@ export default function LoginPage() {
   const [serverOtp, setServerOtp] = useState<string | null>(null)
   const [userData, setUserData] = useState<any>(null)
 
-
+  // Clear form when mode changes
+  useEffect(() => {
+    setEmail("")
+    setEmailError("")
+    setTouched(false)
+    setShowOtpInput(false)
+    setOtp("")
+    setOtpError("")
+    setOtpTouched(false)
+  }, [mode])
 
   // Update cursor style
   useEffect(() => {
@@ -107,6 +116,13 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
 
+    if (mode === "signup") {
+      // For sign up, redirect to full signup page
+      router.push('/signup')
+      return
+    }
+
+    // For sign in, request OTP
     try {
       // Call the API to request OTP
       const response = await api.auth.requestOtp(email, 'email')
@@ -126,18 +142,11 @@ export default function LoginPage() {
           description: `Please check your email for the verification code.`,
         })
 
-        if (mode === "signin") {
-          // For sign in, show OTP input
-          setShowOtpInput(true)
-          setIsSubmitting(false)
-          // Focus on OTP input
-          setTimeout(() => otpInputRef.current?.focus(), 100)
-        } else {
-          // For sign up, proceed with registration
-          setIsSubmitting(false)
-          console.log(`Sign up with email:`, email)
-          // TODO: Implement sign up flow
-        }
+        // Show OTP input
+        setShowOtpInput(true)
+        setIsSubmitting(false)
+        // Focus on OTP input
+        setTimeout(() => otpInputRef.current?.focus(), 100)
       } else {
         toast.error("Failed to send verification code", {
           description: response.message || "Please try again.",
@@ -666,11 +675,11 @@ export default function LoginPage() {
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                               />
-                              <span>Sending code...</span>
+                              <span>{mode === "signin" ? "Sending code..." : "Redirecting..."}</span>
                             </>
                           ) : (
                             <>
-                              <span>{mode === "signin" ? "Continue" : "Create account"}</span>
+                              <span>{mode === "signin" ? "Continue" : "Get started"}</span>
                               <ArrowRight className="h-4 w-4" />
                             </>
                           )}

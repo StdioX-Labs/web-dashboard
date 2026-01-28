@@ -181,11 +181,21 @@ export const api = {
       return apiRequest<{
         message: string
         status: boolean
-        user?: any
+        user?: {
+          phoneNumber: string
+          profile_type: string
+          role: string
+          is_active: boolean
+          kycStatus: string
+          company_id: number
+          user_id: number
+          company_name: string
+          email: string
+        }
       }>(`/user/create`, {
         method: 'POST',
         body: JSON.stringify(userData),
-      })
+      }, true) // Use proxy route
     },
     edit: async (
       userId: number,
@@ -555,6 +565,46 @@ export const api = {
       }>(`/gl/event/attendees/list?eventId=${eventId}`, {
         method: 'GET',
       }, true)
+    },
+    create: async (companyData: {
+      companyName: string
+      physicalAddress: string
+      postalAddress: string
+      phoneNumber: string
+      emailAddress: string
+      currency: string
+      profileType: string
+      billingAccountType?: string
+      bio?: string
+      profilePhoto?: string
+      legalDocuments?: string
+    }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+        company?: {
+          id: number
+          companyName: string
+          physicalAddress: string
+          postalAddress: string
+          phoneNumber: string
+          currency: string
+          profileType: string
+          emailAddress: string
+          billingAccountType: string
+          bio: string
+          profilePhoto: string
+          legalDocuments: string
+          users: unknown[]
+          events: unknown[]
+          createdAt: string
+          updatedAt: string
+          active: boolean
+        }
+      }>('/company/create', {
+        method: 'POST',
+        body: JSON.stringify(companyData),
+      }, true) // Use proxy route
     },
   },
 
