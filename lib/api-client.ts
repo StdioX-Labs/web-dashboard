@@ -758,10 +758,21 @@ export const api = {
   scanner: {
     scan: async (scanData: {
       userId: number
+      eventId: number
       barcode: string
     }) => {
       return apiRequest<{
-        ticket: Array<{
+        ticket: {
+          id: number
+          ticketName: string
+          ticketPrice: number
+          barcode: string
+          ticketGroupCode: string
+          customerMobile: string
+          isComplementary: boolean
+          status: string
+          createdAt: string
+        } | Array<{
           id: number
           ticketName: string
           ticketPrice: number
@@ -772,6 +783,7 @@ export const api = {
           status: string
           createdAt: string
         }>
+        message?: string
         error?: string
         status: boolean
       }>('/scanner/scan', {

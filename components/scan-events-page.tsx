@@ -52,6 +52,7 @@ export default function ScanEventsPage() {
   const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([])
   const [isRedeeming, setIsRedeeming] = useState(false)
   const [groupTickets, setGroupTickets] = useState<GroupTickets | null>(null)
+  const [scannedTicketData, setScannedTicketData] = useState<ScannedTicket | null>(null)
 
   // M-Pesa Purchase States
   const [events, setEvents] = useState<Event[]>([])
@@ -69,7 +70,7 @@ export default function ScanEventsPage() {
 
   // Load events on mount
   useEffect(() => {
-    if (scanMode === "payment") {
+    if (scanMode === "payment" || scanMode === "camera") {
       fetchEvents()
     }
   }, [scanMode])
@@ -273,77 +274,76 @@ export default function ScanEventsPage() {
       const user = sessionManager.getUser()
       if (!user || !user.user_id) {
         toast.error("User not logged in")
+        setIsValidating(false)
         return
       }
 
-      const response = await api.scanner.scan({
-        userId: user.user_id,
-        barcode: barcode.trim(),
-      })
+      if (!selectedEvent) {
+        toast.error("Please select an event first")
+        setIsValidating(false)
+        return
+      }
 
-      if (response.status && response.ticket && response.ticket.length > 0) {
-        const ticket = response.ticket[0]
-        
-        // Fetch the group tickets to get event name
-        let eventName = "Event"
-        try {
-          if (ticket.ticketGroupCode) {
-            const groupResponse = await api.scanner.getGroupTickets(ticket.ticketGroupCode)
-            if (groupResponse.status && groupResponse.event) {
-              eventName = groupResponse.event
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching event name:", err)
-        }
+      const scanData = {
+        userId: user.user_id,
+        eventId: selectedEvent.id,
+        barcode: barcode.trim(),
+      }
+
+      console.log('=== Frontend Scanner Request ===')
+      console.log('Scanning ticket:', scanData)
+
+      const response = await api.scanner.scan(scanData)
+
+      console.log('=== Frontend Scanner Response ===')
+      console.log('Response:', response)
+
+      // Handle ticket data - it can be an object or an array
+      const ticketData = Array.isArray(response.ticket) 
+        ? response.ticket[0] 
+        : response.ticket
+
+      // Check if we have ticket data (regardless of status)
+      if (ticketData) {
+        // Store scanned ticket data for display
+        setScannedTicketData(ticketData)
 
         // Build detailed ticket information
-        const ticketStatus = ticket.status === "REDEEMED" ? "Already Scanned" : "Active"
-        const priceInfo = ticket.isComplementary ? "Complementary" : `KES ${ticket.ticketPrice.toLocaleString()}`
+        const priceInfo = ticketData.isComplementary ? "Complementary" : `KES ${ticketData.ticketPrice.toLocaleString()}`
 
-        toast.success("Ticket Scanned Successfully!", {
-          description: `Event: ${eventName}\nTicket: ${ticket.ticketName}\nPrice: ${priceInfo}\nStatus: ${ticketStatus}`,
-          duration: 5000,
-        })
+        // Show success or error based on status
+        if (response.status) {
+          // Ticket is valid
+          toast.success(response.message || "Ticket Scanned Successfully!", {
+            description: `${ticketData.ticketName} - ${priceInfo}`,
+            duration: 3000,
+          })
+        } else {
+          // Ticket already scanned or invalid
+          toast.error(response.error || response.message || "Ticket Already Scanned", {
+            description: `${ticketData.ticketName} - ${priceInfo}`,
+            duration: 3000,
+          })
+        }
 
         // Reset the barcode input
         setManualBarcode("")
 
-        // Restart camera for next scan if in camera mode
-        if (scanMode === "camera" && !isScanning) {
-          setTimeout(() => {
-            startScanning()
-          }, 2000)
+        // Stop camera after scan
+        if (isScanning) {
+          await stopScanning()
         }
       } else {
-        // Ticket already scanned or invalid
-        if (response.ticket && response.ticket.length > 0) {
-          const ticket = response.ticket[0]
+        // No ticket data available - show error and restart camera
+        const errorMsg = response.error || response.message || "Invalid Ticket"
+        const errorDetails = response.error || "This ticket could not be verified"
 
-          // Fetch event name even for already scanned tickets
-          let eventName = "Event"
-          try {
-            if (ticket.ticketGroupCode) {
-              const groupResponse = await api.scanner.getGroupTickets(ticket.ticketGroupCode)
-              if (groupResponse.status && groupResponse.event) {
-                eventName = groupResponse.event
-              }
-            }
-          } catch (err) {
-            console.error("Error fetching event name:", err)
-          }
+        console.error('Scan failed:', { errorMsg, errorDetails, fullResponse: response })
 
-          const priceInfo = ticket.isComplementary ? "Complementary" : `KES ${ticket.ticketPrice.toLocaleString()}`
-
-          toast.error("Ticket Already Scanned", {
-            description: `Event: ${eventName}\nTicket: ${ticket.ticketName}\nPrice: ${priceInfo}\nStatus: Already Redeemed`,
-            duration: 5000,
-          })
-        } else {
-          toast.error(response.error || "Invalid Ticket", {
-            description: response.error || "This ticket could not be verified"
-          })
-        }
+        toast.error(errorMsg, {
+          description: errorDetails,
+          duration: 5000,
+        })
 
         // Restart camera even on error
         if (scanMode === "camera" && !isScanning) {
@@ -353,9 +353,14 @@ export default function ScanEventsPage() {
         }
       }
     } catch (error) {
-      console.error("Scan error:", error)
+      console.error("=== Scanner Error ===")
+      console.error("Error object:", error)
+
+      const errorMessage = error instanceof Error ? error.message : "Could not scan ticket"
+
       toast.error("Scan Failed", {
-        description: "Could not scan ticket. Please try again."
+        description: errorMessage + ". Please try again.",
+        duration: 5000,
       })
 
       // Restart camera even on error
@@ -427,6 +432,11 @@ export default function ScanEventsPage() {
       return
     }
 
+    if (!selectedEvent) {
+      toast.error("Please select an event first")
+      return
+    }
+
     setIsRedeeming(true)
 
     try {
@@ -441,6 +451,7 @@ export default function ScanEventsPage() {
         selectedBarcodes.map(barcode => 
           api.scanner.scan({
             userId: user.user_id,
+            eventId: selectedEvent.id,
             barcode,
           })
         )
@@ -481,18 +492,19 @@ export default function ScanEventsPage() {
     setGroupTickets(null)
     setSelectedBarcodes([])
 
-    if (scanMode === "camera" && !isScanning) {
+    if (scanMode === "camera" && selectedEvent && !isScanning) {
       startScanning()
     } else if (scanMode !== "camera" && isScanning) {
       stopScanning()
     }
-  }, [scanMode])
+  }, [scanMode, selectedEvent])
 
   const resetScanner = () => {
     setManualBarcode("")
     setManualGroupCode("")
     setGroupTickets(null)
     setSelectedBarcodes([])
+    setScannedTicketData(null)
     setCustomerPhone("")
     setCustomerEmail("")
     if (scanMode === "camera") {
@@ -664,48 +676,199 @@ export default function ScanEventsPage() {
               )}
             </div>
           ) : scanMode === "camera" ? (
-            <div className="relative">
-              <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: "300px" }} />
-              {isScanning && (
-                <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-                  <div className="px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm">
-                    📷 Scanning barcode...
+            <div className="space-y-4">
+              {/* Event Selection for Scanner */}
+              <div className="p-4 sm:p-6 border-b border-border">
+                <div className="text-center mb-4">
+                  <Camera className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
+                  <h3 className="text-lg font-semibold">QR Code Scanner</h3>
+                  <p className="text-sm text-muted-foreground">Scan tickets for entry</p>
+                </div>
+
+                {isLoadingEvents ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
                   </div>
-                  <button
-                    onClick={stopScanning}
-                    className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors"
-                  >
-                    Stop
-                  </button>
-                </div>
-              )}
-              {!isScanning && (
-                <div className="p-6 text-center text-muted-foreground">
-                  <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Camera will start automatically</p>
-                  <p className="text-sm mt-1">Point at ticket barcode to scan</p>
-                </div>
-              )}
-              {/* Manual barcode input for camera mode */}
-              <div className="p-4 border-t border-border">
-                <label className="block text-sm font-medium mb-2">Or enter barcode manually:</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={manualBarcode}
-                    onChange={(e) => setManualBarcode(e.target.value.toUpperCase())}
-                    placeholder="e.g. 5VBM0W"
-                    className="flex-1 px-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                  />
-                  <button
-                    onClick={handleManualBarcodeScan}
-                    disabled={isValidating || !manualBarcode.trim()}
-                    className="px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Scan"}
-                  </button>
-                </div>
+                ) : events.length > 0 ? (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Select Event to Scan</label>
+                    <select
+                      value={selectedEvent?.id || ""}
+                      onChange={(e) => {
+                        const event = events.find(ev => ev.id === Number(e.target.value))
+                        setSelectedEvent(event || null)
+                      }}
+                      className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                    >
+                      {events.map(event => (
+                        <option key={event.id} value={event.id}>{event.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      Select the event you want to scan tickets for
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No active events found for your company</p>
+                  </div>
+                )}
               </div>
+
+              {/* Scanner Area - Only show when event is selected */}
+              {selectedEvent && !scannedTicketData && (
+                <div className="relative">
+                  <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: "300px" }} />
+                  {isScanning && (
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
+                      <div className="px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm">
+                        📷 Scanning for {selectedEvent.name}...
+                      </div>
+                      <button
+                        onClick={stopScanning}
+                        className="px-4 py-2 bg-red-500 text-white text-sm rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        Stop
+                      </button>
+                    </div>
+                  )}
+                  {!isScanning && (
+                    <div className="p-6 text-center text-muted-foreground">
+                      <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>Camera will start automatically</p>
+                      <p className="text-sm mt-1">Point at ticket barcode to scan</p>
+                    </div>
+                  )}
+                  {/* Manual barcode input for camera mode */}
+                  <div className="p-4 border-t border-border">
+                    <label className="block text-sm font-medium mb-2">Or enter barcode manually:</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={manualBarcode}
+                        onChange={(e) => setManualBarcode(e.target.value.toUpperCase())}
+                        placeholder="e.g. 5VBM0W"
+                        className="flex-1 px-4 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                      />
+                      <button
+                        onClick={handleManualBarcodeScan}
+                        disabled={isValidating || !manualBarcode.trim()}
+                        className="px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Scan"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scanned Ticket Display */}
+              {scannedTicketData && selectedEvent && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-6 space-y-4"
+                >
+                  <div className="text-center">
+                    <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                      scannedTicketData.status === "REDEEMED"
+                        ? "bg-red-100 dark:bg-red-950/30"
+                        : "bg-green-100 dark:bg-green-950/30"
+                    }`}>
+                      <CheckCircle className={`w-10 h-10 ${
+                        scannedTicketData.status === "REDEEMED"
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`} />
+                    </div>
+                    <h3 className={`text-2xl font-bold mb-2 ${
+                      scannedTicketData.status === "REDEEMED"
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-green-600 dark:text-green-400"
+                    }`}>
+                      {scannedTicketData.status === "REDEEMED" ? "Already Scanned!" : "Ticket Validated!"}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {scannedTicketData.status === "REDEEMED"
+                        ? "This ticket has already been redeemed"
+                        : "Ticket successfully scanned and validated"}
+                    </p>
+                  </div>
+
+                  <div className={`rounded-xl p-6 space-y-4 border ${
+                    scannedTicketData.status === "REDEEMED"
+                      ? "bg-gradient-to-br from-red-50/50 to-red-100/50 dark:from-red-950/10 dark:to-red-900/10 border-red-200/50 dark:border-red-900/50"
+                      : "bg-gradient-to-br from-[#8b5cf6]/10 to-[#7c3aed]/10 border-[#8b5cf6]/20"
+                  }`}>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Event</p>
+                        <p className="font-semibold text-sm">{selectedEvent.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Ticket Type</p>
+                        <p className="font-semibold text-sm">{scannedTicketData.ticketName}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Price</p>
+                        <p className="font-semibold text-sm">
+                          {scannedTicketData.isComplementary ? (
+                            <span className="text-blue-600 dark:text-blue-400">Complementary</span>
+                          ) : (
+                            `KES ${scannedTicketData.ticketPrice.toLocaleString()}`
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <p className="font-semibold text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            scannedTicketData.status === "REDEEMED" 
+                              ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+                              : "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                          }`}>
+                            {scannedTicketData.status === "REDEEMED" ? "Already Redeemed" : "Valid"}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-1">Barcode</p>
+                        <p className="font-mono font-bold text-lg">{scannedTicketData.barcode}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Group Code</p>
+                        <p className="font-mono font-semibold text-sm">{scannedTicketData.ticketGroupCode}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Customer Mobile</p>
+                        <p className="font-semibold text-sm">{scannedTicketData.customerMobile}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground mb-1">Scanned At</p>
+                        <p className="font-semibold text-sm">
+                          {new Date().toLocaleString('en-US', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={resetScanner}
+                    className={`w-full py-4 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
+                      scannedTicketData.status === "REDEEMED"
+                        ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+                        : "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9] text-white"
+                    }`}
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span>Scan Another Ticket</span>
+                  </button>
+                </motion.div>
+              )}
             </div>
           ) : (
             <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
