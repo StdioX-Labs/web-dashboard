@@ -8,6 +8,17 @@ import { toast } from "sonner"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 
+/**
+ * FEATURE FLAG: Affiliates Tab
+ *
+ * Set to `true` to enable the affiliates functionality.
+ * When enabled, users will see an "Affiliates" tab alongside the "Users" tab,
+ * allowing them to manage affiliate partners and track their performance.
+ *
+ * @default false
+ */
+const ENABLE_AFFILIATES = false
+
 type UserRole = "SUPER_ADMIN" | "COMPANY_OWNER" | "STAFF"
 
 interface User {
@@ -383,7 +394,9 @@ export default function UsersPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-6">
         <div className="inline-flex rounded-xl border border-border bg-card p-1">
           <button onClick={() => setActiveTab("users")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "users" ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25" : "text-muted-foreground hover:text-foreground")}>Users</button>
-          <button onClick={() => setActiveTab("affiliates")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "affiliates" ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25" : "text-muted-foreground hover:text-foreground")}>Affiliates</button>
+          {ENABLE_AFFILIATES && (
+            <button onClick={() => setActiveTab("affiliates")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "affiliates" ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25" : "text-muted-foreground hover:text-foreground")}>Affiliates</button>
+          )}
         </div>
       </motion.div>
 
