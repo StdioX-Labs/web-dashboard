@@ -119,31 +119,39 @@ export default function EventsPage() {
 
   // Calculate event statistics
   const getEventStats = (event: Event) => {
-    // Prefer event-level totals if available (from admin API)
-    if (event.totalTicketsSold !== undefined && event.totalRevenue !== undefined) {
-      const totalTickets = event.tickets.reduce((sum, ticket) =>
-        sum + ticket.soldQuantity + ticket.quantityAvailable, 0
-      ) || event.totalTicketsSold
-
-      return {
-        totalTickets: totalTickets || event.totalTicketsSold,
-        ticketsSold: event.totalTicketsSold,
-        revenue: event.totalRevenue,
+    // Calculate total original tickets and sold tickets from all ticket types
+    // Sum up originalTicketCount from all tickets to get total capacity
+    const totalTickets = event.tickets.reduce((sum, ticket) => {
+      // Check if ticket has originalTicketCount (from ticketSummaries)
+      const originalCount = (ticket as any).originalTicketCount
+      if (originalCount) {
+        return sum + originalCount
       }
+      // Fallback to soldQuantity + quantityAvailable
+      return sum + ticket.soldQuantity + ticket.quantityAvailable
+    }, 0)
+
+    // Sum up uniqueTicketCount (or soldQuantity) from all tickets to get total sold
+    const ticketsSold = event.tickets.reduce((sum, ticket) => {
+      const uniqueCount = (ticket as any).uniqueTicketCount
+      return sum + (uniqueCount !== undefined ? uniqueCount : ticket.soldQuantity)
+    }, 0)
+
+    // Use event-level revenue if available, otherwise calculate
+    const revenue = event.totalRevenue !== undefined
+      ? event.totalRevenue
+      : event.tickets.reduce((sum, ticket) => {
+          const sold = (ticket as any).uniqueTicketCount !== undefined
+            ? (ticket as any).uniqueTicketCount
+            : ticket.soldQuantity
+          return sum + (ticket.ticketPrice * sold)
+        }, 0)
+
+    return {
+      totalTickets: totalTickets || ticketsSold,
+      ticketsSold,
+      revenue
     }
-
-    // Fallback to calculating from tickets array (for company events API)
-    const totalTickets = event.tickets.reduce((sum, ticket) =>
-      sum + ticket.soldQuantity + ticket.quantityAvailable, 0
-    )
-    const ticketsSold = event.tickets.reduce((sum, ticket) =>
-      sum + ticket.soldQuantity, 0
-    )
-    const revenue = event.tickets.reduce((sum, ticket) =>
-      sum + (ticket.ticketPrice * ticket.soldQuantity), 0
-    )
-
-    return { totalTickets, ticketsSold, revenue }
   }
 
   // Determine event status

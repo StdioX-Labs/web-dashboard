@@ -323,7 +323,7 @@ export const api = {
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
             ticketPrice: ticket.ticketPrice,
-            quantityAvailable: 0,
+            quantityAvailable: ticket.originalTicketCount ? ticket.originalTicketCount - (ticket.uniqueTicketCount || 0) : 0,
             soldQuantity: ticket.uniqueTicketCount || 0,
             isActive: ticket.ticketStatus === 'ACTIVE',
             ticketsToIssue: 1,
@@ -336,6 +336,8 @@ export const api = {
             ticketStatus: ticket.ticketStatus || 'ACTIVE',
             createAt: new Date().toISOString(),
             totalTicketSaleBalance: ticket.totalTicketSaleBalance,
+            originalTicketCount: ticket.originalTicketCount,
+            uniqueTicketCount: ticket.uniqueTicketCount,
           })) || []
 
           return {

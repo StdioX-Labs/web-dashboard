@@ -425,11 +425,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     id: ticket.id,
     name: ticket.ticketName,
     price: ticket.ticketPrice,
-    totalAvailable: ticket.soldQuantity + ticket.quantityAvailable,
-    sold: ticket.soldQuantity,
-    revenue: ticket.ticketPrice * ticket.soldQuantity,
+    totalAvailable: ticket.originalTicketCount || (ticket.soldQuantity + ticket.quantityAvailable),
+    sold: ticket.soldQuantity || ticket.uniqueTicketCount || 0,
+    revenue: ticket.ticketPrice * (ticket.soldQuantity || ticket.uniqueTicketCount || 0),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
-    quantityAvailable: ticket.quantityAvailable,
+    quantityAvailable: ticket.quantityAvailable || (ticket.originalTicketCount ? ticket.originalTicketCount - (ticket.uniqueTicketCount || 0) : 0),
   })) || []
 
   // Kenyan phone number validation and formatting
@@ -2589,7 +2589,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-secondary/50">
                     <p className="text-sm text-muted-foreground mb-1">Tickets Sold</p>
-                    <p className="text-2xl font-bold">{eventData.totalTicketsSold || ticketTypes.reduce((sum: number, t: any) => sum + t.sold, 0)}</p>
+                    <p className="text-2xl font-bold">
+                      {eventData.totalTicketsSold || ticketTypes.reduce((sum: number, t: any) => sum + t.sold, 0)} / {ticketTypes.reduce((sum: number, t: any) => sum + t.totalAvailable, 0)}
+                    </p>
                   </div>
                   <div className="p-4 rounded-xl bg-secondary/50">
                     <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
