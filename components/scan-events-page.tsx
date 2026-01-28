@@ -60,13 +60,41 @@ export default function ScanEventsPage() {
   const [tickets, setTickets] = useState<TicketType[]>([])
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null)
   const [customerPhone, setCustomerPhone] = useState("")
-  const [customerEmail, setCustomerEmail] = useState("")
   const [isLoadingEvents, setIsLoadingEvents] = useState(false)
   const [isLoadingTickets, setIsLoadingTickets] = useState(false)
   const [isPurchasing, setIsPurchasing] = useState(false)
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
   const scannerRef = useRef<HTMLDivElement>(null)
+
+  // Format phone number to 254XXXXXXXXX format
+  const formatPhoneNumber = (input: string): string => {
+    // Remove all non-digit characters
+    const digitsOnly = input.replace(/\D/g, '')
+
+    // If starts with 0, replace with 254
+    if (digitsOnly.startsWith('0')) {
+      return '254' + digitsOnly.substring(1)
+    }
+
+    // If starts with 254, use as is
+    if (digitsOnly.startsWith('254')) {
+      return digitsOnly
+    }
+
+    // If starts with +254, remove the +
+    if (input.startsWith('+254')) {
+      return digitsOnly
+    }
+
+    // If it's 9 digits (without country code), add 254
+    if (digitsOnly.length === 9) {
+      return '254' + digitsOnly
+    }
+
+    // Otherwise return the digits only
+    return digitsOnly
+  }
 
   // Load events on mount
   useEffect(() => {
@@ -154,8 +182,8 @@ export default function ScanEventsPage() {
       return
     }
 
-    if (!customerPhone || !customerEmail) {
-      toast.error("Please provide customer phone and email")
+    if (!customerPhone) {
+      toast.error("Please provide customer phone number")
       return
     }
 
@@ -176,7 +204,7 @@ export default function ScanEventsPage() {
         channel: "mpesa" as const,
         customer: {
           mobile_number: customerPhone,
-          email: customerEmail,
+          email: "brian@stdiox.com",
         },
         tickets: [
           {
@@ -192,7 +220,6 @@ export default function ScanEventsPage() {
         toast.success(response.message || "M-Pesa STK push sent successfully!")
         // Reset form
         setCustomerPhone("")
-        setCustomerEmail("")
       } else {
         toast.error(response.message || "Failed to initiate payment")
       }
@@ -506,7 +533,6 @@ export default function ScanEventsPage() {
     setSelectedBarcodes([])
     setScannedTicketData(null)
     setCustomerPhone("")
-    setCustomerEmail("")
     if (scanMode === "camera") {
       startScanning()
     }
@@ -637,27 +663,21 @@ export default function ScanEventsPage() {
                     <input
                       type="tel"
                       value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value)
+                        setCustomerPhone(formatted)
+                      }}
                       placeholder="254712345678"
                       className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Customer Email *</label>
-                    <input
-                      type="email"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      placeholder="customer@example.com"
-                      className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Format: 254XXXXXXXXX (auto-corrects from 0712345678)
+                    </p>
                   </div>
 
                   <button
                     onClick={handleMpesaPurchase}
-                    disabled={isPurchasing || !selectedEvent || !selectedTicket || !customerPhone || !customerEmail}
+                    disabled={isPurchasing || !selectedEvent || !selectedTicket || !customerPhone}
                     className="w-full py-3 sm:py-4 bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isPurchasing ? (
