@@ -631,6 +631,29 @@ export const api = {
         body: JSON.stringify(ticketData),
       }, true) // Use proxy route
     },
+    purchase: async (purchaseData: {
+      eventId: number
+      amountDisplayed: number
+      coupon_code?: string
+      channel: 'mpesa' | 'card'
+      customer: {
+        mobile_number: string
+        email: string
+      }
+      tickets: Array<{
+        ticketId: number
+        quantity: number
+      }>
+    }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+        data?: any
+      }>(`/event/ticket/purchase`, {
+        method: 'POST',
+        body: JSON.stringify(purchaseData),
+      }, true) // Use proxy route
+    },
   },
 
   // Transactions endpoints
@@ -727,6 +750,54 @@ export const api = {
           page: params.page || 0,
           size: params.size || 50,
         }),
+      }, true) // Use proxy route
+    },
+  },
+
+  // Scanner endpoints
+  scanner: {
+    scan: async (scanData: {
+      userId: number
+      barcode: string
+    }) => {
+      return apiRequest<{
+        ticket: Array<{
+          id: number
+          ticketName: string
+          ticketPrice: number
+          barcode: string
+          ticketGroupCode: string
+          customerMobile: string
+          isComplementary: boolean
+          status: string
+          createdAt: string
+        }>
+        error?: string
+        status: boolean
+      }>('/scanner/scan', {
+        method: 'POST',
+        body: JSON.stringify(scanData),
+      }, true) // Use proxy route
+    },
+    getGroupTickets: async (ticketGroup: string) => {
+      return apiRequest<{
+        tickets: Array<{
+          id: number
+          ticketName: string
+          ticketPrice: number
+          barcode: string
+          ticketGroupCode: string
+          customerMobile: string
+          isComplementary: boolean
+          status: string
+          createdAt: string
+        }>
+        posterUrl: string
+        ticketPrice: number
+        event: string
+        status: boolean
+      }>(`/ticket/group?ticketGroup=${ticketGroup}`, {
+        method: 'GET',
       }, true) // Use proxy route
     },
   },

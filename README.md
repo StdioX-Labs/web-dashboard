@@ -12,7 +12,6 @@ This dashboard implements enterprise-grade security:
 - **Configurable Security**: Environment-based security controls
 - **Automatic Recovery**: Violation counts reset after good behavior
 
-📖 **[Read the full Security Documentation](./PROGRESSIVE_BLOCKING.md)**
 
 ## Getting Started
 
@@ -43,6 +42,34 @@ The dashboard uses the same design language as the SoldOutAfrica marketplace:
 - **Theme**: Light/dark mode support
 - **Spacing**: Consistent scale
 - **Animations**: Smooth, purposeful
+
+## 🚩 Feature Flags
+
+The application uses feature flags to enable/disable specific features. This allows you to prepare features in advance and activate them when ready.
+
+### Current Feature Flags
+
+| Feature | File(s) | Flag Name | Default | Status |
+|---------|---------|-----------|---------|--------|
+| Affiliates Tab | `components/users-page.tsx` | `ENABLE_AFFILIATES` | `false` | Hidden |
+| Discover Nav | `components/side-nav.tsx` | `ENABLE_DISCOVER` | `false` | Hidden |
+| Promotions Nav | `components/side-nav.tsx` | `ENABLE_PROMOTIONS` | `false` | Hidden |
+| Promotions Quick Action | `components/dashboard-home.tsx` | `ENABLE_PROMOTIONS` | `false` | Hidden |
+
+### How to Enable a Feature
+
+1. Open the file(s) listed in the table above
+2. Change the flag value from `false` to `true`
+3. Rebuild the application: `pnpm run build`
+4. Restart the development server: `pnpm run dev`
+
+**Example:**
+```typescript
+// In components/side-nav.tsx
+const ENABLE_DISCOVER = true  // Changed from false to true
+```
+
+**Note:** For Promotions, you need to update **both** files (`side-nav.tsx` and `dashboard-home.tsx`).
 
 ## 🔮 Upcoming Features
 

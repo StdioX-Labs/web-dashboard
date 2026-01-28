@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign, ScanLine, Compass } from "lucide-react"
+import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, ChevronRight, DollarSign, ScanLine, Compass, ShoppingCart } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
@@ -10,20 +10,39 @@ import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { sessionManager } from "@/lib/session-manager"
 
+/**
+ * FEATURE FLAGS: Navigation Items
+ *
+ * Set to `true` to enable specific navigation items.
+ * When disabled, the navigation items will be hidden from the sidebar.
+ *
+ * @default false
+ */
+const ENABLE_DISCOVER = false
+const ENABLE_PROMOTIONS = false
+
 type NavItem = {
   name: string
   icon: React.ElementType
   href: string
 }
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { name: "Home", icon: Home, href: "/dashboard" },
   { name: "Events", icon: Calendar, href: "/dashboard/events" },
+  { name: "Purchase Tickets", icon: ShoppingCart, href: "/dashboard/purchase" },
   { name: "Scan Events", icon: ScanLine, href: "/dashboard/scan" },
   { name: "Discover", icon: Compass, href: "/dashboard/discover" },
   { name: "Promotions", icon: Megaphone, href: "/dashboard/promotions" },
   { name: "Users", icon: Users, href: "/dashboard/users" },
 ]
+
+// Filter nav items based on feature flags
+const navItems: NavItem[] = allNavItems.filter(item => {
+  if (item.name === "Discover" && !ENABLE_DISCOVER) return false
+  if (item.name === "Promotions" && !ENABLE_PROMOTIONS) return false
+  return true
+})
 
 type NavContentProps = {
   isCollapsed: boolean

@@ -9,6 +9,15 @@ import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 
+/**
+ * FEATURE FLAGS: Quick Actions
+ *
+ * Set to `true` to enable specific quick action items on the dashboard.
+ *
+ * @default false
+ */
+const ENABLE_PROMOTIONS = false
+
 
 interface CompanySummary {
   totalFees: number
@@ -302,8 +311,8 @@ export default function DashboardHome() {
             { label: "Create Event", icon: Plus, gradient: "from-[#8b5cf6] to-[#7c3aed]", href: "/dashboard/events/create" },
             { label: "View Events", icon: Calendar, gradient: "from-blue-500 to-blue-600", href: "/dashboard/events" },
             { label: "Transactions", icon: Download, gradient: "from-green-500 to-green-600", href: "/dashboard/transactions" },
-            { label: "Promotions", icon: Megaphone, gradient: "from-orange-500 to-orange-600", href: "/dashboard/promotions" },
-          ].map((action) => {
+            { label: "Promotions", icon: Megaphone, gradient: "from-orange-500 to-orange-600", href: "/dashboard/promotions", enabled: ENABLE_PROMOTIONS },
+          ].filter(action => action.enabled !== false).map((action) => {
             const Icon = action.icon
             return (
               <Link key={action.label} href={action.href}>
