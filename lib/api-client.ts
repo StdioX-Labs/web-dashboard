@@ -158,6 +158,58 @@ export const api = {
     },
   },
 
+  // User endpoints
+  user: {
+    void: async (userId: number, requesterUserId: number) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>(`/user/void?userId=${userId}&requesterUserId=${requesterUserId}`, {
+        method: 'PUT',
+      })
+    },
+    create: async (userData: {
+      fullName: string
+      idNumber: string
+      mobileNumber: string
+      password: string
+      emailAddress: string
+      isExternal: boolean
+      company: { id: number }
+      roles: string
+    }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+        user?: any
+      }>(`/user/create`, {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      })
+    },
+    edit: async (
+      userId: number,
+      requesterUserId: number,
+      userData: {
+        fullName: string
+        emailAddress: string
+        mobileNumber: string
+        idNumber?: string
+        roles: string
+        password?: string
+      }
+    ) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+        user?: any
+      }>(`/user/edit?userId=${userId}&requesterUserId=${requesterUserId}`, {
+        method: 'PUT',
+        body: JSON.stringify(userData),
+      })
+    },
+  },
+
   // Company endpoints
   company: {
     getSummary: async (companyId: number) => {
@@ -171,9 +223,26 @@ export const api = {
         }
         message: string
         status: boolean
-      }>(`/company/summary?companyId=${companyId}`, {
-        method: 'GET',
-      }, true) // Use proxy route
+      }>(`/company/summary?companyId=${companyId}`)
+    },
+    getUsers: async (companyId: number) => {
+      return apiRequest<{
+        users: Array<{
+          id: number
+          fullName: string
+          idNumber: string
+          mobileNumber: string
+          emailAddress: string
+          roles: string
+          companyName: string
+          kycStatus: string
+          currency: string
+          role: string | null
+          active: boolean
+        }>
+        message: string
+        status: boolean
+      }>(`/company/users?companyId=${companyId}`)
     },
     getEvents: async () => {
       return apiRequest<{
@@ -323,7 +392,7 @@ export const api = {
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
             ticketPrice: ticket.ticketPrice,
-            quantityAvailable: ticket.originalTicketCount ? ticket.originalTicketCount - (ticket.uniqueTicketCount || 0) : 0,
+            quantityAvailable: ticket.uniqueTicketCount || 0, // Available quantity based on sold tickets
             soldQuantity: ticket.uniqueTicketCount || 0,
             isActive: ticket.ticketStatus === 'ACTIVE',
             ticketsToIssue: 1,
@@ -336,7 +405,6 @@ export const api = {
             ticketStatus: ticket.ticketStatus || 'ACTIVE',
             createAt: new Date().toISOString(),
             totalTicketSaleBalance: ticket.totalTicketSaleBalance,
-            originalTicketCount: ticket.originalTicketCount,
             uniqueTicketCount: ticket.uniqueTicketCount,
           })) || []
 

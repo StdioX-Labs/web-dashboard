@@ -1,22 +1,27 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Plus, Edit, Ban, Shield, User, Users as UsersIcon, CheckCircle, XCircle, X, Mail, Phone, TrendingUp, Copy, Link as LinkIcon, DollarSign } from "lucide-react"
+import { Search, Plus, Edit, Ban, Shield, User, Users as UsersIcon, CheckCircle, XCircle, X, Mail, Phone, TrendingUp, Copy, Link as LinkIcon, DollarSign, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { api } from "@/lib/api-client"
+import { sessionManager } from "@/lib/session-manager"
 
-type UserRole = "owner" | "organizer" | "staff"
+type UserRole = "SUPER_ADMIN" | "COMPANY_OWNER" | "STAFF"
 
 interface User {
-  id: string
-  name: string
-  email: string
-  phone: string
-  role: UserRole
-  status: "active" | "suspended"
-  joinedDate: string
-  lastActive: string
+  id: number
+  fullName: string
+  idNumber: string
+  mobileNumber: string
+  emailAddress: string
+  roles: UserRole
+  companyName: string
+  kycStatus: string
+  currency: string
+  role: string | null
+  active: boolean
 }
 
 interface Affiliate {
@@ -33,13 +38,6 @@ interface Affiliate {
   commission: number
 }
 
-const generateMockUsers = (): User[] => [
-  { id: "USR-001", name: "Brian Kamau", email: "brian@soldoutafrica.com", phone: "+254712345001", role: "owner", status: "active", joinedDate: "2025-01-15", lastActive: "2026-01-10" },
-  { id: "USR-002", name: "Sarah Johnson", email: "sarah@soldoutafrica.com", phone: "+254712345002", role: "organizer", status: "active", joinedDate: "2025-06-20", lastActive: "2026-01-09" },
-  { id: "USR-003", name: "Michael Odhiambo", email: "michael@soldoutafrica.com", phone: "+254712345003", role: "organizer", status: "active", joinedDate: "2025-08-10", lastActive: "2026-01-08" },
-  { id: "USR-004", name: "Jane Wanjiku", email: "jane@soldoutafrica.com", phone: "+254712345004", role: "staff", status: "active", joinedDate: "2025-09-05", lastActive: "2026-01-10" },
-  { id: "USR-005", name: "David Mwangi", email: "david@soldoutafrica.com", phone: "+254712345005", role: "staff", status: "suspended", joinedDate: "2025-10-12", lastActive: "2025-12-20" },
-]
 
 const generateMockAffiliates = (): Affiliate[] => [
   { id: "AFF-001", name: "John Marketing", email: "john@marketing.com", phone: "+254722123456", status: "active", joinedDate: "2025-11-01", events: ["1", "2"], affiliateLink: "https://soldoutafrica.com/aff/john-marketing", totalSales: 45, totalRevenue: 135000, commission: 13500 },
@@ -47,10 +45,14 @@ const generateMockAffiliates = (): Affiliate[] => [
   { id: "AFF-003", name: "Mike Influencer", email: "mike@influence.com", phone: "+254744789012", status: "suspended", joinedDate: "2025-10-20", events: ["1"], affiliateLink: "https://soldoutafrica.com/aff/mike-influencer", totalSales: 12, totalRevenue: 36000, commission: 3600 },
 ]
 
-const roleDetails = {
+const roleDetails: Record<string, { label: string; description: string; color: string; bg: string; icon: any }> = {
+  SUPER_ADMIN: { label: "Super Admin", description: "Full system access across all companies", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-950/30", icon: Shield },
+  COMPANY_OWNER: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-950/30", icon: Shield },
+  STAFF: { label: "Event Staff", description: "Can view attendees and scan tickets", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-950/30", icon: UsersIcon },
+  // Add lowercase aliases for compatibility with form inputs
   owner: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-950/30", icon: Shield },
-  organizer: { label: "Event Organizer", description: "Can view all data and download reports, but cannot initiate withdrawals", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-950/30", icon: User },
-  staff: { label: "Event Staff", description: "Can only view attendees and scan tickets", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-950/30", icon: UsersIcon },
+  organizer: { label: "Event Organizer", description: "Can create and manage events", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-950/30", icon: User },
+  staff: { label: "Event Staff", description: "Can view attendees and scan tickets", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-950/30", icon: UsersIcon },
 }
 
 // Mock active events - replace with actual API data
@@ -63,31 +65,68 @@ const activeEvents = [
 ]
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(generateMockUsers())
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [affiliates, setAffiliates] = useState<Affiliate[]>(generateMockAffiliates())
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"users" | "affiliates">("users")
+
+  const fetchUsers = async () => {
+    try {
+      const user = sessionManager.getUser()
+
+      if (!user || !user.company_id) {
+        setIsLoading(false)
+        return
+      }
+
+      console.log('Fetching users for company:', user.company_id)
+      const response = await api.company.getUsers(user.company_id)
+
+      if (response.status && response.users) {
+        console.log('Users fetched:', response.users.length)
+        setUsers(response.users as User[])
+      } else {
+        toast.error('Failed to load users')
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      toast.error('Failed to load users')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  // ...existing code...
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showSuspendModal, setShowSuspendModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null)
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", role: "staff" as UserRole })
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", role: "STAFF" as UserRole, idNumber: "" })
   const [affiliateFormData, setAffiliateFormData] = useState({ name: "", email: "", phone: "", events: [] as string[], eventId: "" })
   const [otpInput, setOtpInput] = useState("")
   const [showOtpInput, setShowOtpInput] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
 
-  const filteredUsers = users.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredUsers = users.filter(u =>
+    u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.emailAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.mobileNumber.includes(searchQuery)
+  )
   const filteredAffiliates = affiliates.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.email.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const totalUsers = users.length
-  const activeUsers = users.filter(u => u.status === "active").length
-  const suspendedUsers = users.filter(u => u.status === "suspended").length
-  const ownerCount = users.filter(u => u.role === "owner").length
-  const organizerCount = users.filter(u => u.role === "organizer").length
-  const staffCount = users.filter(u => u.role === "staff").length
+  const activeUsers = users.filter(u => u.active).length
+  const suspendedUsers = users.filter(u => !u.active).length
+  const superAdminCount = users.filter(u => u.roles === "SUPER_ADMIN").length
+  const ownerCount = users.filter(u => u.roles === "COMPANY_OWNER").length
+  const staffCount = users.filter(u => u.roles === "STAFF").length
   const totalAffiliates = affiliates.length
   const activeAffiliates = affiliates.filter(a => a.status === "active").length
   const suspendedAffiliates = affiliates.filter(a => a.status === "suspended").length
@@ -95,34 +134,118 @@ export default function UsersPage() {
   const totalAffiliateRevenue = affiliates.reduce((sum, a) => sum + a.totalRevenue, 0)
   const totalCommissionPaid = affiliates.reduce((sum, a) => sum + a.commission, 0)
 
-  const handleAddUser = () => {
-    if (!formData.name || !formData.email || !formData.phone) return toast.error("Please fill all required fields")
-    const newUser: User = { id: `USR-${String(users.length + 1).padStart(3, '0')}`, ...formData, status: "active", joinedDate: new Date().toISOString().split('T')[0], lastActive: new Date().toISOString().split('T')[0] }
-    setUsers([...users, newUser])
-    setShowAddModal(false)
-    setFormData({ name: "", email: "", phone: "", role: "staff" })
-    toast.success("User added successfully!")
+  const handleAddUser = async () => {
+    if (!formData.name || !formData.email || !formData.phone || !formData.role) {
+      return toast.error("Please fill all required fields")
+    }
+
+    try {
+      const currentUser = sessionManager.getUser()
+      if (!currentUser) {
+        toast.error("Unable to identify current user")
+        return
+      }
+
+      // Call the create user API
+      const response = await api.user.create({
+        fullName: formData.name,
+        idNumber: formData.idNumber || "00000000",
+        mobileNumber: formData.phone,
+        password: "s0ascAnn3r@56YearsLater!", // Default password
+        emailAddress: formData.email,
+        isExternal: false,
+        company: { id: currentUser.company_id },
+        roles: formData.role,
+      })
+
+      if (response.status) {
+        toast.success(response.message || "User added successfully!")
+        setShowAddModal(false)
+        setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
+        // Refresh the users list
+        fetchUsers()
+      } else {
+        toast.error(response.message || "Failed to create user")
+      }
+    } catch (error) {
+      console.error('Error creating user:', error)
+      toast.error("An error occurred while creating user")
+    }
   }
 
-  const handleEditUser = () => {
+  const handleEditUser = async () => {
     if (!selectedUser) return
-    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, ...formData } : u))
-    setShowEditModal(false)
-    setSelectedUser(null)
-    setFormData({ name: "", email: "", phone: "", role: "staff" })
-    toast.success("User updated successfully!")
+
+    if (!formData.name || !formData.email || !formData.phone || !formData.role) {
+      return toast.error("Please fill all required fields")
+    }
+
+    try {
+      const currentUser = sessionManager.getUser()
+      if (!currentUser) {
+        toast.error("Unable to identify current user")
+        return
+      }
+
+      // Call the edit user API
+      const response = await api.user.edit(
+        selectedUser.id,
+        currentUser.user_id,
+        {
+          fullName: formData.name,
+          emailAddress: formData.email,
+          mobileNumber: formData.phone,
+          idNumber: formData.idNumber || selectedUser.idNumber,
+          roles: formData.role,
+          // Include password only if it's been changed (you may want to add a password field to the form)
+        }
+      )
+
+      if (response.status) {
+        toast.success(response.message || "User updated successfully!")
+        setShowEditModal(false)
+        setSelectedUser(null)
+        setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
+        // Refresh the users list
+        fetchUsers()
+      } else {
+        toast.error(response.message || "Failed to update user")
+      }
+    } catch (error) {
+      console.error('Error updating user:', error)
+      toast.error("An error occurred while updating user")
+    }
   }
 
-  const handleSuspendUser = () => {
-    if (otpInput !== "0000") return toast.error("Invalid OTP")
+  const handleSuspendUser = async () => {
     if (!selectedUser) return
-    const newStatus = selectedUser.status === "active" ? "suspended" : "active"
-    setUsers(users.map(u => u.id === selectedUser.id ? { ...u, status: newStatus } : u))
-    setShowSuspendModal(false)
-    setShowOtpInput(false)
-    setOtpInput("")
-    setSelectedUser(null)
-    toast.success(`User ${newStatus === "suspended" ? "suspended" : "activated"} successfully!`)
+
+    try {
+      const currentUser = sessionManager.getUser()
+      if (!currentUser) {
+        toast.error("Unable to identify current user")
+        return
+      }
+
+      // Call the void API with userId and requesterUserId
+      const response = await api.user.void(selectedUser.id, currentUser.user_id)
+
+      if (response.status) {
+        // Toggle the active status locally
+        const newActiveStatus = !selectedUser.active
+        setUsers(users.map(u => u.id === selectedUser.id ? { ...u, active: newActiveStatus } : u))
+
+        toast.success(response.message || `User ${newActiveStatus ? "activated" : "suspended"} successfully!`)
+      } else {
+        toast.error("Failed to update user status")
+      }
+    } catch (error) {
+      console.error('Error suspending/activating user:', error)
+      toast.error("An error occurred while updating user status")
+    } finally {
+      setShowSuspendModal(false)
+      setSelectedUser(null)
+    }
   }
 
   const handleAddAffiliate = () => {
@@ -156,8 +279,46 @@ export default function UsersPage() {
     toast.success(`Affiliate ${newStatus === "suspended" ? "suspended" : "activated"} successfully!`)
   }
 
-  const openEditModal = (user: User) => { setSelectedUser(user); setFormData({ name: user.name, email: user.email, phone: user.phone, role: user.role }); setShowEditModal(true) }
-  const openSuspendModal = (user: User) => { setSelectedUser(user); setShowSuspendModal(true); setShowOtpInput(false); setOtpInput("") }
+  const openEditModal = (user: User) => {
+    setSelectedUser(user)
+    setFormData({
+      name: user.fullName,
+      email: user.emailAddress,
+      phone: user.mobileNumber,
+      role: user.roles,
+      idNumber: user.idNumber
+    })
+    setShowEditModal(true)
+  }
+  const openSuspendModal = (user: User) => {
+    setSelectedUser(user)
+    setShowSuspendModal(true)
+  }
+
+  // Check if current user can edit/suspend another user based on roles
+  const canManageUser = (targetUser: User): boolean => {
+    const currentUser = sessionManager.getUser()
+    if (!currentUser) return false
+
+    const currentUserRole = currentUser.role
+    const targetUserRole = targetUser.roles
+
+    // Super Admin can manage everyone
+    if (currentUserRole === "SUPER_ADMIN") return true
+
+    // Company Owner (COMPANY_OWNER) can manage everyone except Super Admins
+    if (currentUserRole === "COMPANY_OWNER") {
+      return targetUserRole !== "SUPER_ADMIN"
+    }
+
+    // Staff can only manage themselves
+    if (currentUserRole === "STAFF") {
+      return targetUser.id === currentUser.user_id
+    }
+
+    return false
+  }
+
   const openEditAffiliateModal = (affiliate: Affiliate) => { setSelectedAffiliate(affiliate); setAffiliateFormData({ name: affiliate.name, email: affiliate.email, phone: affiliate.phone, events: affiliate.events, eventId: affiliate.events[0] || "" }); setShowEditModal(true) }
   const openSuspendAffiliateModal = (affiliate: Affiliate) => { setSelectedAffiliate(affiliate); setShowSuspendModal(true); setShowOtpInput(false); setOtpInput("") }
   const copyAffiliateLink = (link: string) => { navigator.clipboard.writeText(link); toast.success("Affiliate link copied!") }
@@ -230,9 +391,9 @@ export default function UsersPage() {
         {(activeTab === "users" ? [
           { label: "Total Users", value: totalUsers, icon: UsersIcon, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
           { label: "Active", value: activeUsers, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Suspended", value: suspendedUsers, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: "Inactive", value: suspendedUsers, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: "Super Admins", value: superAdminCount, icon: Shield, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Owners", value: ownerCount, icon: Shield, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
-          { label: "Organizers", value: organizerCount, icon: User, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Staff", value: staffCount, icon: UsersIcon, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
         ] : [
           { label: "Total Affiliates", value: totalAffiliates, icon: UsersIcon, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
@@ -264,37 +425,51 @@ export default function UsersPage() {
 
       {activeTab === "users" ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="space-y-4">
-          {filteredUsers.map((user, index) => {
-            const RoleIcon = roleDetails[user.role].icon
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                <p className="text-muted-foreground">Loading users...</p>
+              </div>
+            </div>
+          ) : filteredUsers.map((user, index) => {
+            const RoleIcon = roleDetails[user.roles]?.icon || User
+            const roleInfo = roleDetails[user.roles] || roleDetails.STAFF
             return (
               <motion.div key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-[#8b5cf6]/30 transition-all">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3 mb-3">
-                      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0", roleDetails[user.role].bg)}><RoleIcon className={cn("w-6 h-6", roleDetails[user.role].color)} /></div>
+                      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0", roleInfo.bg)}><RoleIcon className={cn("w-6 h-6", roleInfo.color)} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="font-bold text-base sm:text-lg">{user.name}</h3>
-                          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", user.status === "active" ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400")}>
-                            {user.status === "active" ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                          <h3 className="font-bold text-base sm:text-lg">{user.fullName}</h3>
+                          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", user.active ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400")}>
+                            {user.active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                            {user.active ? "Active" : "Inactive"}
                           </span>
+                          {user.kycStatus === "PASSED" && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+                              <CheckCircle className="w-3 h-3" />
+                              KYC Verified
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2"><Mail className="w-4 h-4" /><span className="break-all">{user.email}</span></div>
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-3"><Phone className="w-4 h-4" /><span>{user.phone}</span></div>
-                        <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold", roleDetails[user.role].bg, roleDetails[user.role].color)}><RoleIcon className="w-4 h-4" />{roleDetails[user.role].label}</div>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2"><Mail className="w-4 h-4" /><span className="break-all">{user.emailAddress}</span></div>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-3"><Phone className="w-4 h-4" /><span>{user.mobileNumber}</span></div>
+                        <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold", roleInfo.bg, roleInfo.color)}><RoleIcon className="w-4 h-4" />{roleInfo.label}</div>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground pl-15">
-                      <div><span className="font-medium">Joined:</span> {new Date(user.joinedDate).toLocaleDateString()}</div>
-                      <div><span className="font-medium">Last Active:</span> {new Date(user.lastActive).toLocaleDateString()}</div>
+                      <div><span className="font-medium">Company:</span> {user.companyName}</div>
+                      <div><span className="font-medium">KYC Status:</span> {user.kycStatus}</div>
                     </div>
                   </div>
-                  {user.role !== "owner" && (
+                  {canManageUser(user) && (
                     <div className="flex sm:flex-col gap-2 sm:gap-3">
                       <button onClick={() => openEditModal(user)} className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-200 dark:hover:bg-blue-950/50 transition-all cursor-pointer border border-blue-200 dark:border-blue-900"><Edit className="w-4 h-4" />Edit</button>
-                      <button onClick={() => openSuspendModal(user)} className={cn("flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border", user.status === "active" ? "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-950/50 border-red-200 dark:border-red-900" : "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-950/50 border-green-200 dark:border-green-900")}>
-                        {user.status === "active" ? <><Ban className="w-4 h-4" />Suspend</> : <><CheckCircle className="w-4 h-4" />Activate</>}
+                      <button onClick={() => openSuspendModal(user)} className={cn("flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border", user.active ? "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-950/50 border-red-200 dark:border-red-900" : "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-950/50 border-green-200 dark:border-green-900")}>
+                        {user.active ? <><Ban className="w-4 h-4" />Suspend</> : <><CheckCircle className="w-4 h-4" />Activate</>}
                       </button>
                     </div>
                   )}
@@ -302,7 +477,7 @@ export default function UsersPage() {
               </motion.div>
             )
           })}
-          {filteredUsers.length === 0 && <div className="text-center py-12 text-muted-foreground"><UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>No users found</p></div>}
+          {!isLoading && filteredUsers.length === 0 && <div className="text-center py-12 text-muted-foreground"><UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>No users found</p></div>}
         </motion.div>
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="space-y-4">
@@ -366,7 +541,7 @@ export default function UsersPage() {
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@example.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["owner", "organizer", "staff"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
+                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
                   <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Add User</button></div>
                 </div>
               ) : (
@@ -407,7 +582,8 @@ export default function UsersPage() {
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["owner", "organizer", "staff"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
+                  <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} placeholder="12345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
                   <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Save Changes</button></div>
                 </div>
               ) : (
@@ -442,26 +618,30 @@ export default function UsersPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSuspendModal(false)} className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-card rounded-2xl border border-border p-6 z-50 shadow-2xl">
               <button onClick={() => setShowSuspendModal(false)} className="absolute top-4 right-4 p-2 hover:bg-secondary rounded-lg transition-colors"><X className="w-5 h-5" /></button>
-              {!showOtpInput ? (
-                <>
-                  <h3 className="text-xl font-bold mb-4">{(selectedUser || selectedAffiliate)?.status === "active" ? `Suspend ${activeTab === "users" ? "User" : "Affiliate"}` : `Activate ${activeTab === "users" ? "User" : "Affiliate"}`}</h3>
-                  <p className="text-muted-foreground mb-6">{(selectedUser || selectedAffiliate)?.status === "active" ? `Are you sure you want to suspend ${(selectedUser || selectedAffiliate)?.name}? ${activeTab === "users" ? "They will no longer be able to access the system." : "Their affiliate links will no longer work."}` : `Are you sure you want to activate ${(selectedUser || selectedAffiliate)?.name}? ${activeTab === "users" ? "They will regain access to the system." : "Their affiliate links will become active."}`}</p>
-                  <div className="flex gap-3">
-                    <button onClick={() => setShowSuspendModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button>
-                    <button onClick={() => setShowOtpInput(true)} className={cn("flex-1 px-4 py-3 rounded-xl font-semibold transition-all", (selectedUser || selectedAffiliate)?.status === "active" ? "bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg hover:shadow-red-600/30" : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:shadow-lg hover:shadow-green-600/30")}>Continue</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-bold mb-4">Enter OTP</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Enter the 4-digit OTP to confirm this action</p>
-                  <input type="text" maxLength={4} value={otpInput} onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))} placeholder="0000" className="w-full h-14 px-4 rounded-xl border border-border bg-background text-center text-2xl font-bold tracking-widest outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all mb-6" />
-                  <div className="flex gap-3">
-                    <button onClick={() => { setShowOtpInput(false); setOtpInput(""); }} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Back</button>
-                    <button onClick={activeTab === "users" ? handleSuspendUser : handleSuspendAffiliate} disabled={otpInput.length !== 4} className={cn("flex-1 px-4 py-3 rounded-xl font-semibold transition-all", (selectedUser || selectedAffiliate)?.status === "active" ? "bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg hover:shadow-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed" : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:shadow-lg hover:shadow-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed")}>Confirm</button>
-                  </div>
-                </>
-              )}
+              <h3 className="text-xl font-bold mb-4">
+                {activeTab === "users"
+                  ? (selectedUser?.active ? "Suspend User" : "Activate User")
+                  : (selectedAffiliate?.status === "active" ? "Suspend Affiliate" : "Activate Affiliate")
+                }
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                {activeTab === "users"
+                  ? (selectedUser?.active
+                    ? `Are you sure you want to suspend ${selectedUser?.fullName}? They will no longer be able to access the system.`
+                    : `Are you sure you want to activate ${selectedUser?.fullName}? They will regain access to the system.`)
+                  : (selectedAffiliate?.status === "active"
+                    ? `Are you sure you want to suspend ${selectedAffiliate?.name}? Their affiliate links will no longer work.`
+                    : `Are you sure you want to activate ${selectedAffiliate?.name}? Their affiliate links will become active.`)
+                }
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowSuspendModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button>
+                <button onClick={activeTab === "users" ? handleSuspendUser : handleSuspendAffiliate} className={cn("flex-1 px-4 py-3 rounded-xl font-semibold transition-all",
+                  (activeTab === "users" ? selectedUser?.active : selectedAffiliate?.status === "active")
+                    ? "bg-gradient-to-r from-red-600 to-red-700 text-white hover:shadow-lg hover:shadow-red-600/30"
+                    : "bg-gradient-to-r from-green-600 to-green-700 text-white hover:shadow-lg hover:shadow-green-600/30"
+                )}>Confirm</button>
+              </div>
             </motion.div>
           </>
         )}
