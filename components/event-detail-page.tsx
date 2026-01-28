@@ -103,6 +103,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [editTicketDescription, setEditTicketDescription] = useState("")
   const [editTicketSaleStart, setEditTicketSaleStart] = useState<Date | undefined>(undefined)
   const [editTicketSaleEnd, setEditTicketSaleEnd] = useState<Date | undefined>(undefined)
+  const [editTicketLimitPerPerson, setEditTicketLimitPerPerson] = useState("")
+  const [editTicketComplementary, setEditTicketComplementary] = useState("")
+  const [editTicketToIssue, setEditTicketToIssue] = useState("")
+  const [editTicketIsFree, setEditTicketIsFree] = useState(false)
+  const [loadingTicketDetails, setLoadingTicketDetails] = useState(false)
 
   const [showAddTicketModal, setShowAddTicketModal] = useState(false)
   const [addTicketName, setAddTicketName] = useState("")
@@ -311,6 +316,18 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
     fetchEvent()
   }, [eventId])
+
+  // Debug: Monitor ticket sale date changes
+  useEffect(() => {
+    console.log('=== Edit Ticket Sale Dates Changed ===', {
+      editTicketSaleStart,
+      editTicketSaleEnd,
+      startIsDate: editTicketSaleStart instanceof Date,
+      endIsDate: editTicketSaleEnd instanceof Date,
+      startValid: editTicketSaleStart ? !isNaN(editTicketSaleStart.getTime()) : false,
+      endValid: editTicketSaleEnd ? !isNaN(editTicketSaleEnd.getTime()) : false
+    })
+  }, [editTicketSaleStart, editTicketSaleEnd])
 
   // Fetch transactions when transactions tab is active
   useEffect(() => {
@@ -565,18 +582,96 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setSuspendError("")
   }
 
-  const handleEditTicket = (ticket: any) => {
+  const handleEditTicket = async (ticket: any) => {
     setEditingTicket(ticket)
+
+    // Set basic info from the ticket summary first
     setEditTicketName(ticket.name)
     setEditTicketPrice(ticket.price.toString())
     setEditTicketQuantity(ticket.totalAvailable.toString())
     setEditTicketDescription("")
+
+    // Reset additional fields
+    setEditTicketLimitPerPerson("0")
+    setEditTicketComplementary("0")
+    setEditTicketToIssue("1")
+    setEditTicketIsFree(false)
     setEditTicketSaleStart(undefined)
     setEditTicketSaleEnd(undefined)
+
+    // Show loading toast while fetching
+    const loadingToast = toast.loading('Loading ticket details...')
+
+    // Fetch full ticket details from API BEFORE opening modal
+    setLoadingTicketDetails(true)
+    try {
+      console.log('Fetching full event details to get complete ticket info for ticket ID:', ticket.id)
+      const response = await api.event.getById(eventId)
+
+      if (response.status && response.event && response.event.tickets) {
+        // Find the specific ticket in the full response
+        const fullTicket = response.event.tickets.find((t: any) => t.id === ticket.id)
+
+        if (fullTicket) {
+          console.log('Found full ticket details:', fullTicket)
+
+          // Update with complete ticket details
+          setEditTicketName(fullTicket.ticketName || ticket.name)
+          setEditTicketPrice(fullTicket.ticketPrice?.toString() || ticket.price.toString())
+          setEditTicketQuantity(fullTicket.quantityAvailable?.toString() || ticket.totalAvailable.toString())
+          setEditTicketLimitPerPerson(fullTicket.ticketLimitPerPerson?.toString() || "0")
+          setEditTicketComplementary(fullTicket.numberOfComplementary?.toString() || "0")
+          setEditTicketToIssue(fullTicket.ticketsToIssue?.toString() || "1")
+          setEditTicketIsFree(fullTicket.isFree || false)
+
+          // Set ticket sale dates
+          if (fullTicket.ticketSaleStartDate) {
+            const startDate = new Date(fullTicket.ticketSaleStartDate)
+            console.log('Setting ticket sale start date:', fullTicket.ticketSaleStartDate, '-> Date object:', startDate)
+            setEditTicketSaleStart(startDate)
+          } else {
+            console.log('No ticket sale start date found in API response')
+          }
+
+          if (fullTicket.ticketSaleEndDate) {
+            const endDate = new Date(fullTicket.ticketSaleEndDate)
+            console.log('Setting ticket sale end date:', fullTicket.ticketSaleEndDate, '-> Date object:', endDate)
+            setEditTicketSaleEnd(endDate)
+          } else {
+            console.log('No ticket sale end date found in API response')
+          }
+
+          console.log('All ticket details populated:', {
+            name: fullTicket.ticketName,
+            price: fullTicket.ticketPrice,
+            quantity: fullTicket.quantityAvailable,
+            limitPerPerson: fullTicket.ticketLimitPerPerson,
+            complementary: fullTicket.numberOfComplementary,
+            ticketsToIssue: fullTicket.ticketsToIssue,
+            isFree: fullTicket.isFree,
+            saleStartRaw: fullTicket.ticketSaleStartDate,
+            saleEndRaw: fullTicket.ticketSaleEndDate,
+            saleStartParsed: fullTicket.ticketSaleStartDate ? new Date(fullTicket.ticketSaleStartDate) : null,
+            saleEndParsed: fullTicket.ticketSaleEndDate ? new Date(fullTicket.ticketSaleEndDate) : null
+          })
+        }
+      }
+
+      toast.dismiss(loadingToast)
+    } catch (error) {
+      console.error('Error fetching full ticket details:', error)
+      toast.dismiss(loadingToast)
+      toast.error('Could not load complete ticket details')
+      return // Don't open modal if fetch failed
+    } finally {
+      setLoadingTicketDetails(false)
+    }
+
+    // Open modal AFTER fetching data
     setShowEditTicketModal(true)
   }
 
-  const handleSaveTicket = () => {
+  const handleSaveTicket = async () => {
     if (!editTicketName || !editTicketPrice || !editTicketQuantity) {
       toast.error("Please fill in all required fields")
       return
@@ -587,10 +682,65 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
-    toast.success("Ticket updated successfully!", {
-      description: "Your changes have been saved.",
-    })
-    setShowEditTicketModal(false)
+    if (!editingTicket) {
+      toast.error("No ticket selected")
+      return
+    }
+
+    try {
+      const ticketId = parseInt(editingTicket.id)
+
+      const ticketUpdateData: Record<string, unknown> = {
+        ticketName: editTicketName,
+        quantityAvailable: parseInt(editTicketQuantity),
+        ticketLimitPerPerson: parseInt(editTicketLimitPerPerson || "0"),
+        numberOfComplementary: parseInt(editTicketComplementary || "0"),
+        ticketsToIssue: parseInt(editTicketToIssue || "1"),
+        ticketSaleStartDate: editTicketSaleStart.toISOString(),
+        ticketSaleEndDate: editTicketSaleEnd.toISOString(),
+      }
+
+      console.log('=== Updating Ticket ===')
+      console.log('Ticket ID:', ticketId)
+      console.log('Update data:', ticketUpdateData)
+
+      const response = await api.ticket.update(ticketId, ticketUpdateData)
+
+      console.log('Update response:', response)
+
+      if (!response.status) {
+        const errorMsg = response.message || 'Failed to update ticket'
+        console.error('Update failed:', errorMsg)
+        throw new Error(errorMsg)
+      }
+
+      toast.success("Ticket updated successfully!", {
+        description: "Your changes have been saved.",
+      })
+
+      setShowEditTicketModal(false)
+
+      // Refresh the page data
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
+
+    } catch (error) {
+      console.error('=== Error updating ticket ===')
+      console.error('Error type:', error?.constructor?.name)
+      console.error('Error details:', error)
+
+      let errorMessage = "Failed to update ticket"
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        errorMessage = (error as { message: string }).message
+      }
+
+      toast.error(errorMessage, {
+        description: "Please check the console for more details"
+      })
+    }
   }
 
   const handleCloseEditTicketModal = () => {
@@ -598,11 +748,14 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setEditingTicket(null)
     setEditTicketName("")
     setEditTicketPrice("")
-
     setEditTicketQuantity("")
     setEditTicketDescription("")
     setEditTicketSaleStart(undefined)
     setEditTicketSaleEnd(undefined)
+    setEditTicketLimitPerPerson("0")
+    setEditTicketComplementary("0")
+    setEditTicketToIssue("1")
+    setEditTicketIsFree(false)
   }
 
   const handleAddTicket = () => {
@@ -3360,6 +3513,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               </button>
 
               <h3 className="text-xl font-bold mb-4">Edit Ticket Type</h3>
+
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">
@@ -3384,7 +3538,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketPrice(e.target.value)}
                       placeholder="e.g., 2500"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      disabled
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-secondary text-sm outline-none transition-all cursor-not-allowed opacity-60"
                     />
                   </div>
                   <div>
@@ -3401,16 +3556,47 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Limit Per Person
+                    </label>
+                    <input
+                      type="number"
+                      value={editTicketLimitPerPerson}
+                      onChange={(e) => setEditTicketLimitPerPerson(e.target.value)}
+                      placeholder="0 = No limit"
+                      min="0"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Complementary Tickets
+                    </label>
+                    <input
+                      type="number"
+                      value={editTicketComplementary}
+                      onChange={(e) => setEditTicketComplementary(e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    Description (Optional)
+                    Tickets To Issue
                   </label>
-                  <textarea
-                    value={editTicketDescription}
-                    onChange={(e) => setEditTicketDescription(e.target.value)}
-                    placeholder="Add additional details about this ticket type..."
-                    rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
+                  <input
+                    type="number"
+                    value={editTicketToIssue}
+                    onChange={(e) => setEditTicketToIssue(e.target.value)}
+                    placeholder="1"
+                    min="1"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
                   />
                 </div>
 
@@ -3435,15 +3621,6 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       placeholderText="Select end date & time"
                       minDate={editTicketSaleStart}
                     />
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30">
-                  <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-orange-800 dark:text-orange-300">
-                      <span className="font-semibold">Note:</span> Changes to price or quantity will not affect tickets already sold. Only future sales will use the updated values.
-                    </p>
                   </div>
                 </div>
 

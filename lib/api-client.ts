@@ -223,7 +223,8 @@ export const api = {
         method: 'GET',
       }, true) // Use proxy route
     },
-    getAllEvents: async (companyId: number, page: number = 0, size: number = 300) => {
+    getAllEvents: async (companyId: number, page: number = 0, size: number = 300, includeDetails: boolean = false) => {
+      const detailsParam = includeDetails ? '&includeDetails=true' : ''
       const response = await apiRequest<{
         data: {
           data: Array<{
@@ -259,6 +260,47 @@ export const api = {
               uniqueTicketCount: number
               ticketStatus: string
             }>
+            detailedEvent?: {
+              id: number
+              eventName: string
+              eventDescription: string
+              eventPosterUrl: string
+              eventCategoryId: number
+              ticketSaleStartDate: string
+              ticketSaleEndDate: string
+              eventLocation: string
+              eventStartDate: string
+              eventEndDate: string
+              isActive: boolean
+              tickets: Array<{
+                id: number
+                ticketName: string
+                ticketPrice: number
+                quantityAvailable: number
+                soldQuantity: number
+                isActive: boolean
+                ticketsToIssue: number
+                isSoldOut: boolean
+                ticketLimitPerPerson: number
+                numberOfComplementary: number
+                ticketSaleStartDate: string
+                ticketSaleEndDate: string
+                isFree: boolean
+                ticketStatus: string
+                createAt: string
+              }>
+              createdById: number
+              companyId: number
+              companyName: string
+              comission: number
+              category: string
+              date: string
+              time: string
+              isFeatured: boolean
+              price: number
+              slug: string
+              currency: string
+            }
           }>
           page?: number
           size?: number
@@ -269,30 +311,18 @@ export const api = {
         }
         message: string
         status: boolean
-      }>(`/admin/events/all?page=${page}&size=${size}&companyId=${companyId}`, {
+      }>(`/admin/events/all?page=${page}&size=${size}&companyId=${companyId}${detailsParam}`, {
         method: 'GET',
       }, true)
 
       // Normalize the data to match the expected Event interface
       if (response.data && response.data.data) {
-        const normalizedEvents = response.data.data.map(event => ({
-          id: event.eventId,
-          eventName: event.eventName,
-          eventDescription: event.eventDescription,
-          eventPosterUrl: event.eventPosterUrl,
-          eventCategoryId: 0,
-          ticketSaleStartDate: event.ticketSaleStartDate,
-          ticketSaleEndDate: event.ticketSaleEndDate,
-          eventLocation: event.eventLocation,
-          eventStartDate: event.eventStartDate,
-          eventEndDate: event.eventEndDate,
-          isActive: event.active,
-          status: event.status, // Add status field (ACTIVE, ONHOLD, etc.)
-          tickets: event.ticketSummaries?.map(ticket => ({
+        const normalizedEvents = response.data.data.map(event => {
+          // Use detailed event data if available, otherwise use summary data
+          const tickets = event.detailedEvent?.tickets || event.ticketSummaries?.map(ticket => ({
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
             ticketPrice: ticket.ticketPrice,
-            // Use uniqueTicketCount as soldQuantity (this is the actual sold count)
             quantityAvailable: 0,
             soldQuantity: ticket.uniqueTicketCount || 0,
             isActive: ticket.ticketStatus === 'ACTIVE',
@@ -305,26 +335,42 @@ export const api = {
             isFree: ticket.ticketPrice === 0,
             ticketStatus: ticket.ticketStatus || 'ACTIVE',
             createAt: new Date().toISOString(),
-            // Include totalTicketSaleBalance for revenue calculation
             totalTicketSaleBalance: ticket.totalTicketSaleBalance,
-          })) || [],
-          createdById: 0,
-          companyId: event.companyId,
-          companyName: event.companyName,
-          comission: 0,
-          category: event.eventCategory,
-          date: event.eventStartDate,
-          time: new Date(event.eventStartDate).toLocaleTimeString(),
-          isFeatured: false,
-          price: event.ticketSummaries?.[0]?.ticketPrice || 0,
-          slug: event.slug,
-          currency: 'KES',
-          // Add the actual totals from event level (most important for display)
-          totalTicketsSold: event.totalTicketsSold,
-          totalRevenue: event.totalRevenue,
-          totalPlatformFee: event.totalPlatformFee,
-          analytics: event.analytics,
-        }))
+          })) || []
+
+          return {
+            id: event.eventId,
+            eventName: event.eventName,
+            eventDescription: event.eventDescription,
+            eventPosterUrl: event.eventPosterUrl,
+            eventCategoryId: event.detailedEvent?.eventCategoryId || 0,
+            ticketSaleStartDate: event.ticketSaleStartDate,
+            ticketSaleEndDate: event.ticketSaleEndDate,
+            eventLocation: event.eventLocation,
+            eventStartDate: event.eventStartDate,
+            eventEndDate: event.eventEndDate,
+            isActive: event.active,
+            status: event.status,
+            tickets,
+            createdById: event.detailedEvent?.createdById || 0,
+            companyId: event.companyId,
+            companyName: event.companyName,
+            comission: event.detailedEvent?.comission || 0,
+            category: event.eventCategory,
+            date: event.eventStartDate,
+            time: new Date(event.eventStartDate).toLocaleTimeString(),
+            isFeatured: event.detailedEvent?.isFeatured || false,
+            price: event.ticketSummaries?.[0]?.ticketPrice || 0,
+            slug: event.slug,
+            currency: event.detailedEvent?.currency || 'KES',
+            totalTicketsSold: event.totalTicketsSold,
+            totalRevenue: event.totalRevenue,
+            totalPlatformFee: event.totalPlatformFee,
+            analytics: event.analytics,
+            // Include detailedEvent for easy access to full data
+            detailedEvent: event.detailedEvent,
+          }
+        })
 
         return {
           message: response.message || 'Events fetched successfully',
@@ -439,6 +485,81 @@ export const api = {
       }>(`/gl/event/attendees/list?eventId=${eventId}`, {
         method: 'GET',
       }, true)
+    },
+  },
+
+  // Event endpoints
+  event: {
+    getById: async (eventId: number) => {
+      return apiRequest<{
+        event: {
+          id: number
+          eventName: string
+          eventDescription: string
+          eventPosterUrl: string
+          eventCategoryId: number
+          ticketSaleStartDate: string
+          ticketSaleEndDate: string
+          eventLocation: string
+          eventStartDate: string
+          eventEndDate: string
+          isActive: boolean
+          tickets: Array<{
+            id: number
+            ticketName: string
+            ticketPrice: number
+            quantityAvailable: number
+            soldQuantity: number
+            isActive: boolean
+            ticketsToIssue: number
+            isSoldOut: boolean
+            ticketLimitPerPerson: number
+            numberOfComplementary: number
+            ticketSaleStartDate: string
+            ticketSaleEndDate: string
+            isFree: boolean
+            ticketStatus: string
+            createAt: string
+          }>
+          createdById: number
+          companyId: number
+          companyName: string
+          comission: number
+          category: string
+          date: string
+          time: string
+          isFeatured: boolean
+          price: number
+          slug: string
+          currency: string
+        }
+        message: string
+        status: boolean
+      }>(`/event/get?eventId=${eventId}`, {
+        method: 'GET',
+      }, true) // Use proxy route
+    },
+    update: async (eventId: number, eventData: Record<string, unknown>) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>(`/event/update?eventId=${eventId}`, {
+        method: 'POST',
+        body: JSON.stringify(eventData),
+      }, true) // Use proxy route
+    },
+  },
+
+  // Ticket endpoints
+  ticket: {
+    update: async (ticketId: number, ticketData: Record<string, unknown>) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>(`/ticket/update?ticketId=${ticketId}`, {
+        method: 'POST',
+        body: JSON.stringify(ticketData),
+      }, true) // Use proxy route
     },
   },
 

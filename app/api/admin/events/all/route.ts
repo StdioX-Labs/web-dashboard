@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const page = searchParams.get('page') || '0'
     const size = searchParams.get('size') || '300'
     const companyId = searchParams.get('companyId') // Get company ID from query params
+    const includeDetails = searchParams.get('includeDetails') === 'true' // Optional flag to fetch detailed event data
 
     // Get auth token from request headers
     const authHeader = request.headers.get('Authorization')
@@ -45,7 +46,44 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Return the data as-is since API now filters by companyId
+    // If includeDetails flag is true, fetch detailed data for each event
+    if (includeDetails && data.data?.data && Array.isArray(data.data.data)) {
+      console.log(`Fetching detailed data for ${data.data.data.length} events...`)
+
+      // Fetch detailed event data for each event in parallel
+      const detailedEventsPromises = data.data.data.map(async (event: { eventId: number; [key: string]: unknown }) => {
+        try {
+          const detailResponse = await fetch(
+            `${SOLDOUT_API_BASE}/event/get?eventId=${event.eventId}`,
+            { method: 'GET', headers }
+          )
+
+          if (detailResponse.ok) {
+            const detailData = await detailResponse.json()
+            if (detailData.status && detailData.event) {
+              // Merge detailed event data with summary data
+              return {
+                ...event,
+                detailedEvent: detailData.event, // Full event with complete ticket data
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch details for event ${event.eventId}:`, err)
+        }
+        // Return original event if detail fetch fails
+        return event
+      })
+
+      const eventsWithDetails = await Promise.all(detailedEventsPromises)
+
+      // Replace the events array with enriched data
+      data.data.data = eventsWithDetails
+
+      console.log(`Successfully enriched ${eventsWithDetails.length} events with detailed data`)
+    }
+
+    // Return the data (enriched if includeDetails was true)
     return NextResponse.json(data)
   } catch (error) {
     console.error('All events fetch error:', error)

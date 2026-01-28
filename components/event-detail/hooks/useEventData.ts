@@ -6,7 +6,11 @@ import { eventCache } from '@/lib/event-cache'
 import { EventData } from '../types'
 
 /**
- * Hook to fetch and manage event data
+ * Hook to fetch and manage event data from the cached list of all events
+ * This is efficient for displaying event summaries but may not have complete ticket details.
+ *
+ * For prepopulating edit forms with full ticket data, use useEventDetails instead,
+ * which calls the /event/get endpoint for complete event information.
  */
 export function useEventData(eventId: number) {
   const [eventData, setEventData] = useState<EventData | null>(null)
@@ -105,7 +109,7 @@ export function useEventData(eventId: number) {
                 price: ticket.ticketPrice,
                 totalAvailable: ticket.quantityAvailable,
                 sold: ticket.soldQuantity,
-                revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * ticket.soldQuantity),
+                revenue: (ticket as { totalTicketSaleBalance?: number }).totalTicketSaleBalance || (ticket.ticketPrice * ticket.soldQuantity),
                 status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
                 quantityAvailable: ticket.quantityAvailable,
               })) || [],
