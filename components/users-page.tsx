@@ -82,6 +82,24 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"users" | "affiliates">("users")
 
+  // Format phone number to 254XXXXXXXXX format
+  const formatPhoneNumber = (input: string): string => {
+    // Remove all non-digit characters
+    let cleaned = input.replace(/\D/g, '')
+
+    // If starts with 0, replace with 254
+    if (cleaned.startsWith('0')) {
+      cleaned = '254' + cleaned.substring(1)
+    }
+
+    // If doesn't start with 254, add it
+    if (!cleaned.startsWith('254')) {
+      cleaned = '254' + cleaned
+    }
+
+    return cleaned
+  }
+
   const fetchUsers = async () => {
     try {
       const user = sessionManager.getUser()
@@ -161,9 +179,9 @@ export default function UsersPage() {
       const response = await api.user.create({
         fullName: formData.name,
         idNumber: formData.idNumber || "00000000",
-        mobileNumber: formData.phone,
+        mobileNumber: formatPhoneNumber(formData.phone),
         password: "s0ascAnn3r@56YearsLater!", // Default password
-        emailAddress: formData.email,
+        emailAddress: formData.email.toLowerCase().trim(),
         isExternal: false,
         company: { id: currentUser.company_id },
         roles: formData.role,
@@ -204,8 +222,8 @@ export default function UsersPage() {
         currentUser.user_id,
         {
           fullName: formData.name,
-          emailAddress: formData.email,
-          mobileNumber: formData.phone,
+          emailAddress: formData.email.toLowerCase().trim(),
+          mobileNumber: formatPhoneNumber(formData.phone),
           idNumber: formData.idNumber || selectedUser.idNumber,
           roles: formData.role,
           // Include password only if it's been changed (you may want to add a password field to the form)
@@ -553,7 +571,7 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@example.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} placeholder="254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
                   <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
                   <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Add User</button></div>
                 </div>
@@ -594,7 +612,7 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
                   <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} placeholder="12345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
                   <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
                   <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Save Changes</button></div>
