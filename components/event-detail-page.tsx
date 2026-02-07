@@ -797,7 +797,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setAddTicketSaleEnd(undefined)
   }
 
-  const handleIssueCompTicket = () => {
+  const handleIssueCompTicket = async () => {
     // Validation
     if (!compEmail) {
       toast.error("Please enter recipient email")
@@ -830,21 +830,78 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
-    // Format phone number for display
-    const formattedPhone = formatKenyanPhone(compPhone)
+    try {
+      // Get user from session
+      const user = sessionManager.getUser()
+      if (!user || !user.user_id) {
+        toast.error("User not authenticated")
+        return
+      }
 
-    toast.success("Complimentary ticket issued successfully!", {
-      description: `Sent to ${compEmail} (${formattedPhone})`,
-    })
+      // Format phone number to 254XXXXXXXXX format
+      let formattedPhone = compPhone.replace(/\s+/g, '')
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = '254' + formattedPhone.substring(1)
+      } else if (formattedPhone.startsWith('+254')) {
+        formattedPhone = formattedPhone.substring(1)
+      } else if (!formattedPhone.startsWith('254')) {
+        formattedPhone = '254' + formattedPhone
+      }
 
-    // Reset form and close modal
-    setCompEmail("")
-    setCompEmailError("")
-    setCompPhone("")
-    setCompPhoneError("")
-    setCompTicketType("")
-    setCompQuantity("1")
-    setShowComplementaryModal(false)
+      // Format email to lowercase
+      const formattedEmail = compEmail.toLowerCase()
+
+      // Make API call
+      toast.loading("Issuing complementary ticket...", { id: "comp-ticket" })
+
+      await api.company.issueComplementary({
+        userId: user.user_id,
+        eventId: eventId,
+        customer: {
+          mobile_number: formattedPhone,
+          email: formattedEmail
+        },
+        tickets: [
+          {
+            ticketId: parseInt(compTicketType),
+            quantity: quantity
+          }
+        ]
+      })
+
+      const displayPhone = formatKenyanPhone(compPhone)
+      toast.success("Complimentary ticket issued successfully!", {
+        id: "comp-ticket",
+        description: `Sent to ${formattedEmail} (${displayPhone})`,
+      })
+
+      // Reset form and close modal
+      setCompEmail("")
+      setCompEmailError("")
+      setCompPhone("")
+      setCompPhoneError("")
+      setCompTicketType("")
+      setCompQuantity("1")
+      setShowComplementaryModal(false)
+
+      // Refresh attendees if on attendees tab
+      if (activeTab === "attendees") {
+        try {
+          const response = await api.company.getAttendees(eventId)
+          if (response.status && response.attendees) {
+            setAttendees(response.attendees)
+          }
+        } catch (error) {
+          console.error('Failed to refresh attendees:', error)
+        }
+      }
+    } catch (error) {
+      console.error("Error issuing complementary ticket:", error)
+      toast.error("Failed to issue complementary ticket", {
+        id: "comp-ticket",
+        description: error instanceof Error ? error.message : "Please try again"
+      })
+    }
   }
 
   const handleCloseCompModal = () => {

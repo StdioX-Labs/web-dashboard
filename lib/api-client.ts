@@ -538,6 +538,26 @@ export const api = {
         body: JSON.stringify(ticketData),
       }, true)
     },
+    issueComplementary: async (complementaryData: {
+      userId: number
+      eventId: number
+      customer: {
+        mobile_number: string
+        email: string
+      }
+      tickets: Array<{
+        ticketId: number
+        quantity: number
+      }>
+    }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>('/event/issue/complementary', {
+        method: 'POST',
+        body: JSON.stringify(complementaryData),
+      }, true)
+    },
     getAttendees: async (eventId: number) => {
       return apiRequest<{
         attendees: Array<{
