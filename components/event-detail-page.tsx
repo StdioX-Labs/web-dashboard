@@ -64,6 +64,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     balance: number
     pendingBalance: number
     totalRevenue: number
+    totalPlatformFee: number
     image: string
     currency: string
     tickets: any[]
@@ -275,6 +276,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             console.log("Using Revenue:", revenue)
             console.log("Using Tickets Sold:", ticketsSold)
 
+            const platformFee = foundEvent.totalPlatformFee || 0
+            const netAmount = revenue - platformFee
+
             // Transform API data to component format
             const transformedEvent = {
               id: foundEvent.id,
@@ -285,9 +289,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               description: foundEvent.eventDescription,
               status: foundEvent.isActive ? 'active' : 'inactive',
               apiStatus: foundEvent.status, // Store API status (ONHOLD, ACTIVE, etc.)
-              balance: revenue,
+              balance: netAmount,
               pendingBalance: 0,
               totalRevenue: revenue,
+              totalPlatformFee: platformFee,
               image: foundEvent.eventPosterUrl,
               currency: foundEvent.currency || currency,
               tickets: foundEvent.tickets || [],
@@ -2494,7 +2499,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <p className="text-xs opacity-75 mb-1">Commission & Fees</p>
                   <p className="text-base sm:text-lg lg:text-xl xl:text-2xl font-semibold break-words">
                     {showBalance
-                      ? `- ${eventData.currency || currency} ${(eventData.totalRevenue * 0.125).toLocaleString()}`
+                      ? `- ${eventData.currency || currency} ${eventData.totalPlatformFee.toLocaleString()}`
                       : '- ••••••'}
                   </p>
                 </div>
@@ -2502,7 +2507,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <p className="text-xs opacity-75 mb-1">Net Amount</p>
                   <p className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-green-300 break-words">
                     {showBalance
-                      ? `${eventData.currency || currency} ${(eventData.totalRevenue * 0.875).toLocaleString()}`
+                      ? `${eventData.currency || currency} ${(eventData.totalRevenue - eventData.totalPlatformFee).toLocaleString()}`
                       : '••••••'}
                   </p>
                 </div>

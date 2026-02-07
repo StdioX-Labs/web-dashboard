@@ -65,6 +65,8 @@ export default function DashboardHome() {
   const [eventsLoading, setEventsLoading] = useState(true)
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(true)
+  const [calculatedRevenue, setCalculatedRevenue] = useState(0)
+  const [calculatedFees, setCalculatedFees] = useState(0)
 
   useEffect(() => {
     const user = sessionManager.getUser()
@@ -96,6 +98,20 @@ export default function DashboardHome() {
       try {
         const eventsResponse = await api.company.getAllEvents(user.company_id, 0, 300)
         if (eventsResponse.events) {
+          // Calculate total revenue and fees from all company events
+          let totalRev = 0
+          let totalFee = 0
+
+          eventsResponse.events.forEach(event => {
+            if (event.companyId === user.company_id) {
+              totalRev += event.totalRevenue || 0
+              totalFee += event.totalPlatformFee || 0
+            }
+          })
+
+          setCalculatedRevenue(totalRev)
+          setCalculatedFees(totalFee)
+
           // Filter events for the current user's company
           const companyEvents = eventsResponse.events.filter(
             (event) => event.companyId === user.company_id && event.isActive
@@ -167,8 +183,9 @@ export default function DashboardHome() {
     fetchRecentTransactions()
   }, [])
 
-  const totalRevenue = summary?.totalRevenue || 0
-  const commissionAndFees = summary?.totalFees || 0
+  // Use calculated values from events API (accurate), fallback to summary API
+  const totalRevenue = calculatedRevenue || summary?.totalRevenue || 0
+  const commissionAndFees = calculatedFees || summary?.totalFees || 0
   const withdrawn = 0
   const availableBalance = totalRevenue - commissionAndFees - withdrawn
 
@@ -245,7 +262,7 @@ export default function DashboardHome() {
               <div className="p-4 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 min-w-0">
                 <p className="text-xs sm:text-sm text-white/70 mb-2 sm:mb-3">Commission & Fees</p>
                 <p className="text-lg sm:text-xl lg:text-2xl font-bold break-words">
-                  {isLoading ? "..." : showBalance ? `- ${currency} ${Math.round(commissionAndFees).toLocaleString()}` : "- ••••••"}
+                  {isLoading ? "..." : showBalance ? `- ${currency} ${commissionAndFees.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : "- ••••••"}
                 </p>
               </div>
 

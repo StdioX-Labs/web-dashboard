@@ -58,6 +58,8 @@ export function EventDetail({ eventId }: EventDetailProps) {
               const calculatedTicketsSold = foundActiveEvent.tickets?.reduce((sum: number, ticket: any) =>
                 sum + ticket.soldQuantity, 0
               ) || 0
+              const platformFee = foundActiveEvent.totalPlatformFee || 0
+              const netAmount = calculatedRevenue - platformFee
 
               const transformedEvent: EventData = {
                 id: foundActiveEvent.id,
@@ -67,9 +69,10 @@ export function EventDetail({ eventId }: EventDetailProps) {
                 venue: foundActiveEvent.eventLocation,
                 description: foundActiveEvent.eventDescription,
                 status: foundActiveEvent.isActive ? 'active' : 'inactive',
-                balance: calculatedRevenue,
+                balance: netAmount,
                 pendingBalance: 0,
                 totalRevenue: calculatedRevenue,
+                totalPlatformFee: platformFee,
                 image: foundActiveEvent.eventPosterUrl,
                 currency: foundActiveEvent.currency || currency,
                 tickets: (foundActiveEvent.tickets || []).map((ticket: any) => ({
@@ -111,6 +114,10 @@ export function EventDetail({ eventId }: EventDetailProps) {
           )
 
           if (foundEvent) {
+            const totalRevenue = foundEvent.totalRevenue || 0
+            const platformFee = foundEvent.totalPlatformFee || 0
+            const netAmount = totalRevenue - platformFee
+
             const transformedEvent: EventData = {
               id: foundEvent.id,
               name: foundEvent.eventName,
@@ -119,9 +126,10 @@ export function EventDetail({ eventId }: EventDetailProps) {
               venue: foundEvent.eventLocation,
               description: foundEvent.eventDescription,
               status: foundEvent.isActive ? 'active' : 'inactive',
-              balance: foundEvent.totalRevenue || 0,
+              balance: netAmount,
               pendingBalance: 0,
-              totalRevenue: foundEvent.totalRevenue || 0,
+              totalRevenue: totalRevenue,
+              totalPlatformFee: platformFee,
               image: foundEvent.eventPosterUrl,
               currency: foundEvent.currency || currency,
               tickets: (foundEvent.tickets || []).map((ticket: any) => ({

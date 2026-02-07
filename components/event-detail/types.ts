@@ -23,6 +23,7 @@ export interface EventData {
   balance: number
   pendingBalance: number
   totalRevenue: number
+  totalPlatformFee?: number
   image: string
   currency: string
   tickets: TicketType[]
