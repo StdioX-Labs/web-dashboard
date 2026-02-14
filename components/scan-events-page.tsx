@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Camera, Keyboard, CheckCircle, Loader2, CreditCard, Users, Ticket, AlertCircle } from "lucide-react"
 import { Html5Qrcode } from "html5-qrcode"
@@ -231,11 +231,33 @@ export default function ScanEventsPage() {
     }
   }
 
-  const startScanning = async () => {
+  const startScanning = useCallback(async () => {
     try {
       setIsScanning(true)
+
+      // Clean up existing instance first
+      if (html5QrCodeRef.current) {
+        try {
+          await html5QrCodeRef.current.stop()
+          await html5QrCodeRef.current.clear()
+        } catch (cleanupErr) {
+          // Ignore cleanup errors - just log them
+          console.log("Cleanup warning:", cleanupErr)
+        }
+        html5QrCodeRef.current = null
+      }
+
       const html5QrCode = new Html5Qrcode("qr-reader")
       html5QrCodeRef.current = html5QrCode
+
+      // Request camera permissions explicitly first
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      } catch (permError) {
+        console.error("Camera permission denied:", permError)
+        setIsScanning(false)
+        throw new Error("Camera permission denied. Please allow camera access in your browser settings.")
+      }
 
       const devices = await Html5Qrcode.getCameras()
       const barcodeScanner = devices.find(device =>
@@ -263,36 +285,31 @@ export default function ScanEventsPage() {
       }
     } catch (err) {
       console.error("Error starting scanner:", err)
+      const errorMessage = err instanceof Error ? err.message : "Failed to start camera"
       toast.error("Failed to start camera", {
-        description: "Please check camera permissions"
+        description: errorMessage
       })
       setIsScanning(false)
     }
-  }
+  }, [])
 
-  const stopScanning = async () => {
+  const stopScanning = useCallback(async () => {
     if (html5QrCodeRef.current) {
       try {
         await html5QrCodeRef.current.stop()
+        // Clear the scanner instance
+        await html5QrCodeRef.current.clear()
         html5QrCodeRef.current = null
       } catch (err) {
         console.error("Error stopping scanner:", err)
+        // Force cleanup even on error
+        html5QrCodeRef.current = null
       }
     }
     setIsScanning(false)
-  }
+  }, [])
 
-  const handleScanBarcode = async (code: string) => {
-    if (!code || code.trim().length === 0) return
-    
-    await stopScanning()
-    
-    setTimeout(async () => {
-      await scanTicket(code)
-    }, 200)
-  }
-
-  const scanTicket = async (barcode: string) => {
+  const scanTicket = useCallback(async (barcode: string) => {
     setIsValidating(true)
     setGroupTickets(null)
     setSelectedBarcodes([])
@@ -356,9 +373,11 @@ export default function ScanEventsPage() {
         // Reset the barcode input
         setManualBarcode("")
 
-        // Stop camera after scan
-        if (isScanning) {
-          await stopScanning()
+        // Restart camera after a short delay (for camera mode)
+        if (scanMode === "camera") {
+          setTimeout(() => {
+            startScanning()
+          }, 1500)
         }
       } else {
         // No ticket data available - show error and restart camera
@@ -372,8 +391,8 @@ export default function ScanEventsPage() {
           duration: 5000,
         })
 
-        // Restart camera even on error
-        if (scanMode === "camera" && !isScanning) {
+        // Restart camera even on error (for camera mode)
+        if (scanMode === "camera") {
           setTimeout(() => {
             startScanning()
           }, 2000)
@@ -390,8 +409,8 @@ export default function ScanEventsPage() {
         duration: 5000,
       })
 
-      // Restart camera even on error
-      if (scanMode === "camera" && !isScanning) {
+      // Restart camera even on error (for camera mode)
+      if (scanMode === "camera") {
         setTimeout(() => {
           startScanning()
         }, 2000)
@@ -399,7 +418,17 @@ export default function ScanEventsPage() {
     } finally {
       setIsValidating(false)
     }
-  }
+  }, [scanMode, selectedEvent, startScanning])
+
+  const handleScanBarcode = useCallback(async (code: string) => {
+    if (!code || code.trim().length === 0) return
+
+    await stopScanning()
+
+    setTimeout(async () => {
+      await scanTicket(code)
+    }, 200)
+  }, [stopScanning, scanTicket])
 
   const handleManualBarcodeScan = async () => {
     if (!manualBarcode.trim()) {

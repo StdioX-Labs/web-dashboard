@@ -843,14 +843,31 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         return
       }
 
-      // Format phone number to 254XXXXXXXXX format
-      let formattedPhone = compPhone.replace(/\s+/g, '')
+      // Format phone number to 254XXXXXXXXX format (no + sign, no spaces)
+      let formattedPhone = compPhone.replace(/\D/g, '') // Remove all non-digit characters
+
+      // Handle different input formats
       if (formattedPhone.startsWith('0')) {
+        // Local format: 0715066651 -> 254715066651
         formattedPhone = '254' + formattedPhone.substring(1)
-      } else if (formattedPhone.startsWith('+254')) {
-        formattedPhone = formattedPhone.substring(1)
-      } else if (!formattedPhone.startsWith('254')) {
+      } else if (formattedPhone.startsWith('254')) {
+        // Already in correct format: 254715066651
+        formattedPhone = formattedPhone
+      } else if (formattedPhone.length === 9) {
+        // Without country code or leading zero: 715066651 -> 254715066651
         formattedPhone = '254' + formattedPhone
+      } else if (formattedPhone.length === 12 && formattedPhone.startsWith('254')) {
+        // Already correct: 254715066651
+        formattedPhone = formattedPhone
+      } else {
+        // Default: assume missing 254 prefix
+        formattedPhone = '254' + formattedPhone.replace(/^0+/, '') // Remove leading zeros
+      }
+
+      // Validate format: should be 254XXXXXXXXX (12 digits total)
+      if (formattedPhone.length !== 12 || !formattedPhone.startsWith('254')) {
+        toast.error("Invalid phone number format. Expected: 254715066651")
+        return
       }
 
       // Format email to lowercase
