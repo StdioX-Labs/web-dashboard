@@ -68,6 +68,8 @@ export default function ScanEventsPage() {
   const scannerRef = useRef<HTMLDivElement>(null)
   const startScanningRef = useRef<(() => Promise<void>) | null>(null)
   const scanTicketRef = useRef<((barcode: string) => Promise<void>) | null>(null)
+  const lastScannedCodeRef = useRef<string>("")
+  const lastScanTimeRef = useRef<number>(0)
 
   // Format phone number to 254XXXXXXXXX format
   const formatPhoneNumber = (input: string): string => {
@@ -314,14 +316,9 @@ export default function ScanEventsPage() {
         // Reset the barcode input
         setManualBarcode("")
 
-        // Restart camera after a short delay (for camera mode)
-        if (scanMode === "camera" && startScanningRef.current) {
-          setTimeout(() => {
-            startScanningRef.current?.()
-          }, 1500)
-        }
+        // Camera continues running - no need to restart
       } else {
-        // No ticket data available - show error and restart camera
+        // No ticket data available - show error
         const errorMsg = response.error || response.message || "Invalid Ticket"
         const errorDetails = response.error || "This ticket could not be verified"
 
@@ -332,12 +329,7 @@ export default function ScanEventsPage() {
           duration: 5000,
         })
 
-        // Restart camera even on error (for camera mode)
-        if (scanMode === "camera" && startScanningRef.current) {
-          setTimeout(() => {
-            startScanningRef.current?.()
-          }, 2000)
-        }
+        // Camera continues running - no need to restart
       }
     } catch (error) {
       console.error("=== Scanner Error ===")
@@ -350,12 +342,7 @@ export default function ScanEventsPage() {
         duration: 5000,
       })
 
-      // Restart camera even on error (for camera mode)
-      if (scanMode === "camera" && startScanningRef.current) {
-        setTimeout(() => {
-          startScanningRef.current?.()
-        }, 2000)
-      }
+      // Camera continues running - no need to restart
     } finally {
       setIsValidating(false)
     }
@@ -369,17 +356,30 @@ export default function ScanEventsPage() {
   const handleScanBarcode = async (code: string) => {
     if (!code || code.trim().length === 0) return
 
-    await stopScanning()
+    // Prevent scanning the same code multiple times rapidly (2 second cooldown)
+    const now = Date.now()
+    if (code === lastScannedCodeRef.current && now - lastScanTimeRef.current < 2000) {
+      console.log("Ignoring duplicate scan within cooldown period:", code)
+      return
+    }
 
-    setTimeout(async () => {
-      if (scanTicketRef.current) {
-        await scanTicketRef.current(code)
-      }
-    }, 200)
+    console.log("Processing new barcode scan:", code)
+
+    // Update last scanned code and time
+    lastScannedCodeRef.current = code
+    lastScanTimeRef.current = now
+
+    // Process the scan without stopping the camera
+    if (scanTicketRef.current) {
+      await scanTicketRef.current(code)
+    }
+
+    console.log("Scanner remains active, ready for next scan")
   }
 
   const startScanning = async () => {
     try {
+      console.log("Starting camera scanner...")
       setIsScanning(true)
 
       // Clean up existing instance first
@@ -399,7 +399,10 @@ export default function ScanEventsPage() {
 
       // Request camera permissions explicitly first
       try {
-        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        console.log("Requesting camera permissions...")
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        console.log("Camera permissions granted:", stream.active)
+        // Keep stream active - don't stop it
       } catch (permError) {
         console.error("Camera permission denied:", permError)
         setIsScanning(false)
@@ -407,6 +410,7 @@ export default function ScanEventsPage() {
       }
 
       const devices = await Html5Qrcode.getCameras()
+      console.log("Available camera devices:", devices.length)
       const barcodeScanner = devices.find(device =>
         device.label.toLowerCase().includes('barcode') ||
         device.label.toLowerCase().includes('scanner')
@@ -424,6 +428,8 @@ export default function ScanEventsPage() {
       await html5QrCode.start(cameraId, config, (decodedText) => {
         handleScanBarcode(decodedText)
       }, undefined)
+
+      console.log("Scanner started successfully, continuous scanning mode active")
 
       if (barcodeScanner) {
         toast.success("Barcode Scanner Connected", {
