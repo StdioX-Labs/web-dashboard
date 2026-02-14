@@ -34,6 +34,8 @@ interface ScannedTicket {
   isComplementary: boolean
   status: string
   createdAt: string
+  eventId?: number // Event ID for validation
+  eventName?: string // Event name for display
 }
 
 interface GroupTickets {
@@ -49,10 +51,12 @@ export default function ScanEventsPage() {
   const [manualBarcode, setManualBarcode] = useState<string>("")
   const [manualGroupCode, setManualGroupCode] = useState<string>("")
   const [isValidating, setIsValidating] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false) // Prevent multiple simultaneous scans
   const [selectedBarcodes, setSelectedBarcodes] = useState<string[]>([])
   const [isRedeeming, setIsRedeeming] = useState(false)
   const [groupTickets, setGroupTickets] = useState<GroupTickets | null>(null)
   const [scannedTicketData, setScannedTicketData] = useState<ScannedTicket | null>(null)
+  const [showScanAgainButton, setShowScanAgainButton] = useState(false) // Show button after scan
 
   // M-Pesa Purchase States
   const [events, setEvents] = useState<Event[]>([])
@@ -113,6 +117,21 @@ export default function ScanEventsPage() {
       fetchTickets(selectedEvent.id)
     }
   }, [selectedEvent])
+
+  // Track event changes and notify user
+  const previousEventRef = useRef<Event | null>(null)
+  useEffect(() => {
+    if (selectedEvent && previousEventRef.current && selectedEvent.id !== previousEventRef.current.id) {
+      // Event was changed
+      if (scanMode === "camera") {
+        toast.info(`Now scanning for: ${selectedEvent.name}`, {
+          description: "Previous scan data has been cleared",
+          duration: 3000,
+        })
+      }
+    }
+    previousEventRef.current = selectedEvent
+  }, [selectedEvent, scanMode])
 
   const fetchEvents = async () => {
     setIsLoadingEvents(true)
@@ -278,6 +297,11 @@ export default function ScanEventsPage() {
       }
 
       console.log('=== Frontend Scanner Request ===')
+      console.log('Selected Event:', {
+        id: selectedEvent.id,
+        name: selectedEvent.name,
+        location: selectedEvent.location
+      })
       console.log('Scanning ticket:', scanData)
 
       const response = await api.scanner.scan(scanData)
@@ -286,12 +310,30 @@ export default function ScanEventsPage() {
       console.log('Response:', response)
 
       // Handle ticket data - it can be an object or an array
-      const ticketData = Array.isArray(response.ticket)
+      const ticketData: ScannedTicket | undefined = Array.isArray(response.ticket)
         ? response.ticket[0]
         : response.ticket
 
       // Check if we have ticket data (regardless of status)
       if (ticketData) {
+        // Validate that the ticket belongs to the selected event
+        if (ticketData.eventId && ticketData.eventId !== selectedEvent.id) {
+          console.error('Event mismatch:', {
+            ticketEventId: ticketData.eventId,
+            selectedEventId: selectedEvent.id,
+            ticketData
+          })
+
+          toast.error("Wrong Event!", {
+            description: `This ticket is for a different event. Currently scanning for: ${selectedEvent.name}`,
+            duration: 5000,
+          })
+
+          // Don't store this ticket data
+          setIsValidating(false)
+          return
+        }
+
         // Store scanned ticket data for display
         setScannedTicketData(ticketData)
 
@@ -302,13 +344,13 @@ export default function ScanEventsPage() {
         if (response.status) {
           // Ticket is valid
           toast.success(response.message || "Ticket Scanned Successfully!", {
-            description: `${ticketData.ticketName} - ${priceInfo}`,
+            description: `${selectedEvent.name} - ${ticketData.ticketName} - ${priceInfo}`,
             duration: 3000,
           })
         } else {
           // Ticket already scanned or invalid
           toast.error(response.error || response.message || "Ticket Already Scanned", {
-            description: `${ticketData.ticketName} - ${priceInfo}`,
+            description: `${selectedEvent.name} - ${ticketData.ticketName} - ${priceInfo}`,
             duration: 3000,
           })
         }
@@ -356,25 +398,41 @@ export default function ScanEventsPage() {
   const handleScanBarcode = async (code: string) => {
     if (!code || code.trim().length === 0) return
 
-    // Prevent scanning the same code multiple times rapidly (2 second cooldown)
-    const now = Date.now()
-    if (code === lastScannedCodeRef.current && now - lastScanTimeRef.current < 2000) {
-      console.log("Ignoring duplicate scan within cooldown period:", code)
+    // If already processing a scan, ignore new scans
+    if (isProcessing) {
+      console.log("Already processing a scan, ignoring:", code)
       return
     }
 
     console.log("Processing new barcode scan:", code)
 
+    // Set processing flag and pause scanner
+    setIsProcessing(true)
+
+    // Pause the scanner immediately to prevent multiple scans
+    if (html5QrCodeRef.current && html5QrCodeRef.current.getState() === 2) { // State 2 = SCANNING
+      try {
+        await html5QrCodeRef.current.pause(true)
+        console.log("Scanner paused for processing")
+      } catch (pauseErr) {
+        console.warn("Could not pause scanner:", pauseErr)
+      }
+    }
+
     // Update last scanned code and time
     lastScannedCodeRef.current = code
-    lastScanTimeRef.current = now
+    lastScanTimeRef.current = Date.now()
 
-    // Process the scan without stopping the camera
+    // Process the scan
     if (scanTicketRef.current) {
       await scanTicketRef.current(code)
     }
 
-    console.log("Scanner remains active, ready for next scan")
+    // Show the "Scan Another Ticket" button
+    setShowScanAgainButton(true)
+    setIsProcessing(false)
+
+    console.log("Scan complete. Waiting for user to click 'Scan Another Ticket'")
   }
 
   const startScanning = async () => {
@@ -453,6 +511,31 @@ export default function ScanEventsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopScanning])
 
+  const resumeScanning = async () => {
+    console.log("Resuming scanner for next ticket...")
+
+    // Clear the scanned ticket data and hide the button
+    setScannedTicketData(null)
+    setShowScanAgainButton(false)
+
+    // Resume the scanner
+    if (html5QrCodeRef.current && html5QrCodeRef.current.getState() === 3) { // State 3 = PAUSED
+      try {
+        html5QrCodeRef.current.resume()
+        console.log("Scanner resumed, ready for next scan")
+        toast.info("Ready to scan next ticket", {
+          duration: 2000
+        })
+      } catch (resumeErr) {
+        console.error("Could not resume scanner:", resumeErr)
+        // If resume fails, try restarting
+        await startScanning()
+      }
+    } else if (!isScanning) {
+      // If scanner is not active, start it
+      await startScanning()
+    }
+  }
 
   const handleManualBarcodeScan = async () => {
     if (!manualBarcode.trim()) {
@@ -568,9 +651,12 @@ export default function ScanEventsPage() {
   }, [])
 
   useEffect(() => {
-    // Clear group tickets when switching modes
+    // Clear group tickets when switching modes or events
     setGroupTickets(null)
     setSelectedBarcodes([])
+    setShowScanAgainButton(false)
+    setIsProcessing(false)
+    setScannedTicketData(null) // Clear any previous scan when event changes
 
     if (scanMode === "camera" && selectedEvent && !isScanning) {
       startScanning()
@@ -587,6 +673,8 @@ export default function ScanEventsPage() {
     setSelectedBarcodes([])
     setScannedTicketData(null)
     setCustomerPhone("")
+    setShowScanAgainButton(false)
+    setIsProcessing(false)
     if (scanMode === "camera") {
       startScanning()
     }
@@ -793,11 +881,19 @@ export default function ScanEventsPage() {
               {/* Scanner Area - Only show when event is selected */}
               {selectedEvent && !scannedTicketData && (
                 <div className="relative">
+                  {/* Event Name Header - Always visible when scanning */}
+                  <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-3 sm:p-4 text-white text-center">
+                    <p className="text-xs sm:text-sm font-medium opacity-90">Currently Scanning For</p>
+                    <p className="text-base sm:text-lg font-bold mt-1">{selectedEvent.name}</p>
+                    <p className="text-xs opacity-75 mt-1">📍 {selectedEvent.location}</p>
+                  </div>
+
                   <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: "300px" }} />
-                  {isScanning && (
-                    <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-                      <div className="px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm">
-                        📷 Scanning for {selectedEvent.name}...
+                  {isScanning && !showScanAgainButton && (
+                    <div className="absolute top-20 left-4 right-4 flex justify-between items-center">
+                      <div className="px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>Active - Point at QR code</span>
                       </div>
                       <button
                         onClick={stopScanning}
@@ -807,7 +903,17 @@ export default function ScanEventsPage() {
                       </button>
                     </div>
                   )}
-                  {!isScanning && (
+                  {showScanAgainButton && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                      <div className="text-center text-white p-6">
+                        <Loader2 className="w-12 h-12 mx-auto mb-3 animate-pulse" />
+                        <p className="text-lg font-semibold">Scanner Paused</p>
+                        <p className="text-sm opacity-90 mt-1">Review scan for: {selectedEvent.name}</p>
+                        <p className="text-xs opacity-75 mt-2">Click "Scan Another Ticket" below to continue</p>
+                      </div>
+                    </div>
+                  )}
+                  {!isScanning && !showScanAgainButton && (
                     <div className="p-6 text-center text-muted-foreground">
                       <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p>Camera will start automatically</p>
@@ -931,7 +1037,7 @@ export default function ScanEventsPage() {
                   </div>
 
                   <button
-                    onClick={resetScanner}
+                    onClick={resumeScanning}
                     className={`w-full py-4 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl ${
                       scannedTicketData.status === "REDEEMED"
                         ? "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
