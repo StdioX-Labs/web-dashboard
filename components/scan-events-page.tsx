@@ -17,6 +17,14 @@ import {
   ArrowRight,
   MapPin,
   Calendar,
+  Phone,
+  Hash,
+  Smartphone,
+  Search,
+  Send,
+  RotateCcw,
+  Plus,
+  Minus,
 } from "lucide-react"
 import { Html5Qrcode } from "html5-qrcode"
 import { toast } from "sonner"
@@ -91,6 +99,7 @@ export default function ScanEventsPage() {
   const [customerPhone, setCustomerPhone] = useState("")
   const [isLoadingTickets, setIsLoadingTickets] = useState(false)
   const [isPurchasing, setIsPurchasing] = useState(false)
+  const [ticketQuantity, setTicketQuantity] = useState(1)
 
   // ── Group code lookup state ────────────────────────────────────────────
   const [manualGroupCode, setManualGroupCode] = useState("")
@@ -151,9 +160,7 @@ export default function ScanEventsPage() {
   }, [])
 
   useEffect(() => {
-    if (scanMode === "payment" || scanMode === "camera") {
-      fetchEvents()
-    }
+    fetchEvents()
   }, [scanMode, fetchEvents])
 
   // ── Fetch tickets (M-Pesa) ─────────────────────────────────────────────
@@ -185,6 +192,7 @@ export default function ScanEventsPage() {
   useEffect(() => {
     if (selectedEvent && scanMode === "payment") {
       fetchTickets(selectedEvent.id)
+      setTicketQuantity(1)
     }
   }, [selectedEvent, scanMode, fetchTickets])
 
@@ -467,19 +475,20 @@ export default function ScanEventsPage() {
     try {
       const purchaseData = {
         eventId: selectedEvent.id,
-        amountDisplayed: selectedTicket.ticketPrice,
+        amountDisplayed: selectedTicket.ticketPrice * ticketQuantity,
         coupon_code: "",
         channel: "mpesa" as const,
         customer: {
           mobile_number: customerPhone,
           email: "brian@stdiox.com",
         },
-        tickets: [{ ticketId: selectedTicket.id, quantity: 1 }],
+        tickets: [{ ticketId: selectedTicket.id, quantity: ticketQuantity }],
       }
       const response = await api.ticket.purchase(purchaseData)
       if (response.status) {
         toast.success(response.message || "M-Pesa STK push sent successfully!")
         setCustomerPhone("")
+        setTicketQuantity(1)
       } else {
         toast.error(response.message || "Failed to initiate payment")
       }
@@ -596,10 +605,15 @@ export default function ScanEventsPage() {
               key={mode}
               onClick={() => {
                 setScanMode(mode)
-                if (mode !== "camera") {
-                  stopScanning()
-                  setSelectedEvent(null)
-                }
+                stopScanning()
+                setSelectedEvent(null)
+                setGroupTickets(null)
+                setSelectedBarcodes([])
+                setManualGroupCode("")
+                setSelectedTicket(null)
+                setTickets([])
+                setCustomerPhone("")
+                setTicketQuantity(1)
               }}
               className={`flex flex-col items-center justify-center gap-1 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all ${
                 scanMode === mode
@@ -907,104 +921,286 @@ export default function ScanEventsPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
           >
-            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
-              <div className="text-center mb-4">
-                <CreditCard className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
-                <h3 className="text-lg font-semibold">M-Pesa STK Push</h3>
-                <p className="text-sm text-muted-foreground">Sell tickets at the gate</p>
-              </div>
-
-              {isLoadingEvents ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Select Event</label>
-                    <select
-                      value={selectedEvent?.id || ""}
-                      onChange={(e) => {
-                        const event = events.find((ev) => ev.id === Number(e.target.value))
-                        setSelectedEvent(event || null)
-                      }}
-                      className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                    >
-                      <option value="">Select an event</option>
-                      {events.map((event) => (
-                        <option key={event.id} value={event.id}>
-                          {event.name}
-                        </option>
-                      ))}
-                    </select>
+            {/* Step 1: Select event */}
+            {!selectedEvent ? (
+              <div className="p-4 sm:p-6 md:p-8">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+                    <Smartphone className="w-8 h-8 text-green-600" />
                   </div>
+                  <h3 className="text-xl font-bold">Gate Sale — M-Pesa</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Select the event to sell tickets for
+                  </p>
+                </div>
 
+                {isLoadingEvents ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                  </div>
+                ) : events.length > 0 ? (
+                  <div className="space-y-3">
+                    {events.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => setSelectedEvent(event)}
+                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-[#8b5cf6] hover:bg-[#8b5cf6]/5 transition-all group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base truncate group-hover:text-[#8b5cf6] transition-colors">
+                              {event.name}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                {event.location}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {new Date(event.date).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-[#8b5cf6] transition-colors flex-shrink-0 ml-3" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                    <p className="font-medium">No active events found</p>
+                    <p className="text-sm mt-1">Create an event first</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Step 2: Configure & send payment */
+              <div>
+                {/* Event header bar */}
+                <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        setSelectedEvent(null)
+                        setSelectedTicket(null)
+                        setTickets([])
+                        setCustomerPhone("")
+                        setTicketQuantity(1)
+                      }}
+                      className="flex items-center gap-1 text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline">Change Event</span>
+                    </button>
+                    <div className="text-center flex-1 px-2">
+                      <p className="text-xs font-medium opacity-80">Selling For</p>
+                      <p className="text-sm sm:text-base font-bold truncate">{selectedEvent.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 rounded-full text-xs">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>M-Pesa</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-6 space-y-5">
+                  {/* Ticket type selection */}
                   {isLoadingTickets ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="w-7 h-7 animate-spin text-[#8b5cf6]" />
                     </div>
                   ) : tickets.length > 0 ? (
                     <div>
-                      <label className="block text-sm font-medium mb-2">Select Ticket Type</label>
-                      <select
-                        value={selectedTicket?.id || ""}
-                        onChange={(e) => {
-                          const ticket = tickets.find((t) => t.id === Number(e.target.value))
-                          setSelectedTicket(ticket || null)
-                        }}
-                        className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                      >
-                        {tickets.map((ticket) => (
-                          <option key={ticket.id} value={ticket.id}>
-                            {ticket.ticketName} - KES {ticket.ticketPrice.toLocaleString()}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                        <Ticket className="w-4 h-4 text-[#8b5cf6]" />
+                        Select Ticket Type
+                      </label>
+                      <div className="grid gap-2.5">
+                        {tickets.map((ticket) => {
+                          const isSelected = selectedTicket?.id === ticket.id
+                          return (
+                            <button
+                              key={ticket.id}
+                              onClick={() => {
+                                setSelectedTicket(ticket)
+                                setTicketQuantity(1)
+                              }}
+                              className={`relative w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                                isSelected
+                                  ? "border-[#8b5cf6] bg-[#8b5cf6]/5 shadow-md shadow-[#8b5cf6]/10 ring-2 ring-[#8b5cf6]/20 scale-[1.02]"
+                                  : "border-border hover:border-[#8b5cf6]/50"
+                              }`}
+                            >
+                              {/* Selected accent strip */}
+                              {isSelected && (
+                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed]" />
+                              )}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  {/* Selection indicator */}
+                                  <div
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                                      isSelected
+                                        ? "border-[#8b5cf6] bg-[#8b5cf6]"
+                                        : "border-border"
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <CheckCircle className="w-3 h-3 text-white" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className={`font-semibold text-sm transition-colors ${isSelected ? "text-[#8b5cf6]" : ""}`}>
+                                      {ticket.ticketName}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                      {ticket.quantityAvailable} remaining
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right flex-shrink-0 ml-3">
+                                  <p className={`font-bold ${isSelected ? "text-[#8b5cf6]" : "text-foreground"}`}>
+                                    KES {ticket.ticketPrice.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
-                  ) : selectedEvent ? (
-                    <div className="text-center py-8 text-muted-foreground">
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground">
                       <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No tickets available for this event</p>
+                      <p className="font-medium">No tickets available</p>
+                      <p className="text-sm mt-1">All tickets may be sold out</p>
                     </div>
-                  ) : null}
+                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Customer Phone Number *</label>
-                    <input
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => {
-                        const formatted = formatPhoneNumber(e.target.value)
-                        setCustomerPhone(formatted)
-                      }}
-                      placeholder="254712345678"
-                      className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Format: 254XXXXXXXXX (auto-corrects from 0712345678)
-                    </p>
-                  </div>
+                  {/* Quantity selector */}
+                  {selectedTicket && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                        <Hash className="w-4 h-4 text-[#8b5cf6]" />
+                        Quantity
+                      </label>
+                      <div className="flex items-center justify-center gap-4 p-3 bg-muted/30 rounded-xl border border-border">
+                        <button
+                          onClick={() => setTicketQuantity(Math.max(1, ticketQuantity - 1))}
+                          disabled={ticketQuantity <= 1}
+                          className="w-10 h-10 rounded-xl border-2 border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="text-2xl font-bold w-12 text-center tabular-nums">{ticketQuantity}</span>
+                        <button
+                          onClick={() =>
+                            setTicketQuantity(
+                              Math.min(selectedTicket.quantityAvailable, ticketQuantity + 1)
+                            )
+                          }
+                          disabled={ticketQuantity >= selectedTicket.quantityAvailable}
+                          className="w-10 h-10 rounded-xl border-2 border-border flex items-center justify-center hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
 
-                  <button
-                    onClick={handleMpesaPurchase}
-                    disabled={isPurchasing || !selectedEvent || !selectedTicket || !customerPhone}
-                    className="w-full py-3 sm:py-4 bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isPurchasing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
-                        <span>Send M-Pesa STK Push</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Phone number */}
+                  {selectedTicket && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                    >
+                      <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                        <Phone className="w-4 h-4 text-[#8b5cf6]" />
+                        Customer Phone Number
+                      </label>
+                      <div className="relative">
+                        <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
+                          <span className="text-sm text-muted-foreground font-medium">+254</span>
+                        </div>
+                        <input
+                          type="tel"
+                          value={customerPhone.startsWith("254") ? customerPhone.slice(3) : customerPhone}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "").slice(0, 9)
+                            setCustomerPhone("254" + raw)
+                          }}
+                          placeholder="712345678"
+                          className="w-full h-12 pl-16 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        M-Pesa prompt will be sent to this number
+                      </p>
+                    </motion.div>
+                  )}
+
+                  {/* Order summary & CTA */}
+                  {selectedTicket && customerPhone.length >= 12 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="rounded-xl border border-border bg-muted/20 p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Ticket</span>
+                        <span className="font-medium">{selectedTicket.ticketName}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Qty</span>
+                        <span className="font-medium">×{ticketQuantity}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Phone</span>
+                        <span className="font-medium font-mono">+{customerPhone}</span>
+                      </div>
+                      <div className="border-t border-border pt-3 flex items-center justify-between">
+                        <span className="font-semibold">Total</span>
+                        <span className="font-bold text-lg text-[#8b5cf6]">
+                          KES {(selectedTicket.ticketPrice * ticketQuantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Send button */}
+                  {selectedTicket && (
+                    <button
+                      onClick={handleMpesaPurchase}
+                      disabled={isPurchasing || !customerPhone || customerPhone.length < 12}
+                      className="w-full py-3.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 hover:shadow-green-600/30"
+                    >
+                      {isPurchasing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Sending STK Push…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          <span>Send M-Pesa Prompt</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1015,72 +1211,137 @@ export default function ScanEventsPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
           >
-            <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
-              <div className="text-center mb-4">
-                <Keyboard className="w-12 h-12 mx-auto mb-3 text-[#8b5cf6]" />
-                <h3 className="text-lg font-semibold">Lookup Group Tickets</h3>
-                <p className="text-sm text-muted-foreground">Enter ticket group code</p>
-              </div>
-
-              {/* Event selector for group mode */}
-              {isLoadingEvents ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
-                </div>
-              ) : events.length > 0 ? (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Select Event</label>
-                  <select
-                    value={selectedEvent?.id || ""}
-                    onChange={(e) => {
-                      const event = events.find((ev) => ev.id === Number(e.target.value))
-                      setSelectedEvent(event || null)
-                    }}
-                    className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                  >
-                    <option value="">Select an event</option>
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : null}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Group Code</label>
-                  <input
-                    type="text"
-                    value={manualGroupCode}
-                    onChange={(e) => setManualGroupCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. HCGF08"
-                    className="w-full px-4 py-3 text-sm sm:text-base bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    Fetch all tickets in the group
+            {/* Step 1: Select event */}
+            {!selectedEvent ? (
+              <div className="p-4 sm:p-6 md:p-8">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#8b5cf6]/20 to-[#7c3aed]/20 flex items-center justify-center">
+                    <Users className="w-8 h-8 text-[#8b5cf6]" />
+                  </div>
+                  <h3 className="text-xl font-bold">Group Ticket Lookup</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    First, choose the event for redemption
                   </p>
                 </div>
-              </div>
-              <button
-                onClick={handleManualGroupCodeLookup}
-                disabled={isValidating || !manualGroupCode.trim()}
-                className="w-full py-3 sm:py-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isValidating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    <span>Loading Tickets...</span>
-                  </>
+
+                {isLoadingEvents ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                  </div>
+                ) : events.length > 0 ? (
+                  <div className="space-y-3">
+                    {events.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => setSelectedEvent(event)}
+                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-[#8b5cf6] hover:bg-[#8b5cf6]/5 transition-all group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-base truncate group-hover:text-[#8b5cf6] transition-colors">
+                              {event.name}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                {event.location}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5" />
+                                {new Date(event.date).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-[#8b5cf6] transition-colors flex-shrink-0 ml-3" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
-                  <>
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span>Load Group Tickets</span>
-                  </>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                    <p className="font-medium">No active events found</p>
+                    <p className="text-sm mt-1">Create an event first</p>
+                  </div>
                 )}
-              </button>
-            </div>
+              </div>
+            ) : (
+              /* Step 2: Enter group code */
+              <div>
+                {/* Event header bar */}
+                <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-3 sm:p-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => {
+                        setSelectedEvent(null)
+                        setGroupTickets(null)
+                        setSelectedBarcodes([])
+                        setManualGroupCode("")
+                      }}
+                      className="flex items-center gap-1 text-sm font-medium opacity-90 hover:opacity-100 transition-opacity"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline">Change Event</span>
+                    </button>
+                    <div className="text-center flex-1 px-2">
+                      <p className="text-xs font-medium opacity-80">Redeeming For</p>
+                      <p className="text-sm sm:text-base font-bold truncate">{selectedEvent.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/20 rounded-full text-xs">
+                      <Keyboard className="w-3.5 h-3.5" />
+                      <span>Group</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 sm:p-6 space-y-5">
+                  <div>
+                    <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                      <Search className="w-4 h-4 text-[#8b5cf6]" />
+                      Enter Group Code
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute left-0 top-0 bottom-0 flex items-center pl-4 pointer-events-none">
+                          <Hash className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <input
+                          type="text"
+                          value={manualGroupCode}
+                          onChange={(e) => setManualGroupCode(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && manualGroupCode.trim()) handleManualGroupCodeLookup()
+                          }}
+                          placeholder="e.g. HCGF08"
+                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-sm font-mono tracking-wider outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all uppercase"
+                        />
+                      </div>
+                      <button
+                        onClick={handleManualGroupCodeLookup}
+                        disabled={isValidating || !manualGroupCode.trim()}
+                        className="h-12 px-5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {isValidating ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <Search className="w-4 h-4" />
+                            <span className="hidden sm:inline">Lookup</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Fetch all tickets purchased together in a group
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1091,124 +1352,161 @@ export default function ScanEventsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-card border-2 border-[#8b5cf6] rounded-2xl shadow-xl overflow-hidden"
+              className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
             >
-              <div className="px-6 py-4 bg-[#8b5cf6]/10">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-4 sm:p-5 text-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Ticket className="w-6 h-6 text-[#8b5cf6]" />
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Ticket className="w-5 h-5" />
+                    </div>
                     <div>
-                      <h3 className="font-bold text-lg">Group Tickets</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {groupTickets.event} • {groupTickets.tickets.length} ticket(s)
+                      <h3 className="font-bold text-base sm:text-lg">Group Tickets</h3>
+                      <p className="text-xs sm:text-sm opacity-90">
+                        {groupTickets.tickets.length} ticket{groupTickets.tickets.length !== 1 ? "s" : ""} found
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#8b5cf6]/20 text-[#8b5cf6] rounded-full">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm font-medium">{groupTickets.tickets[0]?.ticketGroupCode}</span>
+                  <div className="px-3 py-1.5 bg-white/20 rounded-full text-xs font-mono font-bold tracking-wider">
+                    {groupTickets.tickets[0]?.ticketGroupCode}
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Event</p>
-                    <p className="font-semibold">{groupTickets.event}</p>
+              <div className="p-4 sm:p-6 space-y-5">
+                {/* Summary cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Event</p>
+                    <p className="font-semibold text-sm mt-1 truncate">{groupTickets.event}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ticket Price</p>
-                    <p className="font-semibold">KES {groupTickets.ticketPrice.toLocaleString()}</p>
+                  <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Price Each</p>
+                    <p className="font-semibold text-sm mt-1">KES {groupTickets.ticketPrice.toLocaleString()}</p>
                   </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Customer Mobile</p>
-                    <p className="font-semibold">{groupTickets.tickets[0]?.customerMobile}</p>
+                  <div className="rounded-xl border border-border bg-muted/20 p-3 text-center">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Customer</p>
+                    <p className="font-semibold text-sm mt-1 truncate font-mono">{groupTickets.tickets[0]?.customerMobile}</p>
                   </div>
                 </div>
 
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="pt-4 border-t border-border space-y-3"
-                >
+                {/* Ticket selection */}
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-base sm:text-lg">Select Tickets to Redeem</h4>
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      {selectedBarcodes.length} of{" "}
-                      {groupTickets.tickets.filter((t) => t.status === "VALID").length} selected
-                    </span>
+                    <h4 className="font-semibold text-sm sm:text-base flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-[#8b5cf6]" />
+                      Select Tickets to Redeem
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {selectedBarcodes.length}/{groupTickets.tickets.filter((t) => t.status === "VALID").length}
+                      </span>
+                      {groupTickets.tickets.filter((t) => t.status === "VALID").length > 0 && (
+                        <button
+                          onClick={() => {
+                            const validBarcodes = groupTickets.tickets
+                              .filter((t) => t.status === "VALID")
+                              .map((t) => t.barcode)
+                            setSelectedBarcodes(
+                              selectedBarcodes.length === validBarcodes.length ? [] : validBarcodes
+                            )
+                          }}
+                          className="text-xs font-medium text-[#8b5cf6] hover:text-[#7c3aed] transition-colors"
+                        >
+                          {selectedBarcodes.length ===
+                          groupTickets.tickets.filter((t) => t.status === "VALID").length
+                            ? "Deselect All"
+                            : "Select All"}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {groupTickets.tickets.map((ticket) => (
-                      <div
-                        key={ticket.barcode}
-                        className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
-                          ticket.status === "REDEEMED"
-                            ? "border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed"
-                            : selectedBarcodes.includes(ticket.barcode)
-                            ? "border-[#8b5cf6] bg-[#8b5cf6]/10"
-                            : "border-border hover:border-[#8b5cf6]/50 cursor-pointer"
-                        }`}
-                        onClick={() =>
-                          ticket.status === "VALID" && toggleBarcodeSelection(ticket.barcode)
-                        }
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                              ticket.status === "REDEEMED"
-                                ? "border-gray-400 bg-gray-200"
-                                : selectedBarcodes.includes(ticket.barcode)
-                                ? "border-[#8b5cf6] bg-[#8b5cf6]"
-                                : "border-border"
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {groupTickets.tickets.map((ticket, i) => {
+                      const isRedeemed = ticket.status === "REDEEMED"
+                      const isSelected = selectedBarcodes.includes(ticket.barcode)
+
+                      return (
+                        <motion.div
+                          key={ticket.barcode}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className={`flex items-center justify-between p-3 sm:p-3.5 rounded-xl border-2 transition-all ${
+                            isRedeemed
+                              ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
+                              : isSelected
+                              ? "border-[#8b5cf6] bg-[#8b5cf6]/5 shadow-sm"
+                              : "border-border hover:border-[#8b5cf6]/40 cursor-pointer"
+                          }`}
+                          onClick={() => !isRedeemed && toggleBarcodeSelection(ticket.barcode)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                isRedeemed
+                                  ? "border-muted-foreground/30 bg-muted"
+                                  : isSelected
+                                  ? "border-[#8b5cf6] bg-[#8b5cf6]"
+                                  : "border-border"
+                              }`}
+                            >
+                              {(isSelected || isRedeemed) && (
+                                <CheckCircle
+                                  className={`w-3 h-3 ${
+                                    isRedeemed ? "text-muted-foreground/50" : "text-white"
+                                  }`}
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium">{ticket.ticketName}</p>
+                                <span className="font-mono text-xs text-muted-foreground">{ticket.barcode}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {ticket.isComplementary
+                                  ? "Complementary"
+                                  : `KES ${ticket.ticketPrice.toLocaleString()}`}
+                                {" · "}
+                                {new Date(ticket.createdAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
+                              isRedeemed
+                                ? "bg-muted text-muted-foreground"
+                                : "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
                             }`}
                           >
-                            {(selectedBarcodes.includes(ticket.barcode) ||
-                              ticket.status === "REDEEMED") && (
-                              <CheckCircle
-                                className={`w-3 h-3 ${
-                                  ticket.status === "REDEEMED" ? "text-gray-600" : "text-white"
-                                }`}
-                              />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {ticket.ticketName} - {ticket.barcode}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {ticket.isComplementary
-                                ? "Complementary"
-                                : `KES ${ticket.ticketPrice.toLocaleString()}`}{" "}
-                              • Created: {new Date(ticket.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        {ticket.status === "REDEEMED" ? (
-                          <span className="text-xs font-medium text-gray-600 px-2 py-1 bg-gray-200 rounded">
-                            Redeemed
+                            {isRedeemed ? "Redeemed" : "Valid"}
                           </span>
-                        ) : (
-                          <span className="text-xs font-medium text-green-600 px-2 py-1 bg-green-100 rounded">
-                            Valid
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                        </motion.div>
+                      )
+                    })}
                   </div>
+                </div>
 
+                {/* Action buttons */}
+                <div className="flex flex-col gap-2.5 pt-1">
                   {selectedBarcodes.length > 0 && (
-                    <button
+                    <motion.button
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
                       onClick={handleRedeemBarcodes}
                       disabled={isRedeeming}
-                      className="w-full py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      className="w-full py-3.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-green-600/20"
                     >
                       {isRedeeming ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Redeeming...</span>
+                          <span>Redeeming…</span>
                         </>
                       ) : (
                         <>
@@ -1219,20 +1517,21 @@ export default function ScanEventsPage() {
                           </span>
                         </>
                       )}
-                    </button>
+                    </motion.button>
                   )}
-                </motion.div>
 
-                <button
-                  onClick={() => {
-                    setManualGroupCode("")
-                    setGroupTickets(null)
-                    setSelectedBarcodes([])
-                  }}
-                  className="w-full py-3 bg-muted hover:bg-muted/80 text-foreground font-medium rounded-xl transition-all"
-                >
-                  Lookup Another Group
-                </button>
+                  <button
+                    onClick={() => {
+                      setManualGroupCode("")
+                      setGroupTickets(null)
+                      setSelectedBarcodes([])
+                    }}
+                    className="w-full py-3 bg-muted/50 hover:bg-muted text-foreground font-medium rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Lookup Another Group
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1255,8 +1554,7 @@ export default function ScanEventsPage() {
               <div>
                 <p className="font-semibold text-foreground mb-1">M-Pesa Payment Mode</p>
                 <p className="text-muted-foreground">
-                  Sell tickets at the gate: Select event → Select ticket type → Enter customer details →
-                  Send STK push
+                  Select event → Pick ticket type & quantity → Enter phone → Send STK push
                 </p>
               </div>
             </div>
@@ -1265,8 +1563,7 @@ export default function ScanEventsPage() {
               <div>
                 <p className="font-semibold text-foreground mb-1">QR Scan Mode</p>
                 <p className="text-muted-foreground">
-                  Select event → Camera opens continuously → Scan QR → Review ticket in popup →
-                  Dismiss & scan next
+                  Select event → Camera opens continuously → Scan QR → Review ticket → Dismiss & scan next
                 </p>
               </div>
             </div>
@@ -1275,8 +1572,7 @@ export default function ScanEventsPage() {
               <div>
                 <p className="font-semibold text-foreground mb-1">Group Code Mode</p>
                 <p className="text-muted-foreground">
-                  Lookup group tickets: Enter group code → System loads all tickets → Select valid
-                  tickets → Redeem
+                  Select event → Enter group code → View all tickets → Select & redeem
                 </p>
               </div>
             </div>
