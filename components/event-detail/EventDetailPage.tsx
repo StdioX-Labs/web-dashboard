@@ -67,10 +67,10 @@ export default function EventDetailPage({ eventId }: EventDetailPageProps) {
     name: ticket.ticketName,
     price: ticket.ticketPrice,
     totalAvailable: ticket.originalTicketCount || (ticket.soldQuantity + ticket.quantityAvailable),
-    sold: ticket.soldQuantity || ticket.uniqueTicketCount || 0,
-    revenue: ticket.ticketPrice * (ticket.soldQuantity || ticket.uniqueTicketCount || 0),
+    sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
+    revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
-    quantityAvailable: ticket.quantityAvailable || (ticket.originalTicketCount ? ticket.originalTicketCount - (ticket.uniqueTicketCount || 0) : 0),
+    quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
   })) || []
 
   // Paginated attendees (transactions are paginated from API)

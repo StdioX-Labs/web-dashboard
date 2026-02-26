@@ -338,6 +338,8 @@ export const api = {
               ticketPrice: number
               uniqueTicketCount: number
               ticketStatus: string
+              originalTicketCount?: number
+              ticketCount?: number
             }>
             detailedEvent?: {
               id: number
@@ -402,8 +404,8 @@ export const api = {
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
             ticketPrice: ticket.ticketPrice,
-            quantityAvailable: ticket.uniqueTicketCount || 0, // Available quantity based on sold tickets
-            soldQuantity: ticket.uniqueTicketCount || 0,
+            quantityAvailable: ticket.ticketCount ?? ticket.uniqueTicketCount ?? 0, // Remaining tickets
+            soldQuantity: ticket.uniqueTicketCount || 0, // Tickets sold
             isActive: ticket.ticketStatus === 'ACTIVE',
             ticketsToIssue: 1,
             isSoldOut: ticket.ticketStatus === 'SOLDOUT',
@@ -416,6 +418,8 @@ export const api = {
             createAt: new Date().toISOString(),
             totalTicketSaleBalance: ticket.totalTicketSaleBalance,
             uniqueTicketCount: ticket.uniqueTicketCount,
+            originalTicketCount: ticket.originalTicketCount,
+            ticketCount: ticket.ticketCount,
           })) || []
 
           return {
