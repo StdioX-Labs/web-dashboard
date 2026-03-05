@@ -31,9 +31,8 @@ export default function LoginPage() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const otpInputRef = useRef<HTMLInputElement>(null)
 
-  // Store server OTP and user data (for development mode or when backend returns it)
-  const [serverOtp, setServerOtp] = useState<string | null>(null)
-  const [userData, setUserData] = useState<any>(null)
+  // Store login token for server-side OTP verification
+  const [loginToken, setLoginToken] = useState<string | null>(null)
 
   // Clear form when mode changes
   useEffect(() => {
@@ -128,13 +127,9 @@ export default function LoginPage() {
       const response = await api.auth.requestOtp(email, 'email')
 
       if (response.status) {
-        // Store OTP and user data if returned by backend (development mode)
-        if (response.otp) {
-          setServerOtp(response.otp)
-          console.log('OTP received from server:', response.otp)
-        }
-        if (response.user) {
-          setUserData(response.user)
+        // Store login token for server-side OTP verification
+        if (response.loginToken) {
+          setLoginToken(response.loginToken)
         }
 
         // Show success message
@@ -193,33 +188,32 @@ export default function LoginPage() {
     setIsVerifyingOtp(true)
 
     try {
-      // Check if we have OTP and user data from the login response
-      if (!serverOtp || !userData) {
-        console.error('No OTP or user data available. Backend may not have returned it.')
+      // Verify OTP server-side
+      if (!loginToken) {
+        console.error('No login token available. Please request a new code.')
         toast.error("Verification error", {
-          description: "Unable to verify OTP. Please try requesting a new code.",
+          description: "Session expired. Please request a new code.",
         })
         setIsVerifyingOtp(false)
         return
       }
 
-      console.log('Validating OTP client-side')
+      const response = await api.auth.verifyOtp(loginToken, otp)
 
-      // Validate OTP
-      if (otp !== serverOtp) {
-        setOtpError("Invalid verification code. Please try again.")
+      if (!response.status || !response.user) {
+        setOtpError(response.message || "Invalid verification code. Please try again.")
         toast.error("Verification failed", {
-          description: "The code you entered is incorrect.",
+          description: response.message || "The code you entered is incorrect.",
         })
         setIsVerifyingOtp(false)
         return
       }
 
-      // OTP matches, create session
-      sessionManager.createSession(userData)
+      // OTP verified server-side, create session with returned user data
+      sessionManager.createSession(response.user)
 
       toast.success("Login successful!", {
-        description: `Welcome back, ${userData.company_name}!`,
+        description: `Welcome back, ${response.user.company_name}!`,
       })
 
       // Redirect to dashboard
@@ -228,9 +222,26 @@ export default function LoginPage() {
       }, 500)
     } catch (error) {
       console.error('Error verifying OTP:', error)
-      toast.error("Verification failed", {
-        description: "An unexpected error occurred. Please try again.",
-      })
+
+      if (error instanceof ApiError) {
+        if (error.statusCode === 429) {
+          const retryAfter = (error.response as any)?.retryAfter
+          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
+          toast.error("Too many attempts", {
+            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            duration: 10000,
+          })
+        } else {
+          setOtpError(error.message || "Verification failed")
+          toast.error("Verification failed", {
+            description: error.message || "Please try again.",
+          })
+        }
+      } else {
+        toast.error("Verification failed", {
+          description: "An unexpected error occurred. Please try again.",
+        })
+      }
       setIsVerifyingOtp(false)
     }
   }
@@ -259,13 +270,9 @@ export default function LoginPage() {
       const response = await api.auth.requestOtp(email, 'email')
 
       if (response.status) {
-        // Store new OTP and user data if returned by backend
-        if (response.otp) {
-          setServerOtp(response.otp)
-          console.log('New OTP received from server:', response.otp)
-        }
-        if (response.user) {
-          setUserData(response.user)
+        // Store new login token for server-side OTP verification
+        if (response.loginToken) {
+          setLoginToken(response.loginToken)
         }
 
         toast.success("Code resent successfully", {

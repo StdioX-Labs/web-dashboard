@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, getClientIp, getRateLimitConfig } from '@/lib/rate-limiter'
+import { storePendingLogin } from '@/lib/pending-login-store'
 
 const API_BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 
@@ -12,7 +13,8 @@ export const runtime = 'nodejs'
  *
  * Security Features:
  * - IP-based rate limiting (works across tabs and browsers)
- * - OTP and user data hidden in production (controlled by HIDE_OTP_IN_RESPONSE env var)
+ * - OTP and user data stored server-side only, never exposed to client
+ * - Client receives an opaque loginToken to reference the pending session
  * - Request logging for security auditing
  *
  * Rate Limiting:
@@ -110,38 +112,26 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeoutId)
 
       console.log('Login proxy - API response status:', response.status)
-      console.log('Login proxy - API response headers:', Object.fromEntries(response.headers.entries()))
 
       // Get the response text first to see what we're getting
       const responseText = await response.text()
-      console.log('Login proxy - API response text:', responseText)
+      console.log('Login proxy - API response received, length:', responseText.length)
 
       // Try to parse as JSON
       let data
       try {
         data = JSON.parse(responseText)
-        console.log('Login proxy - API response data:', data)
+        console.log('Login proxy - API response data parsed successfully')
       } catch (e) {
         console.error('Login proxy - Failed to parse response as JSON:', e)
         return NextResponse.json(
           {
             status: false,
             message: 'Invalid response from authentication service',
-            rawResponse: responseText
           },
           { status: 500 }
         )
       }
-
-      // IMPORTANT: The backend API returns OTP for client-side validation
-      // Since there's no separate /user/otp/verify endpoint, we must return the OTP
-      // Security is maintained through:
-      // 1. Rate limiting (prevents brute force)
-      // 2. OTP sent to user's email (user must have access)
-      // 3. Short OTP validity period
-      // 4. IP-based tracking
-
-      console.log('Login proxy - Returning OTP and user data for client-side validation')
 
       // Add rate limit headers to response
       const responseHeaders = {
@@ -150,10 +140,38 @@ export async function POST(request: NextRequest) {
         'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
       }
 
-      return NextResponse.json(data, {
-        status: response.status,
-        headers: responseHeaders
-      })
+      // If the backend returned an error, forward the message only (no sensitive data)
+      if (!data.status) {
+        return NextResponse.json(
+          { status: false, message: data.message || 'Login failed' },
+          { status: response.status, headers: responseHeaders }
+        )
+      }
+
+      // SECURITY: Store OTP and user data server-side, never expose to client
+      // The client receives a loginToken to reference this pending login session
+      if (data.otp && data.user) {
+        const loginToken = storePendingLogin(data.otp, data.user)
+        console.log('Login proxy - OTP and user data stored server-side, loginToken issued')
+
+        return NextResponse.json(
+          {
+            status: true,
+            message: data.message || 'OTP sent successfully',
+            loginToken, // Opaque token for the client to use during OTP verification
+          },
+          { status: 200, headers: responseHeaders }
+        )
+      }
+
+      // Fallback: return only safe fields
+      return NextResponse.json(
+        {
+          status: data.status,
+          message: data.message || 'OTP sent successfully',
+        },
+        { status: response.status, headers: responseHeaders }
+      )
     } catch (fetchError) {
       clearTimeout(timeoutId)
 
@@ -180,8 +198,6 @@ export async function POST(request: NextRequest) {
       {
         status: false,
         message: 'Failed to connect to authentication service',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : String(error)
       },
       { status: 500 }
     )

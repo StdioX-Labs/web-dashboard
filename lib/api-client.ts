@@ -115,30 +115,18 @@ export const api = {
   auth: {
     requestOtp: async (id: string, method: 'email' | 'phone') => {
       return apiRequest<{
-        otp?: string // Optional in production
         message: string
-        user?: { // Optional in production
-          phoneNumber: string
-          role: string
-          is_active: boolean
-          kycStatus: string
-          profile_type: string | null
-          company_id: number
-          user_id: number
-          company_name: string
-          currency: string
-          email: string
-        }
+        loginToken?: string // Opaque token to reference server-side pending login
         status: boolean
       }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ id, method }),
       }, true) // Use proxy
     },
-    verifyOtp: async (id: string, otp: string, method: 'email' | 'phone') => {
+    verifyOtp: async (loginToken: string, otp: string) => {
       return apiRequest<{
         message: string
-        user: {
+        user?: {
           phoneNumber: string
           role: string
           is_active: boolean
@@ -153,7 +141,7 @@ export const api = {
         status: boolean
       }>('/auth/verify-otp', {
         method: 'POST',
-        body: JSON.stringify({ id, otp, method }),
+        body: JSON.stringify({ loginToken, otp }),
       }, true) // Use proxy
     },
   },

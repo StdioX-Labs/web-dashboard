@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimit, getClientIp, getRateLimitConfig } from '@/lib/rate-limiter'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
+import { verifyPendingLogin } from '@/lib/pending-login-store'
 
-const API_BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 
 // Configure route segment
 export const dynamic = 'force-dynamic'
@@ -57,15 +57,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, otp, method } = body
+    const { loginToken, otp } = body
 
-    console.log('Verify OTP proxy - Received request:', { id, method, ip: clientIp, remaining: rateLimitResult.remaining })
+    console.log('Verify OTP proxy - Received request:', { ip: clientIp, remaining: rateLimitResult.remaining })
 
-    if (!id || !otp || !method) {
+    if (!loginToken || !otp) {
       return NextResponse.json(
         {
           status: false,
-          message: 'Missing required fields: id, otp, and method'
+          message: 'Missing required fields: loginToken and otp'
         },
         { status: 400 }
       )
@@ -82,97 +82,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const apiUrl = `${API_BASE_URL}/user/otp/verify`
-    console.log('Verify OTP proxy - Calling external API:', apiUrl)
+    // Verify OTP against server-side stored data
+    const result = verifyPendingLogin(loginToken, otp)
 
-    // Create abort controller for timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-
-    try {
-      // Build headers with Basic Authentication
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
-      // Add Basic Auth credentials
-      const username = process.env.SOLDOUT_API_USERNAME
-      const password = process.env.SOLDOUT_API_PASSWORD
-
-      if (username && password) {
-        const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-        headers['Authorization'] = `Basic ${basicAuth}`
-        console.log('Verify OTP proxy - Using Basic Auth credentials')
-      } else {
-        console.error('Verify OTP proxy - Missing API credentials in environment variables')
-        return NextResponse.json(
-          {
-            status: false,
-            message: 'API credentials not configured'
-          },
-          { status: 500 }
-        )
-      }
-
-      // Make request to external API
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ id, otp, method }),
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      console.log('Verify OTP proxy - API response status:', response.status)
-
-      // Get the response text first
-      const responseText = await response.text()
-      console.log('Verify OTP proxy - API response text:', responseText)
-
-      // Try to parse as JSON
-      let data
-      try {
-        data = JSON.parse(responseText)
-        console.log('Verify OTP proxy - API response data:', data)
-      } catch (e) {
-        console.error('Verify OTP proxy - Failed to parse response as JSON:', e)
-        return NextResponse.json(
-          {
-            status: false,
-            message: 'Invalid response from authentication service',
-          },
-          { status: 500 }
-        )
-      }
-
-      // Add rate limit headers to response
-      const responseHeaders = {
-        'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-        'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
-      }
-
-      return NextResponse.json(data, {
-        status: response.status,
-        headers: responseHeaders
-      })
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error('Verify OTP proxy - Request timed out after 30 seconds')
-        return NextResponse.json(
-          {
-            status: false,
-            message: 'Request to authentication service timed out',
-          },
-          { status: 504 }
-        )
-      }
-
-      throw fetchError
+    // Add rate limit headers to response
+    const responseHeaders = {
+      'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
+      'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+      'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
     }
+
+    if (!result.success) {
+      console.log('Verify OTP proxy - Verification failed:', result.error)
+      return NextResponse.json(
+        {
+          status: false,
+          message: result.error || 'Invalid verification code',
+        },
+        { status: 401, headers: responseHeaders }
+      )
+    }
+
+    console.log('Verify OTP proxy - Verification successful for user:', result.user?.email)
+
+    return NextResponse.json(
+      {
+        status: true,
+        message: 'OTP verified successfully',
+        user: result.user,
+      },
+      { status: 200, headers: responseHeaders }
+    )
   } catch (error) {
     console.error('Verify OTP Proxy Error - Full details:', error)
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error)
@@ -182,7 +122,6 @@ export async function POST(request: NextRequest) {
       {
         status: false,
         message: 'Failed to verify OTP',
-        error: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
