@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import {
@@ -134,6 +134,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   // Share state
   const [showShareModal, setShowShareModal] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+
+  // Sticky tabs — IntersectionObserver-based, reliable across all mobile browsers
+  const tabsSentinelRef = useRef<HTMLDivElement>(null)
+  const [tabsFixed, setTabsFixed] = useState(false)
 
   // Pagination state
   const [transactionsPage, setTransactionsPage] = useState(1)
@@ -481,6 +485,45 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   }, [activeTab, eventId, eventData, detailedTicketsLoaded])
 
   // Get ticket types from event data
+  // Tabs sticky: IntersectionObserver on a sentinel placed just above the tabs.
+  // CSS sticky inside overflow-y-auto fires at the wrong time on many mobile browsers;
+  // observing the viewport directly is reliable on all devices.
+  useEffect(() => {
+    const sentinel = tabsSentinelRef.current
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return
+
+    const HEADER_H = 56 // h-14
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Only apply fixed override on mobile (< lg breakpoint = 1024px).
+        // On desktop the sidebar is always present so sticky top-0 works fine.
+        if (window.innerWidth >= 1024) {
+          setTabsFixed(false)
+          return
+        }
+        // isIntersecting flips false when the sentinel crosses above (HEADER_H)px from top.
+        setTabsFixed(!entry.isIntersecting && entry.boundingClientRect.top < HEADER_H)
+      },
+      {
+        root: null, // viewport
+        rootMargin: `-${HEADER_H}px 0px 0px 0px`,
+        threshold: 0,
+      }
+    )
+    observer.observe(sentinel)
+
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setTabsFixed(false)
+    }
+    window.addEventListener('resize', onResize)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', onResize)
+    }
+  }, [])
+
   const ticketTypes = eventData?.tickets?.map((ticket: any) => ({
     id: ticket.id,
     name: ticket.ticketName,
@@ -2745,8 +2788,18 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         </div>
         )}
 
-        {/* Tabs */}
-        <div className="sticky top-14 lg:top-0 z-30 -mx-4 sm:mx-0 bg-background/98 backdrop-blur-md border-b border-border shadow-sm">
+        {/* Sentinel — IntersectionObserver watches this to know when tabs should pin */}
+        <div ref={tabsSentinelRef} aria-hidden="true" />
+
+        {/* Tabs — fixed via JS on mobile once sentinel crosses header; sticky on desktop */}
+        <div
+          className={cn(
+            "z-30 bg-background/98 backdrop-blur-md border-b border-border shadow-sm",
+            tabsFixed
+              ? "fixed top-14 inset-x-0"       // mobile: pinned below h-14 header
+              : "sticky top-14 lg:top-0 -mx-4 sm:mx-0"  // default: CSS sticky
+          )}
+        >
           <div className="flex overflow-x-auto scrollbar-hide">
             {[
               { id: "overview", label: "Overview" },
@@ -2772,8 +2825,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             ))}
           </div>
         </div>
-        {/* Spacer so content doesn't jump when tab bar becomes sticky */}
-        <div className="h-4" />
+
+        {/* Spacer — prevents content jump when tabs lift into fixed position */}
+        <div className={tabsFixed ? "h-[46px]" : "h-4"} />
 
       {/* Floating Edit Button - Mobile */}
       <Link
