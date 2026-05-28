@@ -2375,6 +2375,83 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     }
   }
 
+  const downloadCSV = (filename: string, rows: string[][]) => {
+    const escape = (v: unknown) => {
+      const s = String(v ?? "")
+      return s.includes(",") || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s
+    }
+    const csv = rows.map(r => r.map(escape).join(",")).join("\n")
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportTransactionsToCSV = async () => {
+    const loadingToast = toast.loading("Preparing CSV…")
+    try {
+      let rows: typeof transactions = []
+      try {
+        const response = await api.transactions.fetchDetailed({
+          id: eventId,
+          idType: "event",
+          page: 0,
+          size: 1000,
+        })
+        if (response.data?.data) {
+          rows = response.data.data.map((txn: any) => ({
+            id: txn.transactionId || "N/A",
+            buyer: `${txn.buyer?.firstName || ""} ${txn.buyer?.lastName || ""}`.trim() || "N/A",
+            email: txn.buyer?.email || "N/A",
+            ticketType: txn.ticket?.ticketName || "N/A",
+            quantity: 1,
+            amount: txn.transactionAmount || 0,
+            date: new Date(txn.createdAt).toLocaleString(),
+            status: "completed",
+            barcode: txn.barcode || "",
+            platformFee: txn.platformFee || 0,
+          }))
+        }
+      } catch {
+        rows = transactions
+      }
+      toast.dismiss(loadingToast)
+      if (!rows.length) { toast.error("No transactions to export"); return }
+      const header = ["Transaction ID", "Buyer", "Email", "Ticket Type", "Qty", "Amount", "Platform Fee", "Date", "Barcode"]
+      const data = rows.map(t => [t.id, t.buyer, t.email, t.ticketType, String(t.quantity), String(t.amount), String(t.platformFee), t.date, t.barcode])
+      const eventName = (eventData?.name ?? "event").replace(/[^a-z0-9]/gi, "_")
+      downloadCSV(`transactions_${eventName}.csv`, [header, ...data])
+      toast.success("Transactions exported as CSV")
+    } catch (error) {
+      toast.dismiss(loadingToast)
+      toast.error("Failed to export transactions")
+    }
+  }
+
+  const exportAttendeesToCSV = () => {
+    if (!attendees.length) { toast.error("No attendees to export"); return }
+    const header = ["First Name", "Last Name", "Email", "Phone", "Ticket Type", "Ticket #", "Purchase Date", "Checked In", "Complementary"]
+    const data = attendees.map(a => [
+      a.firstName,
+      a.lastName,
+      a.email,
+      a.mobileNumber,
+      a.ticketName,
+      a.ticketId,
+      a.purchaseTime,
+      a.scanned ? "Yes" : "No",
+      a.complementary ? "Yes" : "No",
+    ])
+    const eventName = (eventData?.name ?? "event").replace(/[^a-z0-9]/gi, "_")
+    downloadCSV(`attendees_${eventName}.csv`, [header, ...data])
+    toast.success("Attendees exported as CSV")
+  }
+
   return (
     <>
       {/* Loading State */}
@@ -3057,13 +3134,22 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       Search
                     </button>
                   </div>
-                  <button
-                    onClick={exportTransactionsToPDF}
-                    className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export PDF
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={exportTransactionsToCSV}
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-sm font-semibold transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={exportTransactionsToPDF}
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4" />
+                      PDF
+                    </button>
+                  </div>
                 </div>
 
                 {/* Desktop Table */}
@@ -3261,13 +3347,22 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       Search
                     </button>
                   </div>
-                  <button
-                    onClick={exportAttendeesToPDF}
-                    className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export Attendees
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={exportAttendeesToCSV}
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-secondary hover:bg-secondary/80 border border-border rounded-lg text-sm font-semibold transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4" />
+                      CSV
+                    </button>
+                    <button
+                      onClick={exportAttendeesToPDF}
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Download className="w-4 h-4" />
+                      PDF
+                    </button>
+                  </div>
                 </div>
 
                 {/* Desktop Table */}
