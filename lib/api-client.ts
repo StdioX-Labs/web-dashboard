@@ -680,10 +680,28 @@ export const api = {
         body: JSON.stringify(eventData),
       }, true) // Use proxy route
     },
+    toggleStatus: async (eventId: number, userId: number, data: { otp: string, eventStatus: string }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>(`/event/status/toggle?eventId=${eventId}&userId=${userId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
   },
 
   // Ticket endpoints
   ticket: {
+    toggleStatus: async (ticketId: number, userId: number, data: { otp: string, ticketStatus: string }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+      }>(`/ticket/status/toggle?ticketId=${ticketId}&userId=${userId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
     update: async (ticketId: number, ticketData: Record<string, unknown>) => {
       return apiRequest<{
         message: string

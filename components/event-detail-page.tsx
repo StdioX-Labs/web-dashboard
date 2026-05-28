@@ -44,7 +44,15 @@ interface TicketType {
   totalAvailable: number
   sold: number
   revenue: number
-  status: "active" | "sold_out" | "suspended"
+  status: "active" | "sold_out" | "suspended" | "inactive"
+  quantityAvailable: number
+  ticketStatus: string
+  isFree: boolean
+  ticketsToIssue: number
+  ticketLimitPerPerson: number
+  numberOfComplementary: number
+  ticketSaleStartDate: string | null
+  ticketSaleEndDate: string | null
 }
 
 // Mock attendees data removed - now fetched from API
@@ -109,6 +117,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [editTicketToIssue, setEditTicketToIssue] = useState("")
   const [editTicketIsFree, setEditTicketIsFree] = useState(false)
   const [loadingTicketDetails, setLoadingTicketDetails] = useState(false)
+  const [detailedTicketsLoaded, setDetailedTicketsLoaded] = useState(false)
 
   const [showAddTicketModal, setShowAddTicketModal] = useState(false)
   const [addTicketName, setAddTicketName] = useState("")
@@ -117,6 +126,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [addTicketDescription, setAddTicketDescription] = useState("")
   const [addTicketSaleStart, setAddTicketSaleStart] = useState<Date | undefined>(undefined)
   const [addTicketSaleEnd, setAddTicketSaleEnd] = useState<Date | undefined>(undefined)
+  const [addTicketLimitPerPerson, setAddTicketLimitPerPerson] = useState("0")
+  const [addTicketComplementary, setAddTicketComplementary] = useState("0")
+  const [addTicketToIssue, setAddTicketToIssue] = useState("1")
+  const [addTicketIsFree, setAddTicketIsFree] = useState(false)
 
   // Share state
   const [showShareModal, setShowShareModal] = useState(false)
@@ -425,6 +438,48 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     fetchAttendees()
   }, [activeTab, eventId, eventData])
 
+  // Fetch full ticket details when tickets tab is opened
+  useEffect(() => {
+    if (activeTab !== 'tickets' || !eventData || detailedTicketsLoaded) return
+
+    const fetchDetailedTickets = async () => {
+      setLoadingTicketDetails(true)
+      try {
+        const response = await api.event.getById(eventId)
+        if (response.status && response.event?.tickets) {
+          setEventData(prev => {
+            if (!prev) return prev
+            // Build a lookup of summary data by ticket id to preserve
+            // financial fields (totalTicketSaleBalance, uniqueTicketCount)
+            // which are not present in the getById response.
+            const summaryMap = new Map(
+              (prev.tickets || []).map((t: any) => [t.id, t])
+            )
+            const mergedTickets = response.event.tickets.map((detailed: any) => {
+              const summary = summaryMap.get(detailed.id) || {}
+              return {
+                ...detailed,
+                // Preserve accurate financial data from summaries
+                totalTicketSaleBalance: summary.totalTicketSaleBalance,
+                uniqueTicketCount: summary.uniqueTicketCount ?? detailed.soldQuantity,
+                originalTicketCount: summary.originalTicketCount,
+                ticketCount: summary.ticketCount,
+              }
+            })
+            return { ...prev, tickets: mergedTickets }
+          })
+          setDetailedTicketsLoaded(true)
+        }
+      } catch (error) {
+        console.error('Failed to fetch detailed ticket data:', error)
+      } finally {
+        setLoadingTicketDetails(false)
+      }
+    }
+
+    fetchDetailedTickets()
+  }, [activeTab, eventId, eventData, detailedTicketsLoaded])
+
   // Get ticket types from event data
   const ticketTypes = eventData?.tickets?.map((ticket: any) => ({
     id: ticket.id,
@@ -435,6 +490,13 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
     quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
+    ticketStatus: ticket.ticketStatus || (ticket.isActive ? 'ACTIVE' : 'INACTIVE'),
+    isFree: ticket.isFree ?? ticket.ticketPrice === 0,
+    ticketsToIssue: ticket.ticketsToIssue ?? 1,
+    ticketLimitPerPerson: ticket.ticketLimitPerPerson ?? 0,
+    numberOfComplementary: ticket.numberOfComplementary ?? 0,
+    ticketSaleStartDate: ticket.ticketSaleStartDate || null,
+    ticketSaleEndDate: ticket.ticketSaleEndDate || null,
   })) || []
 
   // Kenyan phone number validation and formatting
@@ -537,33 +599,69 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setShowSuspendModal(true)
   }
 
-  const handleSuspendConfirm = () => {
-    setSuspendStep("otp")
-    setSuspendError("")
+  const handleSuspendConfirm = async () => {
+    const user = sessionManager.getUser()
+    if (!user?.phoneNumber) {
+      toast.error("User not authenticated")
+      return
+    }
+    try {
+      await api.auth.requestOtp(user.phoneNumber, 'phone')
+      setSuspendStep("otp")
+      setSuspendError("")
+      toast.info("OTP sent to your phone")
+    } catch (error) {
+      toast.error("Failed to send OTP. Please try again.")
+    }
   }
 
-  const handleOtpSubmit = () => {
-    // Test OTP is 0000
-    if (suspendOtp === "0000") {
-      // Success - update state
-      if (actionType === "suspend") {
-        if (suspendType === "event") {
+  const handleOtpSubmit = async () => {
+    const user = sessionManager.getUser()
+    if (!user?.user_id) {
+      setSuspendError("User not authenticated")
+      return
+    }
+
+    try {
+      if (suspendType === "event") {
+        const eventStatus = actionType === "suspend" ? "ONHOLD" : "ACTIVE"
+        const response = await api.event.toggleStatus(eventId, user.user_id, {
+          otp: suspendOtp,
+          eventStatus,
+        })
+        if (!response.status) {
+          setSuspendError(response.message || "Invalid OTP. Please try again.")
+          return
+        }
+        if (actionType === "suspend") {
           setEventSuspended(true)
           toast.error("Event suspended", {
             description: "Ticket sales have been paused and the event is now hidden from the marketplace."
           })
         } else {
-          setSuspendedTickets([...suspendedTickets, suspendTicketId!])
-          toast.error("Ticket sales suspended", {
-            description: "This ticket type is no longer available for purchase."
-          })
-        }
-      } else {
-        // Activate
-        if (suspendType === "event") {
           setEventSuspended(false)
           toast.success("Event activated successfully!", {
             description: "Ticket sales have resumed and the event is now visible on the marketplace."
+          })
+        }
+      } else {
+        if (!suspendTicketId) {
+          setSuspendError("No ticket selected")
+          return
+        }
+        const ticketStatus = actionType === "suspend" ? "ONHOLD" : "ACTIVE"
+        const response = await api.ticket.toggleStatus(suspendTicketId, user.user_id, {
+          otp: suspendOtp,
+          ticketStatus,
+        })
+        if (!response.status) {
+          setSuspendError(response.message || "Invalid OTP. Please try again.")
+          return
+        }
+        if (actionType === "suspend") {
+          setSuspendedTickets([...suspendedTickets, suspendTicketId])
+          toast.error("Ticket sales suspended", {
+            description: "This ticket type is no longer available for purchase."
           })
         } else {
           setSuspendedTickets(suspendedTickets.filter(id => id !== suspendTicketId))
@@ -572,11 +670,14 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           })
         }
       }
+
       setShowSuspendModal(false)
       setSuspendOtp("")
       setSuspendError("")
-    } else {
-      setSuspendError("Invalid OTP. Please try again.")
+      setTimeout(() => window.location.reload(), 500)
+    } catch (error) {
+      console.error("Error toggling status:", error)
+      setSuspendError("Failed to perform action. Please try again.")
     }
   }
 
@@ -767,7 +868,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setShowAddTicketModal(true)
   }
 
-  const handleSaveNewTicket = () => {
+  const handleSaveNewTicket = async () => {
     if (!addTicketName || !addTicketPrice || !addTicketQuantity) {
       toast.error("Please fill in all required fields")
       return
@@ -778,18 +879,47 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
-    toast.success("Ticket added successfully!", {
-      description: "Your new ticket type has been created.",
-    })
+    try {
+      const price = parseFloat(addTicketPrice)
+      const response = await api.company.createTicket({
+        event: { id: eventId },
+        ticketName: addTicketName,
+        ticketPrice: price,
+        quantityAvailable: parseInt(addTicketQuantity),
+        ticketsToIssue: parseInt(addTicketToIssue || "1"),
+        ticketLimitPerPerson: parseInt(addTicketLimitPerPerson || "0"),
+        numberOfComplementary: parseInt(addTicketComplementary || "0"),
+        ticketSaleStartDate: addTicketSaleStart.toISOString(),
+        ticketSaleEndDate: addTicketSaleEnd.toISOString(),
+        isFree: addTicketIsFree || price === 0,
+      })
 
-    // Reset form
-    setAddTicketName("")
-    setAddTicketPrice("")
-    setAddTicketQuantity("")
-    setAddTicketDescription("")
-    setAddTicketSaleStart(undefined)
-    setAddTicketSaleEnd(undefined)
-    setShowAddTicketModal(false)
+      if (!response.status) {
+        throw new Error(response.message || "Failed to create ticket")
+      }
+
+      toast.success("Ticket added successfully!", {
+        description: "Your new ticket type has been created.",
+      })
+
+      // Reset form
+      setAddTicketName("")
+      setAddTicketPrice("")
+      setAddTicketQuantity("")
+      setAddTicketDescription("")
+      setAddTicketSaleStart(undefined)
+      setAddTicketSaleEnd(undefined)
+      setAddTicketLimitPerPerson("0")
+      setAddTicketComplementary("0")
+      setAddTicketToIssue("1")
+      setAddTicketIsFree(false)
+      setShowAddTicketModal(false)
+
+      setTimeout(() => window.location.reload(), 500)
+    } catch (error) {
+      console.error("Error creating ticket:", error)
+      toast.error(error instanceof Error ? error.message : "Failed to create ticket")
+    }
   }
 
   const handleCloseAddTicketModal = () => {
@@ -800,6 +930,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setAddTicketDescription("")
     setAddTicketSaleStart(undefined)
     setAddTicketSaleEnd(undefined)
+    setAddTicketLimitPerPerson("0")
+    setAddTicketComplementary("0")
+    setAddTicketToIssue("1")
+    setAddTicketIsFree(false)
   }
 
   const handleIssueCompTicket = async () => {
@@ -2723,91 +2857,162 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             </div>
 
             {/* Ticket Cards */}
+            {loadingTicketDetails && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading ticket details...
+              </div>
+            )}
             <div className="grid gap-4">
-              {ticketTypes.map((ticket: any) => (
-                <div
-                  key={ticket.id}
-                  className="rounded-2xl border border-border bg-card p-4 sm:p-6 hover:border-[#8b5cf6]/30 transition-all duration-300"
-                >
-                  <div className="flex flex-col gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-lg font-bold">{ticket.name}</h3>
-                          {ticket.status === "sold_out" && (
-                            <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs font-medium">
-                              Sold Out
-                            </span>
-                          )}
-                          {suspendedTickets.includes(ticket.id) && (
-                            <span className="px-3 py-1 rounded-full bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs font-medium border border-red-200 dark:border-red-900">
-                              Sales Suspended
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEditTicket(ticket)}
-                            className="p-2 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
-                            title="Edit Ticket"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Price</p>
-                          <p className="font-semibold">{eventData.currency || currency} {ticket.price.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Sold</p>
-                          <p className="font-semibold">
-                            {ticket.sold} / {ticket.totalAvailable}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Revenue</p>
-                          <p className="font-semibold">{eventData.currency || currency} {ticket.revenue.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                          <p className="font-semibold">{ticket.totalAvailable - ticket.sold}</p>
-                        </div>
-                      </div>
-                      <div className="mb-3">
-                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] transition-all duration-500"
-                            style={{ width: `${(ticket.sold / ticket.totalAvailable) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {!isEventPastOrInactive() && (
-                          <>
-                            {suspendedTickets.includes(ticket.id) ? (
-                              <button
-                                onClick={() => handleActivateClick("ticket", ticket.id)}
-                                className="px-3 py-1.5 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium hover:bg-green-200 dark:hover:bg-green-950/50 transition-colors cursor-pointer border border-green-200 dark:border-green-900"
-                              >
-                                Activate Sales
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleSuspendClick("ticket", ticket.id)}
-                                className="px-3 py-1.5 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-950/50 transition-colors cursor-pointer border border-red-200 dark:border-red-900"
-                              >
-                                Suspend Sales
-                              </button>
-                            )}
-                          </>
+              {ticketTypes.map((ticket: any) => {
+                const now = new Date()
+                const saleStartDate = ticket.ticketSaleStartDate ? new Date(ticket.ticketSaleStartDate) : null
+                const saleEndDate = ticket.ticketSaleEndDate ? new Date(ticket.ticketSaleEndDate) : null
+                const apiStatus = (ticket.ticketStatus || '').toUpperCase()
+                const isSuspended = suspendedTickets.includes(ticket.id) || apiStatus === 'ONHOLD'
+                const isSoldOut = apiStatus === 'SOLDOUT' || ticket.status === 'sold_out'
+                const isClosed = apiStatus === 'CLOSED'
+                const isExpired = !isClosed && !isSoldOut && saleEndDate && saleEndDate < now
+                const isUpcoming = !isSuspended && !isSoldOut && !isClosed && !isExpired && saleStartDate && saleStartDate > now
+                const isActive = !isSuspended && !isSoldOut && !isClosed && !isExpired && !isUpcoming
+
+                // Status config: label, badge colors, left-border accent, progress bar color
+                const statusConfig = isSoldOut
+                  ? { label: 'Sold Out',   badge: 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900',        border: 'border-l-red-500',    bar: 'from-red-400 to-red-500' }
+                  : isSuspended
+                  ? { label: 'On Hold',    badge: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900', border: 'border-l-amber-500',  bar: 'from-amber-400 to-amber-500' }
+                  : isClosed
+                  ? { label: 'Closed',     badge: 'bg-zinc-100 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700',      border: 'border-l-zinc-400',   bar: 'from-zinc-400 to-zinc-500' }
+                  : isExpired
+                  ? { label: 'Sale Ended', badge: 'bg-zinc-100 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700',      border: 'border-l-zinc-400',   bar: 'from-zinc-400 to-zinc-500' }
+                  : isUpcoming
+                  ? { label: 'Upcoming',   badge: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',      border: 'border-l-blue-500',   bar: 'from-blue-400 to-blue-500' }
+                  : { label: 'Active',     badge: 'bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900', border: 'border-l-emerald-500', bar: 'from-emerald-400 to-emerald-500' }
+
+                const tickCurrency = eventData.currency || currency
+                const soldPct = ticket.totalAvailable > 0 ? Math.min((ticket.sold / ticket.totalAvailable) * 100, 100) : 0
+                const fmtDate = (d: Date | null) => d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+                const saleStartFmt = fmtDate(saleStartDate)
+                const saleEndFmt = fmtDate(saleEndDate)
+
+                return (
+                  <div
+                    key={ticket.id}
+                    className={cn(
+                      "rounded-2xl border border-border border-l-4 bg-card p-4 sm:p-6 transition-all duration-300",
+                      statusConfig.border,
+                      (isClosed || isExpired) ? "opacity-75" : "hover:border-[#8b5cf6]/30 hover:border-l-current"
+                    )}
+                  >
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-bold">{ticket.name}</h3>
+                        {/* Primary status badge */}
+                        <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-semibold border", statusConfig.badge)}>
+                          {statusConfig.label}
+                        </span>
+                        {/* Free badge */}
+                        {ticket.isFree && (
+                          <span className="px-2.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400 text-xs font-semibold border border-violet-200 dark:border-violet-900">
+                            Free
+                          </span>
                         )}
                       </div>
+                      <button
+                        onClick={() => handleEditTicket(ticket)}
+                        className="p-2 hover:bg-secondary rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                        title="Edit Ticket"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
                     </div>
+
+                    {/* Primary stats */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Price</p>
+                        <p className="font-semibold">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Sold / Total</p>
+                        <p className="font-semibold">{ticket.sold} / {ticket.totalAvailable}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Revenue</p>
+                        <p className="font-semibold">{tickCurrency} {ticket.revenue.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Remaining</p>
+                        <p className="font-semibold">{Math.max(0, ticket.totalAvailable - ticket.sold)}</p>
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Sales progress</span>
+                        <span>{soldPct.toFixed(0)}%</span>
+                      </div>
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={cn("h-full bg-gradient-to-r transition-all duration-500", statusConfig.bar)}
+                          style={{ width: `${soldPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Secondary details */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 p-3 rounded-xl bg-secondary/40">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Tickets to Issue</p>
+                        <p className="text-sm font-medium">{ticket.ticketsToIssue}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Limit Per Person</p>
+                        <p className="text-sm font-medium">{ticket.ticketLimitPerPerson > 0 ? ticket.ticketLimitPerPerson : 'No limit'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Complementaries</p>
+                        <p className="text-sm font-medium">{ticket.numberOfComplementary}</p>
+                      </div>
+                      <div className="col-span-2 sm:col-span-3">
+                        <p className="text-xs text-muted-foreground mb-1">Sale Period</p>
+                        <p className="text-sm font-medium">
+                          {saleStartFmt && saleEndFmt
+                            ? `${saleStartFmt} → ${saleEndFmt}`
+                            : saleStartFmt
+                            ? `From ${saleStartFmt}`
+                            : saleEndFmt
+                            ? `Until ${saleEndFmt}`
+                            : 'No sale period set'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions — only for non-closed/expired tickets */}
+                    {!isClosed && !isExpired && !isEventPastOrInactive() && (
+                      <div className="flex flex-wrap gap-2">
+                        {isSuspended ? (
+                          <button
+                            onClick={() => handleActivateClick("ticket", ticket.id)}
+                            className="px-3 py-1.5 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium hover:bg-green-200 dark:hover:bg-green-950/50 transition-colors cursor-pointer border border-green-200 dark:border-green-900"
+                          >
+                            Activate Sales
+                          </button>
+                        ) : !isSoldOut && (
+                          <button
+                            onClick={() => handleSuspendClick("ticket", ticket.id)}
+                            className="px-3 py-1.5 bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-lg text-xs font-medium hover:bg-red-200 dark:hover:bg-red-950/50 transition-colors cursor-pointer border border-red-200 dark:border-red-900"
+                          >
+                            Suspend Sales
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </motion.div>
         )}
@@ -3803,6 +4008,63 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     rows={3}
                     className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
                   />
+                </div>
+
+                {/* Additional Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Limit Per Person
+                    </label>
+                    <input
+                      type="number"
+                      value={addTicketLimitPerPerson}
+                      onChange={(e) => setAddTicketLimitPerPerson(e.target.value)}
+                      min="0"
+                      placeholder="0 = no limit"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Complementary Tickets
+                    </label>
+                    <input
+                      type="number"
+                      value={addTicketComplementary}
+                      onChange={(e) => setAddTicketComplementary(e.target.value)}
+                      min="0"
+                      placeholder="0"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Tickets to Issue
+                    </label>
+                    <input
+                      type="number"
+                      value={addTicketToIssue}
+                      onChange={(e) => setAddTicketToIssue(e.target.value)}
+                      min="1"
+                      placeholder="1"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 pt-6">
+                    <input
+                      type="checkbox"
+                      id="addTicketIsFree"
+                      checked={addTicketIsFree}
+                      onChange={(e) => setAddTicketIsFree(e.target.checked)}
+                      className="w-5 h-5 rounded cursor-pointer accent-[#8b5cf6]"
+                    />
+                    <label htmlFor="addTicketIsFree" className="text-sm font-medium cursor-pointer">
+                      Free Ticket
+                    </label>
+                  </div>
                 </div>
 
                 {/* Ticket Sale Period */}
