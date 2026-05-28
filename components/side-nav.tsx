@@ -199,21 +199,63 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
   )
 }
 
+function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
+  const router = useRouter()
+  const [userName, setUserName] = useState("U")
+
+  useEffect(() => {
+    const user = sessionManager.getUser()
+    if (user) {
+      setUserName((user.company_name || user.email || "U").charAt(0).toUpperCase())
+    }
+  }, [])
+
+  return (
+    <header className="lg:hidden fixed top-0 inset-x-0 z-40 h-14 bg-card/95 backdrop-blur-md border-b border-border flex items-center justify-between px-4 shadow-sm">
+      {/* Menu button */}
+      <button
+        onClick={onMenuOpen}
+        className="flex items-center justify-center w-9 h-9 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Logo — centered */}
+      <Link href="/dashboard" className="absolute left-1/2 -translate-x-1/2">
+        <Image
+          src="/soldoutafrica-black.png"
+          alt="SoldOutAfrica"
+          width={130}
+          height={30}
+          className="h-7 w-auto dark:invert"
+          priority
+        />
+      </Link>
+
+      {/* Avatar — links to profile */}
+      <Link
+        href="/dashboard/profile"
+        className="relative flex-shrink-0"
+        aria-label="Profile"
+      >
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-[#8b5cf6]/25">
+          {userName}
+        </div>
+        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-card rounded-full" />
+      </Link>
+    </header>
+  )
+}
+
 export default function SideNav() {
   const [isCollapsed, setIsCollapsed] = useState(true) // Default to collapsed
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
     <>
-      {/* Mobile Menu Button - Only show when menu is closed */}
-      {!isMobileOpen && (
-        <button
-          onClick={() => setIsMobileOpen(true)}
-          className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-card border border-border shadow-lg hover:bg-secondary transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      )}
+      {/* Mobile Header Bar */}
+      <MobileHeader onMenuOpen={() => setIsMobileOpen(true)} />
 
       {/* Mobile Overlay */}
       <AnimatePresence>
@@ -244,7 +286,7 @@ export default function SideNav() {
         />
       </motion.div>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar Drawer */}
       <AnimatePresence>
         {isMobileOpen && (
           <motion.div
