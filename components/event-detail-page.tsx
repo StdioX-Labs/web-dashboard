@@ -2485,7 +2485,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
       {/* Event Content */}
       {!isLoading && eventData && (
-    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-background p-4 pb-28 sm:p-6 sm:pb-10 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
       {/* Back Button */}
       <Link
         href="/dashboard/events"
@@ -2745,9 +2745,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         </div>
         )}
 
-        {/* Tabs - Better mobile styling */}
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {/* Tabs */}
+        <div className="sticky top-14 lg:top-0 z-30 -mx-4 sm:mx-0 bg-background/98 backdrop-blur-md border-b border-border shadow-sm">
+          <div className="flex overflow-x-auto scrollbar-hide">
             {[
               { id: "overview", label: "Overview" },
               { id: "tickets", label: "Tickets" },
@@ -2758,17 +2758,22 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees")}
                 className={cn(
-                  "px-4 sm:px-6 py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0",
+                  "relative flex-1 min-w-max px-5 py-3.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors duration-200",
                   activeTab === tab.id
-                    ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-md"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-[#8b5cf6]/30"
+                    ? "text-[#8b5cf6] dark:text-[#a78bfa]"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] rounded-t-full" />
+                )}
               </button>
             ))}
           </div>
         </div>
+        {/* Spacer so content doesn't jump when tab bar becomes sticky */}
+        <div className="h-4" />
 
       {/* Floating Edit Button - Mobile */}
       <Link
