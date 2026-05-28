@@ -4,11 +4,36 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://dashboard.soldoutafrica.com"),
   title: {
     default: "SoldOutAfrica Dashboard",
     template: "%s | SoldOutAfrica Dashboard",
   },
-  description: "Event organizer dashboard for managing events and ticket sales",
+  description: "Manage your events, track ticket sales, and grow your audience on SoldOutAfrica.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    type: "website",
+    url: "https://dashboard.soldoutafrica.com",
+    siteName: "SoldOutAfrica Dashboard",
+    title: "SoldOutAfrica Dashboard",
+    description: "Manage your events, track ticket sales, and grow your audience on SoldOutAfrica.",
+    images: [
+      {
+        url: "/soldoutafrica-white.png",
+        alt: "SoldOutAfrica Dashboard",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@soldoutafrica",
+    title: "SoldOutAfrica Dashboard",
+    description: "Manage your events, track ticket sales, and grow your audience on SoldOutAfrica.",
+    images: ["/soldoutafrica-white.png"],
+  },
 };
 
 export const viewport: Viewport = {
