@@ -3073,6 +3073,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       const totalIssued  = hasBreakdown ? ticket.paidSold + ticket.complementarySold : ticket.sold
                       const paidPct  = ticket.totalAvailable > 0 ? (ticket.paidSold  / ticket.totalAvailable) * 100 : 0
                       const compsPct = ticket.totalAvailable > 0 ? (ticket.complementarySold / ticket.totalAvailable) * 100 : 0
+                      const tix = ticket.ticketsToIssue ?? 1
+                      const isGroup = tix > 1
+                      // For group tickets, derive the number of purchases (transactions) from individual ticket counts.
+                      const totalPurchases   = isGroup ? Math.round(totalIssued / tix)           : null
+                      const paidPurchases    = isGroup && hasBreakdown ? Math.round(ticket.paidSold / tix)          : null
+                      const compsPurchases   = isGroup && hasBreakdown ? Math.round(ticket.complementarySold / tix) : null
                       return (
                         <div className="space-y-3 mb-4">
 
@@ -3081,14 +3087,24 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                             <div className="p-3 rounded-xl bg-secondary/50">
                               <p className="text-xs text-muted-foreground mb-1">Total Issued</p>
                               <p className="text-2xl font-bold leading-none">{totalIssued}</p>
-                              <p className="text-xs text-muted-foreground mt-1">paid + comps</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                paid + comps
+                                {isGroup && totalPurchases !== null && (
+                                  <span className="ml-1 text-foreground/60">· {totalPurchases} {totalPurchases === 1 ? 'purchase' : 'purchases'}</span>
+                                )}
+                              </p>
                             </div>
                             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                               <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">Tickets Sold</p>
                               <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-none">
                                 {hasBreakdown ? ticket.paidSold : '–'}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1">not complimentary</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                not complimentary
+                                {isGroup && paidPurchases !== null && (
+                                  <span className="ml-1 text-foreground/60">· {paidPurchases} {paidPurchases === 1 ? 'purchase' : 'purchases'}</span>
+                                )}
+                              </p>
                             </div>
                           </div>
 
@@ -3099,7 +3115,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                               <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 leading-none">
                                 {hasBreakdown ? ticket.complementarySold : '–'}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1">complimentary</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                complimentary
+                                {isGroup && compsPurchases !== null && (
+                                  <span className="ml-1 text-foreground/60">· {compsPurchases} issued</span>
+                                )}
+                              </p>
                             </div>
                             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                               <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">Comps Left</p>
@@ -3110,11 +3131,16 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                             </div>
                           </div>
 
-                          {/* Row 3 — Tickets Left (full width on mobile, half on sm) */}
+                          {/* Row 3 — Tickets Left (full width) */}
                           <div className="p-3 rounded-xl bg-secondary/50">
                             <p className="text-xs text-muted-foreground mb-1">Tickets Left</p>
                             <p className="text-2xl font-bold leading-none">{Math.max(0, ticket.quantityAvailable)}</p>
-                            <p className="text-xs text-muted-foreground mt-1">not sold (paid only)</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              not sold (paid only)
+                              {isGroup && ticket.quantityAvailable > 0 && (
+                                <span className="ml-1 text-foreground/60">· {Math.floor(ticket.quantityAvailable / tix)} groups remaining</span>
+                              )}
+                            </p>
                           </div>
 
                           {/* Revenue + segmented progress bar */}
