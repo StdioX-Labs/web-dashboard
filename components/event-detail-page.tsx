@@ -3066,109 +3066,88 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       </button>
                     </div>
 
-                    {/* Ticket stats */}
+                    {/* ── 5 ticket stats ── */}
                     {(() => {
                       const hasBreakdown = (ticket.paidSold + ticket.complementarySold) > 0
-                      const paidPct   = ticket.totalAvailable > 0 ? (ticket.paidSold / ticket.totalAvailable) * 100 : 0
-                      const compsPct  = ticket.totalAvailable > 0 ? (ticket.complementarySold / ticket.totalAvailable) * 100 : 0
+                      const totalIssued  = hasBreakdown ? ticket.paidSold + ticket.complementarySold : ticket.sold
+                      const paidPct  = ticket.totalAvailable > 0 ? (ticket.paidSold  / ticket.totalAvailable) * 100 : 0
+                      const compsPct = ticket.totalAvailable > 0 ? (ticket.complementarySold / ticket.totalAvailable) * 100 : 0
                       return (
                         <div className="space-y-3 mb-4">
 
-                          {/* ── primary stat tiles ── */}
-                          {hasBreakdown ? (
-                            /* With breakdown: Paid + Comps on top row, Price + Remaining below */
-                            <>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">Paid Sold</p>
-                                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-none">{ticket.paidSold}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">of {ticket.totalAvailable} total</p>
-                                </div>
-                                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                                  <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-1">Comps Issued</p>
-                                  <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 leading-none">{ticket.complementarySold}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">complimentary</p>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl bg-secondary/40">
-                                  <p className="text-xs text-muted-foreground mb-1">Price</p>
-                                  <p className="font-semibold text-sm">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
-                                </div>
-                                <div className="p-3 rounded-xl bg-secondary/40">
-                                  <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                                  <p className="font-semibold text-sm">{Math.max(0, ticket.quantityAvailable)} unsold</p>
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            /* No breakdown: Sold + Remaining on top, Price below */
-                            <>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 rounded-xl bg-secondary/40">
-                                  <p className="text-xs text-muted-foreground mb-1">Tickets Sold</p>
-                                  <p className="text-2xl font-bold leading-none">{ticket.sold}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">of {ticket.totalAvailable} total</p>
-                                </div>
-                                <div className="p-3 rounded-xl bg-secondary/40">
-                                  <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                                  <p className="text-2xl font-bold leading-none">{Math.max(0, ticket.quantityAvailable)}</p>
-                                  <p className="text-xs text-muted-foreground mt-1">unsold</p>
-                                </div>
-                              </div>
-                              <div className="p-3 rounded-xl bg-secondary/40">
-                                <p className="text-xs text-muted-foreground mb-1">Price</p>
-                                <p className="font-semibold">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
-                              </div>
-                            </>
-                          )}
+                          {/* Row 1 — Total Issued + Tickets Sold (paid) */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-xl bg-secondary/50">
+                              <p className="text-xs text-muted-foreground mb-1">Total Issued</p>
+                              <p className="text-2xl font-bold leading-none">{totalIssued}</p>
+                              <p className="text-xs text-muted-foreground mt-1">paid + comps</p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">Tickets Sold</p>
+                              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+                                {hasBreakdown ? ticket.paidSold : '–'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">not complimentary</p>
+                            </div>
+                          </div>
 
-                          {/* ── revenue + progress ── */}
+                          {/* Row 2 — Comps Issued + Comps Left */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                              <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-1">Comps Issued</p>
+                              <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 leading-none">
+                                {hasBreakdown ? ticket.complementarySold : '–'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">complimentary</p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                              <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">Comps Left</p>
+                              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 leading-none">
+                                {ticket.numberOfComplementary}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">budget remaining</p>
+                            </div>
+                          </div>
+
+                          {/* Row 3 — Tickets Left (full width on mobile, half on sm) */}
+                          <div className="p-3 rounded-xl bg-secondary/50">
+                            <p className="text-xs text-muted-foreground mb-1">Tickets Left</p>
+                            <p className="text-2xl font-bold leading-none">{Math.max(0, ticket.quantityAvailable)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">not sold (paid only)</p>
+                          </div>
+
+                          {/* Revenue + segmented progress bar */}
                           <div className="p-3 rounded-xl bg-secondary/40 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center justify-between gap-2">
                               <div>
                                 <p className="text-xs text-muted-foreground">Revenue</p>
                                 <p className="font-semibold text-sm">{tickCurrency} {ticket.revenue.toLocaleString()}</p>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="text-xs text-muted-foreground">Total sold</p>
-                                <p className="font-semibold text-sm">{ticket.sold}&thinsp;/&thinsp;{ticket.totalAvailable}</p>
+                                <p className="text-xs text-muted-foreground">Price</p>
+                                <p className="font-semibold text-sm">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
                               </div>
                             </div>
-
-                            {/* progress bar */}
                             <div className="h-2.5 bg-secondary rounded-full overflow-hidden flex">
                               {hasBreakdown ? (
                                 <>
-                                  {paidPct > 0 && (
-                                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${paidPct}%` }} />
-                                  )}
-                                  {compsPct > 0 && (
-                                    <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${compsPct}%` }} />
-                                  )}
+                                  {paidPct  > 0 && <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${paidPct}%` }} />}
+                                  {compsPct > 0 && <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${compsPct}%` }} />}
                                 </>
                               ) : (
-                                <div
-                                  className={cn("h-full bg-gradient-to-r transition-all duration-500", statusConfig.bar)}
-                                  style={{ width: `${soldPct}%` }}
-                                />
+                                <div className={cn("h-full bg-gradient-to-r transition-all duration-500", statusConfig.bar)} style={{ width: `${soldPct}%` }} />
                               )}
                             </div>
-
-                            {/* legend — only when breakdown available */}
                             {hasBreakdown && (
                               <div className="flex flex-wrap gap-x-4 gap-y-1">
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                                  Paid ({paidPct.toFixed(0)}%)
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />Paid ({paidPct.toFixed(0)}%)
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
-                                  Comps ({compsPct.toFixed(0)}%)
+                                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />Comps ({compsPct.toFixed(0)}%)
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span className="w-2 h-2 rounded-full bg-secondary shrink-0" />
-                                  Remaining
+                                  <span className="w-2 h-2 rounded-full bg-secondary shrink-0" />Remaining
                                 </span>
                               </div>
                             )}
@@ -3181,16 +3160,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     {/* Secondary details */}
                     <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-xl bg-secondary/40">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1">Tickets to Issue</p>
-                        <p className="text-sm font-medium">{ticket.ticketsToIssue}</p>
-                      </div>
-                      <div>
                         <p className="text-xs text-muted-foreground mb-1">Limit Per Person</p>
                         <p className="text-sm font-medium">{ticket.ticketLimitPerPerson > 0 ? ticket.ticketLimitPerPerson : 'No limit'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Comps Budget</p>
-                        <p className="text-sm font-medium">{ticket.numberOfComplementary} remaining</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Sale Period</p>
