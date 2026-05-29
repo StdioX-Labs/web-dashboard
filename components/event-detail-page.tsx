@@ -3067,75 +3067,106 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </div>
 
                     {/* Ticket stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                      {/* Price */}
-                      <div className="p-3 rounded-xl bg-secondary/40">
-                        <p className="text-xs text-muted-foreground mb-1">Price</p>
-                        <p className="font-semibold">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
-                      </div>
-                      {/* Paid sold */}
-                      <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Paid Sold</p>
-                        <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{ticket.paidSold}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">of {ticket.totalAvailable} total</p>
-                      </div>
-                      {/* Comps issued */}
-                      <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                        <p className="text-xs text-violet-600 dark:text-violet-400 mb-1">Comps Issued</p>
-                        <p className="text-xl font-bold text-violet-600 dark:text-violet-400">{ticket.complementarySold}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">complimentary</p>
-                      </div>
-                      {/* Remaining */}
-                      <div className="p-3 rounded-xl bg-secondary/40">
-                        <p className="text-xs text-muted-foreground mb-1">Remaining</p>
-                        <p className="text-xl font-bold">{Math.max(0, ticket.quantityAvailable)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">unsold</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const hasBreakdown = (ticket.paidSold + ticket.complementarySold) > 0
+                      return (
+                        <>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                            {/* Price */}
+                            <div className="p-3 rounded-xl bg-secondary/40">
+                              <p className="text-xs text-muted-foreground mb-1">Price</p>
+                              <p className="font-semibold">{ticket.isFree ? 'Free' : `${tickCurrency} ${ticket.price.toLocaleString()}`}</p>
+                            </div>
 
-                    {/* Revenue + segmented progress */}
-                    <div className="mb-4 p-3 rounded-xl bg-secondary/40">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Revenue</p>
-                          <p className="font-semibold">{tickCurrency} {ticket.revenue.toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Total sold</p>
-                          <p className="font-semibold">{ticket.sold} / {ticket.totalAvailable}</p>
-                        </div>
-                      </div>
-                      {/* Segmented bar: green = paid, violet = comps, gray = remaining */}
-                      <div className="h-2 bg-secondary rounded-full overflow-hidden flex">
-                        {ticket.totalAvailable > 0 && ticket.paidSold > 0 && (
-                          <div
-                            className="h-full bg-emerald-500 transition-all duration-500"
-                            style={{ width: `${(ticket.paidSold / ticket.totalAvailable) * 100}%` }}
-                          />
-                        )}
-                        {ticket.totalAvailable > 0 && ticket.complementarySold > 0 && (
-                          <div
-                            className="h-full bg-violet-500 transition-all duration-500"
-                            style={{ width: `${(ticket.complementarySold / ticket.totalAvailable) * 100}%` }}
-                          />
-                        )}
-                      </div>
-                      {/* Legend */}
-                      <div className="flex gap-4 mt-1.5">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                          Paid
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
-                          Comps
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span className="inline-block w-2 h-2 rounded-full bg-secondary" />
-                          Remaining
-                        </span>
-                      </div>
-                    </div>
+                            {hasBreakdown ? (
+                              <>
+                                {/* Paid sold */}
+                                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Paid Sold</p>
+                                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{ticket.paidSold}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">of {ticket.totalAvailable}</p>
+                                </div>
+                                {/* Comps issued */}
+                                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+                                  <p className="text-xs text-violet-600 dark:text-violet-400 mb-1">Comps Issued</p>
+                                  <p className="text-xl font-bold text-violet-600 dark:text-violet-400">{ticket.complementarySold}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">complimentary</p>
+                                </div>
+                              </>
+                            ) : (
+                              /* No breakdown yet — show total sold spanning both middle columns */
+                              <div className="col-span-2 p-3 rounded-xl bg-secondary/40">
+                                <p className="text-xs text-muted-foreground mb-1">Tickets Sold</p>
+                                <p className="text-xl font-bold">{ticket.sold}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">of {ticket.totalAvailable} total</p>
+                              </div>
+                            )}
+
+                            {/* Remaining */}
+                            <div className="p-3 rounded-xl bg-secondary/40">
+                              <p className="text-xs text-muted-foreground mb-1">Remaining</p>
+                              <p className="text-xl font-bold">{Math.max(0, ticket.quantityAvailable)}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">unsold</p>
+                            </div>
+                          </div>
+
+                          {/* Revenue + progress */}
+                          <div className="mb-4 p-3 rounded-xl bg-secondary/40">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Revenue</p>
+                                <p className="font-semibold">{tickCurrency} {ticket.revenue.toLocaleString()}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Total sold</p>
+                                <p className="font-semibold">{ticket.sold} / {ticket.totalAvailable}</p>
+                              </div>
+                            </div>
+                            {hasBreakdown ? (
+                              <>
+                                {/* Segmented bar: green = paid, violet = comps, gray = remaining */}
+                                <div className="h-2 bg-secondary rounded-full overflow-hidden flex">
+                                  {ticket.totalAvailable > 0 && ticket.paidSold > 0 && (
+                                    <div
+                                      className="h-full bg-emerald-500 transition-all duration-500"
+                                      style={{ width: `${(ticket.paidSold / ticket.totalAvailable) * 100}%` }}
+                                    />
+                                  )}
+                                  {ticket.totalAvailable > 0 && ticket.complementarySold > 0 && (
+                                    <div
+                                      className="h-full bg-violet-500 transition-all duration-500"
+                                      style={{ width: `${(ticket.complementarySold / ticket.totalAvailable) * 100}%` }}
+                                    />
+                                  )}
+                                </div>
+                                <div className="flex gap-4 mt-1.5">
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                                    Paid
+                                  </span>
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
+                                    Comps
+                                  </span>
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span className="inline-block w-2 h-2 rounded-full bg-secondary" />
+                                    Remaining
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              /* Simple single-color bar using the status color */
+                              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                                <div
+                                  className={cn("h-full bg-gradient-to-r transition-all duration-500", statusConfig.bar)}
+                                  style={{ width: `${soldPct}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )
+                    })()}
 
                     {/* Secondary details */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 p-3 rounded-xl bg-secondary/40">
