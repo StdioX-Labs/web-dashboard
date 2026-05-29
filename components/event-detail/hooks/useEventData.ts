@@ -109,6 +109,8 @@ export function useEventData(eventId: number) {
                 price: ticket.ticketPrice,
                 totalAvailable: (ticket as any).originalTicketCount || ticket.quantityAvailable + (ticket.soldQuantity || 0),
                 sold: (ticket as any).uniqueTicketCount ?? ticket.soldQuantity ?? 0,
+                paidSold: (ticket as any).paidTicketsSold ?? 0,
+                complementarySold: (ticket as any).complementaryTicketsSold ?? 0,
                 revenue: (ticket as { totalTicketSaleBalance?: number }).totalTicketSaleBalance || (ticket.ticketPrice * ((ticket as any).uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
                 status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
                 quantityAvailable: (ticket as any).ticketCount ?? ticket.quantityAvailable ?? 0,

@@ -328,6 +328,8 @@ export const api = {
               ticketStatus: string
               originalTicketCount?: number
               ticketCount?: number
+              paidTicketsSold?: number
+              complementaryTicketsSold?: number
             }>
             detailedEvent?: {
               id: number
@@ -408,6 +410,8 @@ export const api = {
             uniqueTicketCount: ticket.uniqueTicketCount,
             originalTicketCount: ticket.originalTicketCount,
             ticketCount: ticket.ticketCount,
+            paidTicketsSold: ticket.paidTicketsSold ?? 0,
+            complementaryTicketsSold: ticket.complementaryTicketsSold ?? 0,
           })) || []
 
           return {

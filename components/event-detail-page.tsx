@@ -530,6 +530,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     price: ticket.ticketPrice,
     totalAvailable: ticket.originalTicketCount || (ticket.soldQuantity + ticket.quantityAvailable),
     sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
+    paidSold: ticket.paidSold ?? ticket.paidTicketsSold ?? 0,
+    complementarySold: ticket.complementarySold ?? ticket.complementaryTicketsSold ?? 0,
     revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
     quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
@@ -3083,6 +3085,19 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         <p className="font-semibold">{Math.max(0, ticket.totalAvailable - ticket.sold)}</p>
                       </div>
                     </div>
+                    {/* Paid vs complementary breakdown */}
+                    {ticket.sold > 0 && (
+                      <div className="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-secondary/30">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Paid</p>
+                          <p className="font-semibold text-emerald-500">{ticket.paidSold}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Complimentary</p>
+                          <p className="font-semibold text-blue-400">{ticket.complementarySold}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Progress bar */}
                     <div className="mb-4">
