@@ -70,7 +70,7 @@ export default function EventDetailPage({ eventId }: EventDetailPageProps) {
     sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
     paidSold: (ticket as any).paidTicketsSold ?? 0,
     complementarySold: (ticket as any).complementaryTicketsSold ?? 0,
-    revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
+    revenue: ticket.totalTicketSaleBalance ?? (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
     quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
   })) || []

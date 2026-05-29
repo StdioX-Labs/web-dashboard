@@ -53,8 +53,8 @@ export function EventDetail({ eventId }: EventDetailProps) {
 
             if (foundActiveEvent) {
               const calculatedRevenue = foundActiveEvent.tickets?.reduce((sum: number, ticket: any) =>
-                sum + (ticket.ticketPrice * ticket.soldQuantity), 0
-              ) || 0
+                sum + (ticket.totalTicketSaleBalance ?? 0), 0
+              ) ?? 0
               const calculatedTicketsSold = foundActiveEvent.tickets?.reduce((sum: number, ticket: any) =>
                 sum + ticket.soldQuantity, 0
               ) || 0
@@ -83,7 +83,7 @@ export function EventDetail({ eventId }: EventDetailProps) {
                   sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
                   paidSold: ticket.paidTicketsSold ?? 0,
                   complementarySold: ticket.complementaryTicketsSold ?? 0,
-                  revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
+                  revenue: ticket.totalTicketSaleBalance ?? (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
                   status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
                   quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
                 })),
@@ -142,7 +142,7 @@ export function EventDetail({ eventId }: EventDetailProps) {
                 sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
                 paidSold: ticket.paidTicketsSold ?? 0,
                 complementarySold: ticket.complementaryTicketsSold ?? 0,
-                revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
+                revenue: ticket.totalTicketSaleBalance ?? (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
                 status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
                 quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
               })),

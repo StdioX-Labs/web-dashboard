@@ -279,11 +279,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             console.log("API Total Revenue:", foundEvent.totalRevenue)
             console.log("API Total Tickets Sold:", foundEvent.totalTicketsSold)
 
-            // Use API totals if available, otherwise calculate from tickets
+            // Use API totals if available, otherwise sum GL-sourced balances (never price × count,
+            // which would incorrectly inflate revenue when comps are issued).
             const revenue = foundEvent.totalRevenue !== undefined
               ? foundEvent.totalRevenue
               : foundEvent.tickets?.reduce((sum, ticket) =>
-                  sum + ((ticket.ticketPrice || 0) * (ticket.soldQuantity || 0)), 0) || 0
+                  sum + ((ticket as any).totalTicketSaleBalance ?? 0), 0) ?? 0
 
             const ticketsSold = foundEvent.totalTicketsSold !== undefined
               ? foundEvent.totalTicketsSold
@@ -532,7 +533,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
     paidSold: ticket.paidSold ?? ticket.paidTicketsSold ?? 0,
     complementarySold: ticket.complementarySold ?? ticket.complementaryTicketsSold ?? 0,
-    revenue: ticket.totalTicketSaleBalance || (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
+    revenue: ticket.totalTicketSaleBalance ?? (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
     quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
     ticketStatus: ticket.ticketStatus || (ticket.isActive ? 'ACTIVE' : 'INACTIVE'),
