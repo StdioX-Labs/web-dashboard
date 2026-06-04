@@ -31,6 +31,9 @@ interface TicketType {
   description: string
   complementary: string
   ticketsToIssue: string
+  limitPerPerson: string
+  isGroupTicket: boolean
+  restrictLimitPerPerson: boolean
   saleStartDate: Date | undefined
   saleEndDate: Date | undefined
 }
@@ -60,7 +63,7 @@ export default function CreateEventPage() {
   const [saleStartDateTime, setSaleStartDateTime] = useState<Date | undefined>(undefined)
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
-    { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", saleStartDate: undefined, saleEndDate: undefined },
+    { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
   ])
 
   // Auto-generate slug from event name
@@ -102,7 +105,7 @@ export default function CreateEventPage() {
   const addTicketType = () => {
     setTicketTypes([
       ...ticketTypes,
-      { id: Date.now().toString(), name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", saleStartDate: undefined, saleEndDate: undefined },
+      { id: Date.now().toString(), name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
     ])
   }
 
@@ -112,7 +115,7 @@ export default function CreateEventPage() {
     }
   }
 
-  const updateTicketType = (id: string, field: keyof TicketType, value: string | Date | undefined) => {
+  const updateTicketType = (id: string, field: keyof TicketType, value: string | Date | undefined | boolean) => {
     setTicketTypes(
       ticketTypes.map((ticket) =>
         ticket.id === id ? { ...ticket, [field]: value } : ticket
@@ -274,7 +277,7 @@ export default function CreateEventPage() {
             ticketPrice: parseFloat(ticket.price),
             quantityAvailable: parseInt(ticket.quantity),
             ticketsToIssue: parseInt(ticket.ticketsToIssue || "1"),
-            ticketLimitPerPerson: 0,
+            ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
             numberOfComplementary: parseInt(ticket.complementary || "0"),
             ticketSaleStartDate: (ticket.saleStartDate || saleStartDateTime!).toISOString(),
             ticketSaleEndDate: (ticket.saleEndDate || saleEndDateTime!).toISOString(),
@@ -753,23 +756,72 @@ export default function CreateEventPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium mb-1.5 block">
-                        Tickets To Issue
+                    {/* Group ticket toggle */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={ticket.isGroupTicket}
+                          onChange={(e) => {
+                            updateTicketType(ticket.id, "isGroupTicket", e.target.checked)
+                            if (!e.target.checked) updateTicketType(ticket.id, "ticketsToIssue", "1")
+                            else updateTicketType(ticket.id, "ticketsToIssue", "2")
+                          }}
+                          className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
+                        />
+                        <span className="text-xs font-medium">Group ticket</span>
                       </label>
-                      <input
-                        type="number"
-                        value={ticket.ticketsToIssue}
-                        onChange={(e) =>
-                          updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
-                        }
-                        placeholder="e.g., 1"
-                        min="1"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Number of tickets issued per purchase
-                      </p>
+                      {ticket.isGroupTicket && (
+                        <div>
+                          <label className="text-xs font-medium mb-1.5 block">Group of</label>
+                          <input
+                            type="number"
+                            value={ticket.ticketsToIssue}
+                            onChange={(e) =>
+                              updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
+                            }
+                            min="2"
+                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Tickets issued per purchase (e.g. 2 for a couple's ticket)
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Restrict tickets per person toggle */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={ticket.restrictLimitPerPerson}
+                          onChange={(e) => {
+                            updateTicketType(ticket.id, "restrictLimitPerPerson", e.target.checked)
+                            if (!e.target.checked) updateTicketType(ticket.id, "limitPerPerson", "0")
+                            else updateTicketType(ticket.id, "limitPerPerson", "1")
+                          }}
+                          className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
+                        />
+                        <span className="text-xs font-medium">Restrict tickets per person</span>
+                      </label>
+                      {ticket.restrictLimitPerPerson && (
+                        <div>
+                          <label className="text-xs font-medium mb-1.5 block">Limit to</label>
+                          <input
+                            type="number"
+                            value={ticket.limitPerPerson}
+                            onChange={(e) =>
+                              updateTicketType(ticket.id, "limitPerPerson", e.target.value)
+                            }
+                            min="1"
+                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Maximum tickets one person can purchase
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
