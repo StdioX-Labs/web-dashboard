@@ -146,8 +146,27 @@ export default function CreateEventPage() {
       }
 
       // Validation
-      if (!eventName || !eventStartDate || !eventEndDate || !venue || !description) {
+      if (!eventName || !venue || !description) {
         toast.error("Please fill in all required fields")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Both the day and the time are required on each date field
+      if (!eventStartDate) {
+        toast.error("Please set the event start date and time")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!eventEndDate) {
+        toast.error("Please set the event end date and time")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (eventEndDate <= eventStartDate) {
+        toast.error("Event end must be after the event start")
         setIsSubmitting(false)
         return
       }
@@ -166,9 +185,15 @@ export default function CreateEventPage() {
         return
       }
 
-      // Validate sale period
+      // Validate sale period — each field needs a date and a time
       if (!saleStartDateTime || !saleEndDateTime) {
-        toast.error("Please set the ticket sales period")
+        toast.error("Please set the ticket sales start and end date and time")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (saleEndDateTime <= saleStartDateTime) {
+        toast.error("Ticket sales must end after they start")
         setIsSubmitting(false)
         return
       }

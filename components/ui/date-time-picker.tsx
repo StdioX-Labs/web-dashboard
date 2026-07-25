@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { DayPicker } from "react-day-picker"
 import { format } from "date-fns"
 import { Calendar, Clock } from "lucide-react"
@@ -62,6 +62,7 @@ export function DatePicker({
             <DayPicker
               mode="single"
               selected={selected}
+              defaultMonth={selected}
               onSelect={(date) => {
                 onChange(date)
                 setIsOpen(false)
@@ -87,6 +88,12 @@ interface TimePickerProps {
   disabled?: boolean
 }
 
+const to12Hour = (date: Date | undefined) => ({
+  hour: date ? date.getHours() % 12 || 12 : 9,
+  minute: date ? date.getMinutes() : 0,
+  period: (date && date.getHours() >= 12 ? "PM" : "AM") as "AM" | "PM",
+})
+
 export function TimePicker({
   selected,
   onChange,
@@ -108,20 +115,28 @@ export function TimePicker({
     }
   }, [isOpen])
 
-  // Initialize with selected time or default to 9:00 AM
-  const initHour = selected ? (selected.getHours() % 12 || 12) : 9
-  const initMinute = selected ? selected.getMinutes() : 0
-  const initPeriod = selected && selected.getHours() >= 12 ? "PM" : "AM"
+  // Initialize with the selected time, defaulting to 9:00 AM
+  const initial = to12Hour(selected)
+  const [selectedHour, setSelectedHour] = useState<number>(initial.hour)
+  const [selectedMinute, setSelectedMinute] = useState<number>(initial.minute)
+  const [selectedPeriod, setSelectedPeriod] = useState<"AM" | "PM">(initial.period)
 
-  const [selectedHour, setSelectedHour] = useState<number>(initHour)
-  const [selectedMinute, setSelectedMinute] = useState<number>(initMinute)
-  const [selectedPeriod, setSelectedPeriod] = useState<"AM" | "PM">(initPeriod)
+  // Keep the wheels in sync with the value coming from outside (e.g. an event
+  // loaded from the API, or a time set elsewhere) so reopening the picker never
+  // shows a stale time.
+  useEffect(() => {
+    const next = to12Hour(selected)
+    setSelectedHour(next.hour)
+    setSelectedMinute(next.minute)
+    setSelectedPeriod(next.period)
+  }, [selected])
 
   const hours = Array.from({ length: 12 }, (_, i) => i + 1) // 1-12
-  const minutes = [0, 15, 30, 45]
+  const minutes = Array.from({ length: 60 }, (_, i) => i) // 0-59
 
   const handleApply = () => {
-    const date = new Date()
+    // Preserve the day the value already points at — only the time changes here.
+    const date = selected ? new Date(selected) : new Date()
     let hour24 = selectedHour
     if (selectedPeriod === "PM" && selectedHour !== 12) {
       hour24 += 12
@@ -189,17 +204,17 @@ export function TimePicker({
                 {/* Minute Selector */}
                 <div>
                   <label className="text-xs font-semibold block mb-1.5 sm:mb-2 text-foreground">Min</label>
-                  <div className="space-y-1 sm:space-y-1.5">
+                  <div className="h-32 sm:h-40 overflow-y-auto border border-border rounded-lg bg-secondary/30 scrollbar-thin scrollbar-thumb-[#8b5cf6] scrollbar-track-transparent">
                     {minutes.map((minute) => (
                       <button
                         key={minute}
                         type="button"
                         onClick={() => setSelectedMinute(minute)}
                         className={cn(
-                          "w-full px-2 sm:px-3 py-2 sm:py-2.5 text-sm font-medium text-center transition-all rounded-lg",
+                          "w-full px-2 sm:px-3 py-2 sm:py-2.5 text-sm font-medium text-center transition-all",
                           selectedMinute === minute
-                            ? "bg-[#8b5cf6] text-white font-bold shadow-md"
-                            : "hover:bg-secondary border border-border text-foreground"
+                            ? "bg-[#8b5cf6] text-white font-bold shadow-sm"
+                            : "hover:bg-secondary/70 text-foreground"
                         )}
                       >
                         {minute.toString().padStart(2, "0")}
@@ -269,53 +284,88 @@ interface DateTimePickerProps {
 export function DateTimePicker({
   selected,
   onChange,
-  placeholderText = "Select date and time",
   minDate,
   maxDate,
   className,
   disabled = false,
 }: DateTimePickerProps) {
-  const [tempDate, setTempDate] = useState<Date | undefined>(selected)
+  // Draft keeps the picked day visible before a time has been chosen. The value
+  // is only handed to the parent once BOTH the day and the time are set, so a
+  // half-filled field can never silently become midnight.
+  const [draft, setDraft] = useState<Date | undefined>(selected)
+  const [hasTime, setHasTime] = useState<boolean>(selected !== undefined)
+  const emittedRef = useRef<number | undefined>(selected?.getTime())
+
+  // Adopt values that arrive from the parent (e.g. an event loaded from the API).
+  useEffect(() => {
+    if (selected === undefined) {
+      // Only a real reset by the parent — we never emit undefined once hasTime.
+      if (hasTime) {
+        setDraft(undefined)
+        setHasTime(false)
+        emittedRef.current = undefined
+      }
+      return
+    }
+    if (selected.getTime() === emittedRef.current) return
+    emittedRef.current = selected.getTime()
+    setDraft(selected)
+    setHasTime(true)
+  }, [selected, hasTime])
+
+  const emit = (date: Date | undefined) => {
+    emittedRef.current = date?.getTime()
+    onChange(date)
+  }
 
   const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-      const newDate = new Date(date)
-      if (selected) {
-        newDate.setHours(selected.getHours(), selected.getMinutes())
-      }
-      setTempDate(newDate)
-      onChange(newDate)
+    if (!date) return
+    const next = new Date(date)
+    if (hasTime && draft) {
+      next.setHours(draft.getHours(), draft.getMinutes(), 0, 0)
+    } else {
+      next.setHours(0, 0, 0, 0)
     }
+    setDraft(next)
+    // Without a time the field is incomplete — keep the parent value empty so
+    // form validation catches it.
+    emit(hasTime ? next : undefined)
   }
 
   const handleTimeChange = (time: Date | undefined) => {
-    if (time) {
-      const newDate = tempDate ? new Date(tempDate) : new Date()
-      newDate.setHours(time.getHours(), time.getMinutes(), 0, 0)
-      setTempDate(newDate)
-      onChange(newDate)
-    }
+    if (!time) return
+    const next = draft ? new Date(draft) : new Date()
+    next.setHours(time.getHours(), time.getMinutes(), 0, 0)
+    setDraft(next)
+    setHasTime(true)
+    emit(next)
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <DatePicker
-        selected={tempDate}
-        onChange={handleDateChange}
-        placeholderText="Select date"
-        minDate={minDate}
-        maxDate={maxDate}
-        disabled={disabled}
-        className={className}
-      />
-      <TimePicker
-        selected={tempDate}
-        onChange={handleTimeChange}
-        placeholderText="Select time"
-        disabled={disabled}
-        className={className}
-      />
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <DatePicker
+          selected={draft}
+          onChange={handleDateChange}
+          placeholderText="Select date"
+          minDate={minDate}
+          maxDate={maxDate}
+          disabled={disabled}
+          className={className}
+        />
+        <TimePicker
+          selected={hasTime ? draft : undefined}
+          onChange={handleTimeChange}
+          placeholderText="Select time"
+          disabled={disabled}
+          className={className}
+        />
+      </div>
+      {draft && !hasTime && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Now pick a time to complete this field.
+        </p>
+      )}
     </div>
   )
 }
-
