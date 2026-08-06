@@ -8,6 +8,12 @@ import { useRouter } from "next/navigation"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void
+  }
+}
+
 type SignupStep = "user" | "company" | "success"
 
 export default function SignupPage() {
@@ -196,6 +202,10 @@ export default function SignupPage() {
 
       if (userResponse.status && userResponse.user) {
         toast.success("User account created successfully!")
+
+        if (typeof window !== "undefined" && window.gtag) {
+          window.gtag("event", "conversion", { send_to: "AW-18374176127/y-hJCMH9mN0cEP_avrlE" })
+        }
 
         // Create session with the user data
         sessionManager.createSession({
