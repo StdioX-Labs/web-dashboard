@@ -109,6 +109,34 @@ export async function apiRequest<T>(
   }
 }
 
+export interface AffiliateLink {
+  qrCodeId: number
+  code: string
+  url: string
+  currentUses: number
+  isActive: boolean
+  expiry: string
+}
+
+export interface AffiliateSummary {
+  affiliateId: number
+  fullName: string
+  mobileNumber: string
+  affiliateCode: string
+  revShareModel: 'PERCENTAGE' | 'FIXED_AMOUNT'
+  commissionValue: number
+  isActive: boolean
+  canWithdraw: boolean
+  links: AffiliateLink[]
+  /** Checkout count on this event — one purchase of 3 tickets counts once. */
+  transactions: number
+  grossSales: number
+  /** All states: available + allocated + already withdrawn. */
+  commissionEarned: number
+  /** Withdrawable slice for this event only. */
+  availableBalance: number
+}
+
 // API methods
 export const api = {
   // Auth endpoints
@@ -835,6 +863,78 @@ export const api = {
           size: params.size || 50,
         }),
       }, true) // Use proxy route
+    },
+  },
+
+  // Affiliate admin endpoints
+  // `userId` is always the acting company owner / organizer, never the affiliate.
+  affiliates: {
+    onboard: async (data: {
+      userId: number
+      fullName: string
+      mobileNumber: string
+      eventId: number
+      revShareModels?: 'PERCENTAGE' | 'FIXED_AMOUNT'
+      revShare?: number
+      canWithdraw?: boolean
+      affiliateCode?: string
+    }) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        affiliate_id?: number
+        affiliate_code?: string
+        mobile_number?: string
+        link?: AffiliateLink
+      }>('/affiliates/admin/onboard', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
+    // Issues a link for an affiliate you already have, on another event.
+    linkToEvent: async (userId: number, affiliateId: number, eventId: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        link?: AffiliateLink
+      }>(`/affiliates/admin/link?userId=${userId}&affiliateId=${affiliateId}&eventId=${eventId}`, {
+        method: 'GET',
+      }, true)
+    },
+    getEventAffiliates: async (userId: number, eventId: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        event_id: number
+        event_name: string
+        affiliates: AffiliateSummary[]
+        total_transactions: number
+        total_sales: number
+        total_commission: number
+      }>(`/affiliates/admin/event?userId=${userId}&eventId=${eventId}`, {
+        method: 'GET',
+      }, true)
+    },
+    // Sets the commission value and the active flag together — always pass
+    // isActive deliberately, `false` deactivates the affiliate.
+    adjustRevShare: async (affiliateId: number, revShare: number, isActive: boolean) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+      }>(`/affiliates/adjust/revshare?affiliateId=${affiliateId}&revShare=${revShare}&isActive=${isActive}`, {
+        method: 'GET',
+      }, true)
+    },
+    // Omit eventId to deactivate the affiliate everywhere. Never a hard delete.
+    remove: async (userId: number, affiliateId: number, eventId?: number) => {
+      const eventParam = eventId !== undefined ? `&eventId=${eventId}` : ''
+      return apiRequest<{
+        status: boolean
+        message: string
+        links_disabled?: number
+      }>(`/affiliates/admin/remove?userId=${userId}&affiliateId=${affiliateId}${eventParam}`, {
+        method: 'DELETE',
+      }, true)
     },
   },
 

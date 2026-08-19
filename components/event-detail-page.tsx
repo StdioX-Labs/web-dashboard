@@ -28,11 +28,17 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Users,
+  UserPlus,
+  Link2,
+  Percent,
+  Trash2,
+  Ban,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { api } from "@/lib/api-client"
+import { api, AffiliateSummary } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
 
@@ -85,7 +91,27 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [currency, setCurrency] = useState("KES")
 
   // Existing state
-  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "transactions" | "attendees">("overview")
+  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "transactions" | "attendees" | "affiliates">("overview")
+
+  // Affiliates
+  const [affiliates, setAffiliates] = useState<AffiliateSummary[]>([])
+  const [affiliatesLoading, setAffiliatesLoading] = useState(false)
+  const [affiliateTotals, setAffiliateTotals] = useState({ transactions: 0, sales: 0, commission: 0 })
+  const [affiliateSearch, setAffiliateSearch] = useState("")
+  const [copiedLinkCode, setCopiedLinkCode] = useState<string | null>(null)
+  const [showOnboardModal, setShowOnboardModal] = useState(false)
+  const [onboardName, setOnboardName] = useState("")
+  const [onboardPhone, setOnboardPhone] = useState("")
+  const [onboardModel, setOnboardModel] = useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE")
+  const [onboardRevShare, setOnboardRevShare] = useState("10")
+  const [onboardCanWithdraw, setOnboardCanWithdraw] = useState(false)
+  const [isOnboarding, setIsOnboarding] = useState(false)
+  const [revShareTarget, setRevShareTarget] = useState<AffiliateSummary | null>(null)
+  const [revShareValue, setRevShareValue] = useState("")
+  const [isSavingRevShare, setIsSavingRevShare] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<AffiliateSummary | null>(null)
+  const [removeScope, setRemoveScope] = useState<"event" | "all">("event")
+  const [isRemoving, setIsRemoving] = useState(false)
   const [showComplementaryModal, setShowComplementaryModal] = useState(false)
   const [compEmail, setCompEmail] = useState("")
   const [compEmailError, setCompEmailError] = useState("")
@@ -442,6 +468,274 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
     fetchAttendees()
   }, [activeTab, eventId, eventData])
+
+  // Fetch affiliates when the affiliates tab is active
+  useEffect(() => {
+    if (activeTab !== 'affiliates' || !eventData) return
+
+    loadAffiliates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, eventId, eventData])
+
+  const loadAffiliates = async () => {
+    const user = sessionManager.getUser()
+    if (!user) return
+
+    setAffiliatesLoading(true)
+    try {
+      const response = await api.affiliates.getEventAffiliates(user.user_id, eventId)
+
+      if (response.status) {
+        setAffiliates(response.affiliates || [])
+        setAffiliateTotals({
+          transactions: response.total_transactions || 0,
+          sales: response.total_sales || 0,
+          commission: response.total_commission || 0,
+        })
+      } else {
+        setAffiliates([])
+      }
+    } catch (error) {
+      console.error('Failed to fetch affiliates:', error)
+      toast.error('Failed to load affiliates', {
+        description: error instanceof Error ? error.message : undefined,
+      })
+      setAffiliates([])
+    } finally {
+      setAffiliatesLoading(false)
+    }
+  }
+
+  const handleCopyAffiliateLink = async (link: { code: string; url: string }) => {
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setCopiedLinkCode(link.code)
+      toast.success("Affiliate link copied to clipboard!")
+      setTimeout(() => setCopiedLinkCode((current) => (current === link.code ? null : current)), 2000)
+    } catch {
+      toast.error("Could not copy the link")
+    }
+  }
+
+  const handleCloseOnboardModal = () => {
+    setShowOnboardModal(false)
+    setOnboardName("")
+    setOnboardPhone("")
+    setOnboardModel("PERCENTAGE")
+    setOnboardRevShare("10")
+    setOnboardCanWithdraw(false)
+  }
+
+  const handleOnboardAffiliate = async () => {
+    const user = sessionManager.getUser()
+    if (!user) {
+      toast.error("Unable to identify the current user")
+      return
+    }
+
+    if (!onboardName.trim()) {
+      toast.error("Please enter the affiliate's full name")
+      return
+    }
+
+    if (!onboardPhone.trim()) {
+      toast.error("Please enter the affiliate's mobile number")
+      return
+    }
+
+    const revShare = parseFloat(onboardRevShare || "0")
+    if (Number.isNaN(revShare) || revShare < 0) {
+      toast.error("Please enter a valid revenue share")
+      return
+    }
+
+    if (onboardModel === "PERCENTAGE" && revShare > 100) {
+      toast.error("A percentage revenue share cannot exceed 100")
+      return
+    }
+
+    setIsOnboarding(true)
+    try {
+      const response = await api.affiliates.onboard({
+        userId: user.user_id,
+        fullName: onboardName.trim(),
+        // The API accepts any Kenyan shape and stores it canonically.
+        mobileNumber: onboardPhone.trim(),
+        eventId,
+        revShareModels: onboardModel,
+        revShare,
+        canWithdraw: onboardCanWithdraw,
+      })
+
+      if (!response.status) {
+        throw new Error(response.message || "Failed to onboard affiliate")
+      }
+
+      toast.success("Affiliate onboarded", {
+        description: response.link
+          ? `${onboardName.trim()} was texted their selling link.`
+          : `${onboardName.trim()} can now sign in with an OTP.`,
+      })
+
+      handleCloseOnboardModal()
+      await loadAffiliates()
+    } catch (error) {
+      console.error("Error onboarding affiliate:", error)
+      toast.error("Failed to onboard affiliate", {
+        description: error instanceof Error ? error.message : "Please try again",
+      })
+    } finally {
+      setIsOnboarding(false)
+    }
+  }
+
+  const handleSaveRevShare = async () => {
+    if (!revShareTarget) return
+
+    const value = parseFloat(revShareValue)
+    if (Number.isNaN(value) || value < 0) {
+      toast.error("Please enter a valid revenue share")
+      return
+    }
+
+    if (revShareTarget.revShareModel === "PERCENTAGE" && value > 100) {
+      toast.error("A percentage revenue share cannot exceed 100")
+      return
+    }
+
+    setIsSavingRevShare(true)
+    try {
+      // isActive is set by the same call — preserve the affiliate's current state.
+      const response = await api.affiliates.adjustRevShare(
+        revShareTarget.affiliateId,
+        value,
+        revShareTarget.isActive
+      )
+
+      if (!response.status) {
+        throw new Error(response.message || "Failed to update revenue share")
+      }
+
+      toast.success(`Revenue share updated for ${revShareTarget.fullName}`)
+      setRevShareTarget(null)
+      await loadAffiliates()
+    } catch (error) {
+      console.error("Error updating rev share:", error)
+      toast.error("Failed to update revenue share", {
+        description: error instanceof Error ? error.message : "Please try again",
+      })
+    } finally {
+      setIsSavingRevShare(false)
+    }
+  }
+
+  const handleReactivateAffiliate = async (affiliate: AffiliateSummary) => {
+    try {
+      const response = await api.affiliates.adjustRevShare(
+        affiliate.affiliateId,
+        affiliate.commissionValue,
+        true
+      )
+
+      if (!response.status) {
+        throw new Error(response.message || "Failed to reactivate affiliate")
+      }
+
+      toast.success(`${affiliate.fullName} reactivated`, {
+        description: "Issue a fresh link to put them back on this event.",
+      })
+      await loadAffiliates()
+    } catch (error) {
+      console.error("Error reactivating affiliate:", error)
+      toast.error("Failed to reactivate affiliate", {
+        description: error instanceof Error ? error.message : "Please try again",
+      })
+    }
+  }
+
+  const handleIssueLink = async (affiliate: AffiliateSummary) => {
+    const user = sessionManager.getUser()
+    if (!user) {
+      toast.error("Unable to identify the current user")
+      return
+    }
+
+    try {
+      const response = await api.affiliates.linkToEvent(user.user_id, affiliate.affiliateId, eventId)
+
+      if (!response.status) {
+        throw new Error(response.message || "Failed to issue link")
+      }
+
+      toast.success(`Link issued for ${affiliate.fullName}`)
+      await loadAffiliates()
+    } catch (error) {
+      console.error("Error issuing affiliate link:", error)
+      toast.error("Failed to issue link", {
+        description: error instanceof Error ? error.message : "Please try again",
+      })
+    }
+  }
+
+  const handleRemoveAffiliate = async () => {
+    if (!removeTarget) return
+
+    const user = sessionManager.getUser()
+    if (!user) {
+      toast.error("Unable to identify the current user")
+      return
+    }
+
+    setIsRemoving(true)
+    try {
+      const response = await api.affiliates.remove(
+        user.user_id,
+        removeTarget.affiliateId,
+        removeScope === "event" ? eventId : undefined
+      )
+
+      if (!response.status) {
+        throw new Error(response.message || "Failed to remove affiliate")
+      }
+
+      toast.success(
+        removeScope === "event"
+          ? `${removeTarget.fullName} removed from this event`
+          : `${removeTarget.fullName} deactivated everywhere`,
+        {
+          description: "Historical sales and earned commission are kept.",
+        }
+      )
+      setRemoveTarget(null)
+      await loadAffiliates()
+    } catch (error) {
+      console.error("Error removing affiliate:", error)
+      toast.error("Failed to remove affiliate", {
+        description: error instanceof Error ? error.message : "Please try again",
+      })
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  const filteredAffiliates = affiliates.filter((affiliate) => {
+    const query = affiliateSearch.trim().toLowerCase()
+    if (!query) return true
+    return (
+      affiliate.fullName.toLowerCase().includes(query) ||
+      affiliate.affiliateCode.toLowerCase().includes(query) ||
+      affiliate.mobileNumber.includes(query)
+    )
+  })
+
+  const formatRevShare = (affiliate: AffiliateSummary) =>
+    affiliate.revShareModel === "PERCENTAGE"
+      ? `${affiliate.commissionValue}%`
+      : `${eventData?.currency || currency} ${affiliate.commissionValue.toLocaleString()}`
+
+  // A link issued for this event, if the affiliate currently holds one.
+  const activeLinkFor = (affiliate: AffiliateSummary) =>
+    affiliate.links?.find((link) => link.isActive) || affiliate.links?.[0]
 
   // Fetch full ticket details when tickets tab is opened
   useEffect(() => {
@@ -2809,10 +3103,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               { id: "tickets", label: "Tickets" },
               { id: "transactions", label: "Transactions" },
               { id: "attendees", label: "Attendees" },
+              { id: "affiliates", label: "Affiliates" },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees")}
+                onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees" | "affiliates")}
                 className={cn(
                   "relative flex-1 min-w-max px-5 py-3.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors duration-200",
                   activeTab === tab.id
@@ -3690,6 +3985,674 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               </>
             )}
           </motion.div>
+        )}
+
+        {activeTab === "affiliates" && (
+          <motion.div
+            key="affiliates"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Summary */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {[
+                { label: "Affiliates", value: affiliates.length.toString(), icon: Users, bg: "bg-purple-50 dark:bg-purple-950/30", color: "text-[#8b5cf6]" },
+                { label: "Checkouts", value: affiliateTotals.transactions.toLocaleString(), icon: CheckCircle, bg: "bg-blue-50 dark:bg-blue-950/30", color: "text-blue-600 dark:text-blue-400" },
+                { label: "Gross Sales", value: `${eventData.currency || currency} ${affiliateTotals.sales.toLocaleString()}`, icon: Eye, bg: "bg-green-50 dark:bg-green-950/30", color: "text-green-600 dark:text-green-400" },
+                { label: "Commission", value: `${eventData.currency || currency} ${affiliateTotals.commission.toLocaleString()}`, icon: Percent, bg: "bg-orange-50 dark:bg-orange-950/30", color: "text-orange-600 dark:text-orange-400" },
+              ].map((stat) => {
+                const Icon = stat.icon
+                return (
+                  <div key={stat.label} className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center mb-3", stat.bg)}>
+                      <Icon className={cn("w-4 h-4", stat.color)} />
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                    <p className="text-lg sm:text-xl font-bold break-words">{stat.value}</p>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Search + Add */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search by name, code, or phone..."
+                  value={affiliateSearch}
+                  onChange={(e) => setAffiliateSearch(e.target.value)}
+                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                />
+              </div>
+              <button
+                onClick={() => setShowOnboardModal(true)}
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Affiliate
+              </button>
+            </div>
+
+            {affiliatesLoading ? (
+              <div className="flex flex-col items-center justify-center gap-4 py-20">
+                <Loader2 className="w-12 h-12 animate-spin text-[#8b5cf6]" />
+                <div className="text-center">
+                  <p className="text-base font-medium text-foreground">Loading affiliates...</p>
+                  <p className="text-sm text-muted-foreground mt-1">Please wait while we fetch the data</p>
+                </div>
+              </div>
+            ) : filteredAffiliates.length === 0 ? (
+              <div className="text-center py-16 rounded-2xl border border-dashed border-border bg-card/50">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">
+                  {affiliateSearch ? "No matching affiliates" : "No Affiliates Yet"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                  {affiliateSearch
+                    ? "Try a different name, code, or phone number."
+                    : "Add an affiliate to give them a selling link for this event. They get it by SMS and sign in with an OTP — no password needed."}
+                </p>
+                {!affiliateSearch && (
+                  <button
+                    onClick={() => setShowOnboardModal(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Affiliate
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden lg:block rounded-2xl border border-border bg-card overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="text-left p-4 text-sm font-semibold">Affiliate</th>
+                          <th className="text-left p-4 text-sm font-semibold">Selling Link</th>
+                          <th className="text-left p-4 text-sm font-semibold">Rev Share</th>
+                          <th className="text-left p-4 text-sm font-semibold">Checkouts</th>
+                          <th className="text-left p-4 text-sm font-semibold">Gross Sales</th>
+                          <th className="text-left p-4 text-sm font-semibold">Commission</th>
+                          <th className="text-left p-4 text-sm font-semibold">Available</th>
+                          <th className="text-right p-4 text-sm font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAffiliates.map((affiliate) => {
+                          const link = activeLinkFor(affiliate)
+                          return (
+                            <tr key={affiliate.affiliateId} className="border-b border-border hover:bg-secondary/30 transition-colors">
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{affiliate.fullName}</p>
+                                  {!affiliate.isActive && (
+                                    <span className="text-xs bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded">
+                                      Inactive
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs font-mono text-muted-foreground mt-0.5">{affiliate.affiliateCode}</p>
+                                <p className="text-xs text-muted-foreground">{affiliate.mobileNumber}</p>
+                              </td>
+                              <td className="p-4">
+                                {link ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleCopyAffiliateLink(link)}
+                                      title={link.url}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-[#8b5cf6]/50 transition-colors cursor-pointer max-w-[180px]"
+                                    >
+                                      {copiedLinkCode === link.code ? (
+                                        <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5 flex-shrink-0" />
+                                      )}
+                                      <span className="truncate">{link.code}</span>
+                                    </button>
+                                    <a
+                                      href={link.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+                                      title="Open link"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleIssueLink(affiliate)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                                  >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                    Issue link
+                                  </button>
+                                )}
+                                {link && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {link.currentUses} {link.currentUses === 1 ? "open" : "opens"}
+                                    {!link.isActive && " · disabled"}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="p-4 text-sm font-semibold">{formatRevShare(affiliate)}</td>
+                              <td className="p-4 text-sm">{affiliate.transactions.toLocaleString()}</td>
+                              <td className="p-4 text-sm font-semibold">
+                                {eventData.currency || currency} {affiliate.grossSales.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-sm font-semibold text-green-600 dark:text-green-400">
+                                {eventData.currency || currency} {affiliate.commissionEarned.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {eventData.currency || currency} {affiliate.availableBalance.toLocaleString()}
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setRevShareTarget(affiliate)
+                                      setRevShareValue(affiliate.commissionValue.toString())
+                                    }}
+                                    title="Adjust revenue share"
+                                    className="p-2 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                                  >
+                                    <Percent className="w-4 h-4 text-muted-foreground" />
+                                  </button>
+                                  {affiliate.isActive ? (
+                                    <button
+                                      onClick={() => {
+                                        setRemoveTarget(affiliate)
+                                        setRemoveScope("event")
+                                      }}
+                                      title="Remove affiliate"
+                                      className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleReactivateAffiliate(affiliate)}
+                                      title="Reactivate affiliate"
+                                      className="p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-950/30 transition-colors cursor-pointer"
+                                    >
+                                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="lg:hidden space-y-3">
+                  {filteredAffiliates.map((affiliate) => {
+                    const link = activeLinkFor(affiliate)
+                    return (
+                      <div key={affiliate.affiliateId} className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold truncate">{affiliate.fullName}</p>
+                              {!affiliate.isActive && (
+                                <span className="text-xs bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded flex-shrink-0">
+                                  Inactive
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs font-mono text-muted-foreground mt-0.5">{affiliate.affiliateCode}</p>
+                            <p className="text-xs text-muted-foreground">{affiliate.mobileNumber}</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-lg bg-secondary text-xs font-semibold flex-shrink-0">
+                            {formatRevShare(affiliate)}
+                          </span>
+                        </div>
+
+                        {link ? (
+                          <button
+                            onClick={() => handleCopyAffiliateLink(link)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                          >
+                            {copiedLinkCode === link.code ? (
+                              <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <Copy className="w-4 h-4 flex-shrink-0" />
+                            )}
+                            <span className="truncate flex-1 text-left">{link.url}</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleIssueLink(affiliate)}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                          >
+                            <Link2 className="w-4 h-4" />
+                            Issue link for this event
+                          </button>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">Checkouts</p>
+                            <p className="font-medium">
+                              {affiliate.transactions.toLocaleString()}
+                              {link && <span className="text-muted-foreground font-normal"> · {link.currentUses} opens</span>}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">Gross Sales</p>
+                            <p className="font-medium">{eventData.currency || currency} {affiliate.grossSales.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">Commission</p>
+                            <p className="font-semibold text-green-600 dark:text-green-400">
+                              {eventData.currency || currency} {affiliate.commissionEarned.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">Available</p>
+                            <p className="font-medium">{eventData.currency || currency} {affiliate.availableBalance.toLocaleString()}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={() => {
+                              setRevShareTarget(affiliate)
+                              setRevShareValue(affiliate.commissionValue.toString())
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-secondary text-xs font-semibold hover:bg-secondary/80 transition-colors cursor-pointer"
+                          >
+                            <Percent className="w-3.5 h-3.5" />
+                            Rev Share
+                          </button>
+                          {affiliate.isActive ? (
+                            <button
+                              onClick={() => {
+                                setRemoveTarget(affiliate)
+                                setRemoveScope("event")
+                              }}
+                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Remove
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleReactivateAffiliate(affiliate)}
+                              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs font-semibold hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors cursor-pointer"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              Reactivate
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-800 dark:text-blue-300">
+                      <span className="font-semibold">Checkouts</span> counts purchases, not tickets — one purchase of 3 tickets counts once.
+                      <span className="font-semibold"> Commission</span> is everything earned; <span className="font-semibold">Available</span> is the withdrawable slice for this event only.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Onboard Affiliate Modal */}
+      <AnimatePresence>
+        {showOnboardModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCloseOnboardModal}
+              className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl p-6"
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold">Add Affiliate</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    They get a selling link for this event by SMS and sign in with an OTP.
+                  </p>
+                </div>
+                <button
+                  onClick={handleCloseOnboardModal}
+                  className="p-2 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={onboardName}
+                    onChange={(e) => setOnboardName(e.target.value)}
+                    placeholder="e.g., Jane Wanjiru"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={onboardPhone}
+                    onChange={(e) => setOnboardPhone(e.target.value)}
+                    placeholder="0722000000"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    0722000000, +254 722 000000 and 254722000000 all work.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Rev Share Model</label>
+                    <select
+                      value={onboardModel}
+                      onChange={(e) => setOnboardModel(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all cursor-pointer"
+                    >
+                      <option value="PERCENTAGE">Percentage</option>
+                      <option value="FIXED_AMOUNT">Fixed amount</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      {onboardModel === "PERCENTAGE" ? "Percentage (%)" : `Amount (${eventData.currency || currency})`}
+                    </label>
+                    <input
+                      type="number"
+                      value={onboardRevShare}
+                      onChange={(e) => setOnboardRevShare(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={onboardCanWithdraw}
+                    onChange={(e) => setOnboardCanWithdraw(e.target.checked)}
+                    className="w-5 h-5 rounded cursor-pointer accent-[#8b5cf6] mt-0.5"
+                  />
+                  <span>
+                    <span className="text-sm font-medium block">Allow self-withdrawal</span>
+                    <span className="text-xs text-muted-foreground">
+                      Let this affiliate withdraw their commission without your approval.
+                    </span>
+                  </span>
+                </label>
+
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-800 dark:text-blue-300">
+                      The link covers the whole event — buyers pick their own tickets and the sale is
+                      attributed either way. Adding someone you already work with just gives them a link
+                      for this event; it never creates a duplicate.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={handleCloseOnboardModal}
+                    className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleOnboardAffiliate}
+                    disabled={isOnboarding}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {isOnboarding ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        Add Affiliate
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Adjust Rev Share Modal */}
+      <AnimatePresence>
+        {revShareTarget && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRevShareTarget(null)}
+              className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6"
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold">Revenue Share</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{revShareTarget.fullName}</p>
+                </div>
+                <button
+                  onClick={() => setRevShareTarget(null)}
+                  className="p-2 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    {revShareTarget.revShareModel === "PERCENTAGE"
+                      ? "Percentage (%)"
+                      : `Fixed amount (${eventData.currency || currency})`}
+                  </label>
+                  <input
+                    type="number"
+                    value={revShareValue}
+                    onChange={(e) => setRevShareValue(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    autoFocus
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Applies to sales from now on — commission already earned is unchanged.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setRevShareTarget(null)}
+                    className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveRevShare}
+                    disabled={isSavingRevShare}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {isSavingRevShare ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Remove Affiliate Modal */}
+      <AnimatePresence>
+        {removeTarget && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRemoveTarget(null)}
+              className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6"
+            >
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold">Remove Affiliate</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{removeTarget.fullName}</p>
+                </div>
+                <button
+                  onClick={() => setRemoveTarget(null)}
+                  className="p-2 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => setRemoveScope("event")}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer",
+                    removeScope === "event"
+                      ? "border-[#8b5cf6] bg-[#8b5cf6]/5"
+                      : "border-border hover:border-[#8b5cf6]/30"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Ban className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-sm font-semibold">Remove from this event</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Disables their links for {eventData.name}. They stay active on your other events.
+                  </p>
+                </button>
+
+                <button
+                  onClick={() => setRemoveScope("all")}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer",
+                    removeScope === "all"
+                      ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                      : "border-border hover:border-red-500/30"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    <span className="text-sm font-semibold">Remove entirely</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Disables all their links, blocks sign-in and self-withdrawal across every event.
+                  </p>
+                </button>
+
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-800 dark:text-blue-300">
+                      This is a deactivation, not a delete. Their past sales stay in this report and
+                      commission already earned stays withdrawable. You can reactivate them later.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setRemoveTarget(null)}
+                    className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRemoveAffiliate}
+                    disabled={isRemoving}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {isRemoving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Removing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        {removeScope === "event" ? "Remove from event" : "Remove entirely"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 

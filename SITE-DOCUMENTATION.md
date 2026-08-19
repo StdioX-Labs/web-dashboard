@@ -212,6 +212,11 @@ transactions, attendees, reporting, and suspend/activate controls.
 | Edit ticket | `api.ticket.update(ticketId, data)` | `POST /api/ticket/update` | `POST /ticket/update?ticketId=` |
 | Add ticket type | `api.company.createTicket(...)` | `POST /api/event/ticket/create` | `POST /event/ticket/create` |
 | Issue complimentary tickets | `api.company.issueComplementary(...)` | `POST /api/event/issue/complementary` | `POST /event/issue/complementary` |
+| Affiliates on this event | `api.affiliates.getEventAffiliates(userId, eventId)` | `GET /api/affiliates/admin/event` | `GET /affiliates/admin/event` |
+| Onboard an affiliate | `api.affiliates.onboard(...)` | `POST /api/affiliates/admin/onboard` | `POST /affiliates/admin/onboard` |
+| Issue a link to an existing affiliate | `api.affiliates.linkToEvent(userId, affiliateId, eventId)` | `GET /api/affiliates/admin/link` | `GET /affiliates/admin/link` |
+| Set revenue share / reactivate | `api.affiliates.adjustRevShare(affiliateId, revShare, isActive)` | `GET /api/affiliates/adjust/revshare` | `GET /affiliates/adjust/revshare` |
+| Remove an affiliate | `api.affiliates.remove(userId, affiliateId, eventId?)` | `DELETE /api/affiliates/admin/remove` | `DELETE /affiliates/admin/remove` |
 
 **Header.** Poster, name, status banners (pending-approval / sales-paused), Edit Event, View
 Event (public link), Share, and a revenue strip: Total Revenue, Commission & Fees, Net Amount.
@@ -224,6 +229,29 @@ Event (public link), Share, and a revenue strip: Total Revenue, Commission & Fee
 | **Tickets** | Per ticket type: total issued, sold, comps issued, comps left, tickets left; purchase count shown alongside ticket count for group tickets; edit, suspend/activate, add ticket type |
 | **Transactions** | Paginated event transactions — transaction id, buyer, ticket, amount, platform fee, date |
 | **Attendees** | Attendee list — name, phone, email, ticket name/price, ticket id, group code, purchase time, scanned flag, complimentary flag, issued/scanned by |
+| **Affiliates** | Affiliate management for this event (see below) |
+
+**Affiliates tab.** Summary cards (affiliate count, checkouts, gross sales, commission), a
+searchable table/card list, and four actions:
+
+- **Add Affiliate** — name + mobile (any Kenyan format), rev-share model
+  (`PERCENTAGE` / `FIXED_AMOUNT`), value, and a self-withdrawal toggle. The affiliate is
+  active immediately, is texted their selling link, and signs in with an OTP — no password.
+  Re-adding someone you already work with reuses them and just issues the event link.
+- **Copy / open the selling link** — one event-wide link per affiliate; buyers pick whatever
+  tickets they want and the sale is still attributed. "Issue link" appears when an affiliate
+  has no live link for this event.
+- **Adjust revenue share** — sends the affiliate's current `isActive` alongside the new value,
+  since the endpoint sets both in one call.
+- **Remove** — scoped to this event (disables its links only) or entirely (all links plus
+  sign-in and self-withdrawal). Always a deactivation: past sales stay in the report and
+  earned commission stays withdrawable, so deactivated affiliates still appear in the list
+  with a *Reactivate* action.
+
+Column meanings: **Checkouts** counts purchases, not tickets (one purchase of 3 tickets counts
+once); **Commission** is everything earned (available + allocated + withdrawn); **Available**
+is the withdrawable slice for this event only — the affiliate's cross-event balance lives at
+`GET /fetch/balance`.
 
 **Reporting.** `components/event-detail/ReportExporter.tsx` builds a self-contained HTML
 report, stashes it in `sessionStorage` under `reportHTML`, and opens `/report` in a new tab.
@@ -321,8 +349,9 @@ status filter operate on the current page only.
 full name, email, mobile, role badge (`SUPER_ADMIN`, `COMPANY_OWNER`, `STAFF`), KYC status and
 active flag; add / edit / suspend modals.
 
-**Notes.** New users are created with a hard-coded default password. The **Affiliates** tab is
-behind `ENABLE_AFFILIATES = false` and is backed entirely by mock data.
+**Notes.** New users are created with a hard-coded default password. The **Affiliates** tab on
+*this* page is behind `ENABLE_AFFILIATES = false` and is backed entirely by mock data — real
+affiliate management lives on the Affiliates tab of an individual event.
 
 ---
 
@@ -464,6 +493,11 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 | `/api/ticket/update` | POST | `/ticket/update` | Edit event, Event detail |
 | `/api/ticket/status/toggle` | POST | `/ticket/status/toggle` | Event detail |
 | `/api/ticket/group` | GET | `/event/ticket/group/get` | Scan (group code) |
+| `/api/affiliates/admin/onboard` | POST | `/affiliates/admin/onboard` | Event detail → Affiliates |
+| `/api/affiliates/admin/event` | GET | `/affiliates/admin/event` | Event detail → Affiliates |
+| `/api/affiliates/admin/link` | GET | `/affiliates/admin/link` | Event detail → Affiliates |
+| `/api/affiliates/adjust/revshare` | GET | `/affiliates/adjust/revshare` | Event detail → Affiliates |
+| `/api/affiliates/admin/remove` | DELETE | `/affiliates/admin/remove` | Event detail → Affiliates |
 | `/api/scanner/scan` | POST | `/scanner/scan` | Scan |
 | `/api/transactions/detailed` | POST | `/gl/transactions/fetch/detailed` | Home, Transactions, Event detail |
 | `/api/upload-image` | POST | Contabo S3 | Create event |
@@ -485,7 +519,8 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 ## 5. Known gaps
 
 - **Payouts** and **Promotions** render mock/`localStorage` data — no backend.
-- The **Affiliates** tab and the "Withdraw"/"Report" buttons on the dashboard hero are inert.
+- The **Users → Affiliates** tab and the "Withdraw"/"Report" buttons on the dashboard hero are
+  inert (the per-event Affiliates tab is fully wired).
 - **Edit event** has no separate end-date field and cannot replace the poster.
 - **Transactions** search/filter only apply to the currently loaded page.
 - `/test-event-api` is unauthenticated and reachable in production builds.
