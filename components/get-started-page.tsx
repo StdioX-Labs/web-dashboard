@@ -21,6 +21,7 @@ import {
   type Attribution,
 } from "@/lib/attribution"
 import { formatPhoneNumber } from "@/lib/phone"
+import { GADS_LEAD_CONVERSION } from "@/lib/google-ads"
 import {
   LAST_EVENT_GROSS_OPTIONS,
   NEXT_EVENT_OPTIONS,
@@ -113,10 +114,7 @@ export default function GetStartedPage() {
 
       // Browser-side conversion signals. The server has already sent the Meta
       // CAPI copy; Meta de-duplicates, and Google only has this one.
-      const gadsLeadLabel = process.env.NEXT_PUBLIC_GADS_LEAD_LABEL
-      if (gadsLeadLabel && window.gtag) {
-        window.gtag("event", "conversion", { send_to: gadsLeadLabel })
-      }
+      window.gtag?.("event", "conversion", { send_to: GADS_LEAD_CONVERSION })
       // Same eventID the server sent to the Conversions API, so Meta
       // de-duplicates the browser and server copies into one Lead.
       window.fbq?.("track", "Lead", {}, { eventID: data.eventId })

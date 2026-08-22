@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { formatPhoneNumber } from "@/lib/phone"
+import { GADS_SIGNUP_CONVERSION } from "@/lib/google-ads"
 
 declare global {
   interface Window {
@@ -203,9 +204,7 @@ export default function SignupPage() {
       if (userResponse.status && userResponse.user) {
         toast.success("User account created successfully!")
 
-        if (typeof window !== "undefined" && window.gtag) {
-          window.gtag("event", "conversion", { send_to: "AW-18374176127/y-hJCMH9mN0cEP_avrlE" })
-        }
+        window.gtag?.("event", "conversion", { send_to: GADS_SIGNUP_CONVERSION })
 
         // The second step of the funnel: Lead fires on the landing page,
         // CompleteRegistration when they actually finish creating an account.
