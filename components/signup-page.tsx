@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { User, Mail, Phone, Lock, Building, Loader2, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
+import { formatPhoneNumber } from "@/lib/phone"
 
 declare global {
   interface Window {
@@ -39,32 +40,31 @@ export default function SignupPage() {
   const [postalAddress, setPostalAddress] = useState("")
   const [currency, setCurrency] = useState("KES")
 
-  // Format phone number to 254XXXXXXXXX format
-  const formatPhoneNumber = (input: string): string => {
-    // Remove all non-digit characters
-    let cleaned = input.replace(/\D/g, '')
+  // Prefilled by /get-started so a lead who just gave us their details does
+  // not retype them. useSearchParams would force a Suspense boundary here;
+  // reading location directly does not.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const name = params.get("name")
+    const email = params.get("email")
+    const phone = params.get("phone")
+    const company = params.get("company")
 
-    // If starts with 0, replace with 254
-    if (cleaned.startsWith('0')) {
-      cleaned = '254' + cleaned.substring(1)
+    if (name) setFullName(name)
+    if (email) {
+      setEmailAddress(email)
+      setCompanyEmail(email)
     }
-
-    // If doesn't start with 254, add it
-    if (!cleaned.startsWith('254')) {
-      cleaned = '254' + cleaned
+    if (phone) {
+      setMobileNumber(phone)
+      setCompanyPhone(phone)
     }
-
-    return cleaned
-  }
+    if (company) setCompanyName(company)
+  }, [])
 
   const validateUserForm = (): boolean => {
     if (!fullName.trim()) {
       toast.error("Please enter your full name")
-      return false
-    }
-
-    if (!idNumber.trim()) {
-      toast.error("Please enter your ID number")
       return false
     }
 
@@ -312,14 +312,14 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">ID Number *</label>
+                <label className="block text-sm font-medium mb-2">ID Number (optional)</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
                     type="text"
                     value={idNumber}
                     onChange={(e) => setIdNumber(e.target.value)}
-                    placeholder="12345678"
+                    placeholder="12345678 — needed later for payouts"
                     className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
                   />
                 </div>

@@ -5,7 +5,7 @@ calls, and what data it renders.
 
 - **Stack:** Next.js 16 (App Router, Turbopack) · React 19 · Tailwind v4 · framer-motion · sonner (toasts) · lucide-react
 - **Upstream API:** `https://api.soldoutafrica.com/api/v1`
-- **Deployment:** Netlify (`@netlify/plugin-nextjs`), host `dashboard.soldoutafrica.com`
+- **Deployment:** Coolify, behind Cloudflare. Answers on both `organiser.soldoutafrica.com` and `dashboard.soldoutafrica.com`; `organiser.` is the one the marketplace links and the one ad landing URLs use.
 - **Analytics:** Mixpanel, initialised in `app/layout.tsx` with autocapture + session recording
 
 ---
