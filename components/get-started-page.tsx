@@ -15,7 +15,11 @@ import {
   TrendingUp,
   User,
 } from "lucide-react"
-import { captureAttribution, type Attribution } from "@/lib/attribution"
+import {
+  captureAttribution,
+  readMetaCookies,
+  type Attribution,
+} from "@/lib/attribution"
 import { formatPhoneNumber } from "@/lib/phone"
 import {
   LAST_EVENT_GROSS_OPTIONS,
@@ -94,6 +98,9 @@ export default function GetStartedPage() {
           lastEventGross,
           nextEventWindow,
           ...attribution,
+          // Read at submit time, not on mount: the pixel writes _fbp/_fbc
+          // asynchronously and may not have done so when the page loaded.
+          ...readMetaCookies(),
         }),
       })
       const data = await res.json()

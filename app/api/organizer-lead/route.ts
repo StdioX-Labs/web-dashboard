@@ -20,7 +20,7 @@ async function sendMetaLead(
   lead: { email: string; mobileNumber: string; fullName: string },
   eventId: string,
   sourceUrl: string,
-  fbclid: string | undefined,
+  identifiers: { fbp?: string; fbc?: string; fbclid?: string },
   clientIp: string,
   userAgent: string | null,
 ) {
@@ -54,7 +54,14 @@ async function sendMetaLead(
               em: [sha256(lead.email)],
               ph: [sha256(lead.mobileNumber)],
               fn: [sha256(lead.fullName)],
-              ...(fbclid ? { fbc: `fb.1.${Date.now()}.${fbclid}` } : {}),
+              // Prefer the real _fbc cookie; fall back to rebuilding it from
+              // fbclid only when the pixel never got to write one.
+              ...(identifiers.fbc
+                ? { fbc: identifiers.fbc }
+                : identifiers.fbclid
+                  ? { fbc: `fb.1.${Date.now()}.${identifiers.fbclid}` }
+                  : {}),
+              ...(identifiers.fbp ? { fbp: identifiers.fbp } : {}),
               ...(clientIp && clientIp !== "unknown"
                 ? { client_ip_address: clientIp }
                 : {}),
@@ -185,7 +192,7 @@ export async function POST(request: NextRequest) {
       lead,
       eventId,
       `https://${host}/get-started`,
-      body.fbclid,
+      { fbp: body.fbp, fbc: body.fbc, fbclid: body.fbclid },
       // Reuses the proxy-header handling in getClientIp: behind Coolify's
       // reverse proxy x-forwarded-for is a chain, and Meta rejects
       // "ip1, ip2" as a client_ip_address.

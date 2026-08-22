@@ -207,6 +207,12 @@ export default function SignupPage() {
           window.gtag("event", "conversion", { send_to: "AW-18374176127/y-hJCMH9mN0cEP_avrlE" })
         }
 
+        // The second step of the funnel: Lead fires on the landing page,
+        // CompleteRegistration when they actually finish creating an account.
+        // Browser-only on purpose — this is post-form, low volume, and not
+        // what campaigns optimise on.
+        window.fbq?.("track", "CompleteRegistration")
+
         // Create session with the user data
         sessionManager.createSession({
           phoneNumber: userResponse.user.phoneNumber,

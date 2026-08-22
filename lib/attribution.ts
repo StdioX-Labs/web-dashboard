@@ -45,3 +45,28 @@ export function readAttribution(): Attribution {
     return {}
   }
 }
+
+/**
+ * The _fbp (browser ID) and _fbc (click ID) cookies the Meta pixel sets.
+ *
+ * Passing these to the Conversions API is the single biggest match-quality
+ * lever available before someone has an account: they tie the server event to
+ * the same browser the pixel saw. _fbc is also more reliable than
+ * reconstructing it from fbclid, because the pixel writes the real click
+ * timestamp rather than the time the form happened to be submitted.
+ */
+export function readMetaCookies(): { fbp?: string; fbc?: string } {
+  if (typeof document === "undefined") return {}
+
+  const read = (name: string) =>
+    document.cookie
+      .split("; ")
+      .find((row) => row.startsWith(name + "="))
+      ?.split("=")
+      .slice(1)
+      .join("=")
+
+  const fbp = read("_fbp")
+  const fbc = read("_fbc")
+  return { ...(fbp ? { fbp } : {}), ...(fbc ? { fbc } : {}) }
+}
