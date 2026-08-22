@@ -29,9 +29,10 @@ declare global {
 }
 
 const PROOF_POINTS = [
-  "Payout to M-Pesa the day after your event, not weeks later",
-  "Get your event prefinanced before a single ticket sells",
-  "See which post, link or promoter sold each ticket",
+  "Withdraw to M-Pesa as tickets sell — no waiting for the event to end",
+  "Event funding and prefinancing before a single ticket goes on sale",
+  "Help securing event equipment — sound, staging, screens and more",
+  "Deep customer analytics: who your buyers are, and which post, link or promoter sold each ticket",
   "Free gate scanners and a team on site for your first event",
 ]
 
@@ -148,8 +149,8 @@ export default function GetStartedPage() {
           <h1 className="text-2xl font-bold mb-3">We will call you shortly</h1>
           <p className="text-muted-foreground text-sm leading-relaxed mb-6">
             Thanks {fullName.split(" ")[0]} — someone from our team will reach you
-            on WhatsApp within the hour to walk through prefinancing and payouts
-            for your next event.
+            on WhatsApp within the hour to walk through live payouts, funding and
+            equipment for your next event.
           </p>
           <a
             href="/signup"
@@ -178,12 +179,12 @@ export default function GetStartedPage() {
           </span>
 
           <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-4 leading-[1.1]">
-            Get paid the day after your event
+            Access your ticket money as it sells
           </h1>
           <p className="text-base md:text-lg text-muted-foreground leading-relaxed mb-8 lg:mb-10">
-            SoldOutAfrica settles ticket money to M-Pesa in real time and can
-            prefinance your event before it goes on sale. Tell us about your next
-            one and we will call you today.
+            Withdraw your ticket sales to M-Pesa live, as the money comes in —
+            no waiting for the event to end. We also fund events, help secure
+            equipment, and show you exactly who your buyers are.
           </p>
 
           <ul className="hidden lg:block space-y-3">
@@ -297,7 +298,7 @@ export default function GetStartedPage() {
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  Get my payout plan
+                  Request a callback
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
