@@ -71,6 +71,9 @@ async function sendMetaLead(
         ],
         ...(testEventCode ? { test_event_code: testEventCode } : {}),
       }),
+      // The visitor waits on this call, so cap it: a slow graph.facebook.com
+      // must not hold up the form response.
+      signal: AbortSignal.timeout(5_000),
     })
     const payload = await res.text()
     if (res.ok) {
@@ -172,14 +175,17 @@ export async function POST(request: NextRequest) {
         Authorization: `Basic ${basicAuth}`,
       },
       body: JSON.stringify(lead),
+      signal: AbortSignal.timeout(15_000),
     })
 
     const responseText = await response.text()
     if (!response.ok) {
       console.error("Lead create failed:", response.status, responseText)
+      // 500, not 502: Cloudflare replaces an origin 502 with its own branded
+      // error page, so the visitor sees "Bad gateway" instead of this message.
       return NextResponse.json(
         { status: false, message: "Could not save your details. Please try again." },
-        { status: 502 },
+        { status: 500 },
       )
     }
 
