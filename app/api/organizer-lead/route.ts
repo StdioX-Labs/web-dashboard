@@ -27,7 +27,15 @@ async function sendMetaLead(
   // Only the token is configurable: the pixel ID is public and shared with
   // the browser snippet, so there is nothing to get out of sync.
   const token = process.env.META_CAPI_TOKEN
-  if (!token) return
+  if (!token) {
+    console.warn("META_CAPI_TOKEN not set — server-side Lead event skipped")
+    return
+  }
+
+  // Set META_TEST_EVENT_CODE temporarily to make server events show up in
+  // the Test Events tab in Events Manager. Unset it once verified: events
+  // carrying a test code are excluded from optimisation and reporting.
+  const testEventCode = process.env.META_TEST_EVENT_CODE
 
   try {
     const res = await fetch(`${META_API}/${META_PIXEL_ID}/events?access_token=${token}`, {
@@ -54,10 +62,16 @@ async function sendMetaLead(
             },
           },
         ],
+        ...(testEventCode ? { test_event_code: testEventCode } : {}),
       }),
     })
-    if (!res.ok) {
-      console.error("Meta CAPI rejected the Lead event:", await res.text())
+    const payload = await res.text()
+    if (res.ok) {
+      // events_received should be 1. Logged so a bad token or a rejected
+      // payload is visible in the deploy logs instead of failing silently.
+      console.log("Meta CAPI Lead accepted:", payload)
+    } else {
+      console.error("Meta CAPI rejected the Lead event:", payload)
     }
   } catch (error) {
     // Never fail the form because the pixel is down.
