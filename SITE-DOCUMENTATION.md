@@ -33,6 +33,7 @@ never shipped to the browser.
 | Session shape | `phoneNumber, role, is_active, kycStatus, profile_type, company_id, user_id, company_name, currency, email` |
 | Route guard | `lib/hooks/use-auth.ts` (`useAuth`) used by `app/dashboard/layout.tsx`; redirects to `/` when there is no valid session |
 | Login flow | Email → OTP. The OTP and user record stay server-side (`lib/pending-login-store.ts`); the client only holds an opaque `loginToken` |
+| Deactivated accounts | `/api/auth/verify-otp` returns **403** and withholds the user object when `is_active === false`, so no session can be minted even with a valid code. Checked at verification rather than at code request, so account status is only revealed to whoever received the code. `sessionManager.getSession()` also discards any stored session whose user is inactive |
 | Rate limiting | `lib/rate-limiter.ts`, IP-based, default 3 requests / 5 min, 15 min block, applied to `/api/auth/login` and `/api/auth/verify-otp` |
 
 `authToken` in `localStorage` is a local marker (`session_<userId>_<ts>`), not an upstream
@@ -78,6 +79,9 @@ otherwise shows the email + OTP sign-in. The "Sign Up" tab routes to `/signup`.
 | --- | --- | --- | --- |
 | Request / resend OTP | `api.auth.requestOtp(email, 'email')` | `POST /api/auth/login` | `POST /user/otp/login` |
 | Verify OTP | `api.auth.verifyOtp(loginToken, otp)` | `POST /api/auth/verify-otp` | (validated against the server-side pending-login store) |
+
+Deactivated accounts (`is_active: false`) are rejected at verification with a 403 and an
+"account has been deactivated" toast — a correct OTP does not get them in.
 
 **Data displayed.** Branding panel with static marketing stats (Events 100+, Tickets 100K+,
 Rating 99%); email field with client-side validation; 4-digit OTP field with resend / change
@@ -345,9 +349,11 @@ status filter operate on the current page only.
 | Edit user | `api.user.edit(userId, requesterUserId, data)` | `PUT /api/user/edit` | `PUT /company/user/edit` |
 | Suspend user | `api.user.void(userId, requesterUserId)` | `PUT /api/user/void` | `PUT /company/user/suspend` |
 
-**Data displayed.** Counts (total / active / suspended, and by role), searchable user list with
-full name, email, mobile, role badge (`SUPER_ADMIN`, `COMPANY_OWNER`, `STAFF`), KYC status and
-active flag; add / edit / suspend modals.
+**Data displayed.** Counts (total / active / deactivated, and by role); a search box plus an
+**All / Active / Deactivated** filter with live counts; and a user list showing full name,
+email, mobile, role badge (`SUPER_ADMIN`, `COMPANY_OWNER`, `STAFF`), KYC status and an
+Active/Deactivated badge. Deactivated rows carry a red border and a "cannot sign in until
+reactivated" note. Add / edit / suspend modals; suspend calls `/user/void`, which toggles.
 
 **Notes.** New users are created with a hard-coded default password. The **Affiliates** tab on
 *this* page is behind `ENABLE_AFFILIATES = false` and is backed entirely by mock data — real

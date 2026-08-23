@@ -80,6 +80,7 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [affiliates, setAffiliates] = useState<Affiliate[]>(generateMockAffiliates())
   const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deactivated">("all")
   const [activeTab, setActiveTab] = useState<"users" | "affiliates">("users")
 
   // Format phone number to 254XXXXXXXXX format
@@ -143,11 +144,18 @@ export default function UsersPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState("")
 
-  const filteredUsers = users.filter(u =>
-    u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.emailAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.mobileNumber.includes(searchQuery)
-  )
+  const filteredUsers = users.filter(u => {
+    const matchesSearch =
+      u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.emailAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.mobileNumber.includes(searchQuery)
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" ? u.active : !u.active)
+
+    return matchesSearch && matchesStatus
+  })
   const filteredAffiliates = affiliates.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.email.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const totalUsers = users.length
@@ -422,7 +430,7 @@ export default function UsersPage() {
         {(activeTab === "users" ? [
           { label: "Total Users", value: totalUsers, icon: UsersIcon, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
           { label: "Active", value: activeUsers, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Inactive", value: suspendedUsers, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: "Deactivated", value: suspendedUsers, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Super Admins", value: superAdminCount, icon: Shield, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Owners", value: ownerCount, icon: Shield, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
           { label: "Staff", value: staffCount, icon: UsersIcon, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
@@ -452,6 +460,35 @@ export default function UsersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input type="text" placeholder="Search by name, email, or ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all" />
         </div>
+
+        {activeTab === "users" && (
+          <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-hide -mx-1 px-1">
+            {[
+              { label: "All", value: "all" as const, count: totalUsers },
+              { label: "Active", value: "active" as const, count: activeUsers },
+              { label: "Deactivated", value: "deactivated" as const, count: suspendedUsers },
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setStatusFilter(filter.value)}
+                className={cn(
+                  "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0",
+                  statusFilter === filter.value
+                    ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {filter.label}
+                <span className={cn(
+                  "px-1.5 py-0.5 rounded text-xs font-bold",
+                  statusFilter === filter.value ? "bg-white/20" : "bg-background/60"
+                )}>
+                  {filter.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {activeTab === "users" ? (
@@ -467,7 +504,7 @@ export default function UsersPage() {
             const RoleIcon = roleDetails[user.roles]?.icon || User
             const roleInfo = roleDetails[user.roles] || roleDetails.STAFF
             return (
-              <motion.div key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-[#8b5cf6]/30 transition-all">
+              <motion.div key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className={cn("rounded-xl border bg-card p-4 sm:p-6 transition-all", user.active ? "border-border hover:border-[#8b5cf6]/30" : "border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10")}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3 mb-3">
@@ -477,7 +514,7 @@ export default function UsersPage() {
                           <h3 className="font-bold text-base sm:text-lg">{user.fullName}</h3>
                           <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", user.active ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400")}>
                             {user.active ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            {user.active ? "Active" : "Inactive"}
+                            {user.active ? "Active" : "Deactivated"}
                           </span>
                           {user.kycStatus === "PASSED" && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
@@ -495,6 +532,12 @@ export default function UsersPage() {
                       <div><span className="font-medium">Company:</span> {user.companyName}</div>
                       <div><span className="font-medium">KYC Status:</span> {user.kycStatus}</div>
                     </div>
+                    {!user.active && (
+                      <p className="mt-3 text-xs text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                        <Ban className="w-3.5 h-3.5 flex-shrink-0" />
+                        This user cannot sign in until they are reactivated.
+                      </p>
+                    )}
                   </div>
                   {canManageUser(user) && (
                     <div className="flex sm:flex-col gap-2 sm:gap-3">
@@ -508,7 +551,18 @@ export default function UsersPage() {
               </motion.div>
             )
           })}
-          {!isLoading && filteredUsers.length === 0 && <div className="text-center py-12 text-muted-foreground"><UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>No users found</p></div>}
+          {!isLoading && filteredUsers.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>
+                {statusFilter === "deactivated"
+                  ? "No deactivated users"
+                  : statusFilter === "active"
+                  ? "No active users"
+                  : "No users found"}
+              </p>
+            </div>
+          )}
         </motion.div>
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="space-y-4">

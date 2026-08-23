@@ -103,6 +103,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Deactivated accounts must never receive a session, even with a valid OTP.
+    // Checked here rather than when the code is requested so account status is
+    // only revealed to whoever actually received the code.
+    if (result.user && result.user.is_active === false) {
+      console.warn('Verify OTP proxy - Rejected login for deactivated user:', result.user.email)
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'This account has been deactivated. Please contact your administrator.',
+        },
+        { status: 403, headers: responseHeaders }
+      )
+    }
+
     console.log('Verify OTP proxy - Verification successful for user:', result.user?.email)
 
     return NextResponse.json(

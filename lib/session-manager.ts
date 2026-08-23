@@ -56,6 +56,12 @@ export const sessionManager = {
         return null
       }
 
+      // A deactivated account holds no valid session, even one issued earlier
+      if (session.user?.is_active === false) {
+        sessionManager.clearSession()
+        return null
+      }
+
       return session
     } catch (error) {
       console.error('Error reading session:', error)

@@ -209,6 +209,16 @@ export default function LoginPage() {
         return
       }
 
+      // Belt and braces — the verify route already rejects deactivated accounts.
+      if (response.user.is_active === false) {
+        setOtpError("This account has been deactivated.")
+        toast.error("Account deactivated", {
+          description: "Please contact your administrator to regain access.",
+        })
+        setIsVerifyingOtp(false)
+        return
+      }
+
       // OTP verified server-side, create session with returned user data
       sessionManager.createSession(response.user)
 
