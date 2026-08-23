@@ -6,7 +6,8 @@ calls, and what data it renders.
 - **Stack:** Next.js 16 (App Router, Turbopack) · React 19 · Tailwind v4 · framer-motion · sonner (toasts) · lucide-react
 - **Upstream API:** `https://api.soldoutafrica.com/api/v1`
 - **Deployment:** Coolify, behind Cloudflare. Answers on both `organiser.soldoutafrica.com` and `dashboard.soldoutafrica.com`; `organiser.` is the one the marketplace links and the one ad landing URLs use.
-- **Analytics:** Mixpanel, initialised in `app/layout.tsx` with autocapture + session recording
+- **Analytics & ads:** all initialised in `app/layout.tsx` — Mixpanel (autocapture + session
+  recording), Google Ads gtag (`AW-18374176127`), and the Meta pixel (`1412027874115324`)
 
 ---
 
@@ -64,7 +65,64 @@ Flagged-off pages still resolve if you navigate to the URL directly.
 
 ---
 
+### Ad attribution & conversion tracking
+
+`/get-started` is the paid-traffic landing page; the acquisition funnel around it is:
+
+```
+ad click → /get-started (Lead) → qualified?  yes → callback, sales calls them
+                                             no  → /signup?prefill (CompleteRegistration)
+```
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| Click IDs & UTMs | `lib/attribution.ts` | `gclid`, `fbclid`, `utm_*` captured on landing into `sessionStorage`, **first touch wins**, so they survive `/get-started → /signup` |
+| `_fbp` / `_fbc` | `lib/attribution.ts` → `readMetaCookies()` | read at **submit** time, not on mount — the pixel writes them asynchronously |
+| Lead (server) | `app/api/organizer-lead/route.ts` → Meta CAPI | the copy that survives iOS and ad blockers; email/phone/name are SHA-256 hashed |
+| Lead (browser) | `components/get-started-page.tsx` | `fbq('track','Lead', {}, { eventID })` sharing the server's `eventId` so Meta **de-duplicates** the two into one Lead |
+| Google Ads conversions | `lib/google-ads.ts` | `GADS_LEAD_CONVERSION` on the lead form, `GADS_SIGNUP_CONVERSION` on signup completion. Browser-only — Google has no server copy |
+| `CompleteRegistration` | `components/signup-page.tsx` | browser-only; fires when a self-serve signup finishes |
+
+Pixel and conversion IDs are **hardcoded, not env vars** (`lib/meta-pixel.ts`,
+`lib/google-ads.ts`): they are public values that ship in the page source anyway, and a
+`NEXT_PUBLIC_` var that isn't marked as a build variable in Coolify inlines as `undefined`,
+silently killing the pixel. `META_CAPI_TOKEN` is the actual secret and stays in the
+environment.
+
+---
+
 ## 2. Page-by-page
+
+### `/get-started` — Paid-traffic landing page
+
+**File:** `app/get-started/page.tsx` → `components/get-started-page.tsx`
+
+**Purpose.** Lead capture for ad campaigns, pitched at organisers selling 100+ tickets.
+`robots: noindex` — the marketplace's `/organizers` page is the one meant to rank.
+
+**APIs.** `POST /api/organizer-lead` → `POST /organizer-lead/create` upstream, which also
+fires the server-side Meta Lead event.
+
+**Data collected.** Name, WhatsApp number (normalised by `lib/phone.ts`), email, event/company
+name, last event's ticket sales, and next event window — plus the captured attribution and
+Meta cookies.
+
+**Qualification.** `lib/lead-qualification.ts` — a lead qualifies at **KES 100k+** of ticket
+sales on their last event. The flag is **recomputed server-side and never taken from the
+client**, since it decides whether a human gets paged.
+
+- **Qualified** → "We will call you shortly" panel promising WhatsApp contact within the hour.
+- **Not qualified** → redirected to `/signup` with name/email/phone/company prefilled, so they
+  self-serve instead of being dropped.
+
+**Rate limiting.** Deliberately looser than the auth routes (10 per 10 min vs 3 per 5 min):
+Safaricom and Airtel NAT many subscribers behind one IP, so a tight per-IP cap would reject
+real organisers.
+
+**Note.** The route returns **500, not 502**, on an upstream failure — Cloudflare replaces an
+origin 502 with its own branded error page, hiding the real message.
+
+---
 
 ### `/` — Login
 
@@ -96,6 +154,9 @@ email; toasts for success, failure, and 429 rate-limit responses (with retry-aft
 **File:** `app/signup/page.tsx` → `components/signup-page.tsx`
 
 **Purpose.** Three-step self-registration: personal details → company details → success.
+Reached directly or from `/get-started` for leads below the callback bar, in which case
+name / email / phone / company arrive as query params and are prefilled (read from
+`window.location` rather than `useSearchParams`, which would force a Suspense boundary).
 
 **APIs (ordered — company first, its `id` feeds the user)**
 
@@ -110,7 +171,8 @@ Phone numbers are normalised to `254XXXXXXXXX`. The company is created with
 `profileType: "EVENT_ORGANIZER"`, `billingAccountType: "MPESA"`; the user with
 `roles: "COMPANY_OWNER"`.
 
-**On success.** Creates a session and redirects to `/dashboard` after ~2s.
+**On success.** Fires the Google Ads signup conversion and Meta `CompleteRegistration`, creates
+a session, and redirects to `/dashboard` after ~2s.
 
 ---
 
@@ -460,6 +522,10 @@ utility; it sits under the public route tree with no auth guard.
 | `components/side-nav.tsx` | Collapsible desktop sidebar + mobile header/drawer, nav items, profile link, logout |
 | `components/ui/date-time-picker.tsx` | `DatePicker`, `TimePicker`, and combined `DateTimePicker` used by create/edit event and promotions |
 | `components/theme-provider.tsx` | Light/dark theming |
+| `lib/phone.ts` | `formatPhoneNumber()` — normalises Kenyan numbers to `254XXXXXXXXX`; shared by signup, the lead form and the affiliate onboarding |
+| `lib/attribution.ts` | Ad click IDs, UTMs, and the Meta `_fbp`/`_fbc` cookies |
+| `lib/lead-qualification.ts` | Lead dropdown options and the `isQualified()` bar |
+| `lib/soldout-proxy.ts` | `proxyToSoldOut()` / `requireParams()` used by the affiliate routes |
 | `components/event-detail/*` | Modular refactor of the event detail page (hooks, modals, stats, report exporter) |
 
 ### DateTimePicker contract
@@ -506,6 +572,7 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 | `/api/affiliates/admin/remove` | DELETE | `/affiliates/admin/remove` | Event detail → Affiliates |
 | `/api/scanner/scan` | POST | `/scanner/scan` | Scan |
 | `/api/transactions/detailed` | POST | `/gl/transactions/fetch/detailed` | Home, Transactions, Event detail |
+| `/api/organizer-lead` | POST | `/organizer-lead/create` + Meta CAPI | Get started |
 | `/api/upload-image` | POST | Contabo S3 | Create event |
 | `/api/health` | GET | — | Health probe |
 | `/api/test-api` | GET | connectivity probe | Development |
@@ -516,6 +583,8 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 | Variable | Purpose |
 | --- | --- |
 | `SOLDOUT_API_USERNAME` / `SOLDOUT_API_PASSWORD` | Basic auth for the upstream API |
+| `META_CAPI_TOKEN` | Meta Conversions API token. Unset → the server-side Lead event is skipped with a warning |
+| `META_TEST_EVENT_CODE` | Temporary: surfaces server events in the Events Manager Test Events tab. **Unset once verified** — events carrying a test code are excluded from optimisation and reporting |
 | `NEXT_PUBLIC_API_BASE_URL` | Overrides the upstream base in a few routes |
 | Contabo S3 credentials | Used by `/api/upload-image` (`eu2.contabostorage.com`) |
 | Rate-limit settings | Read by `lib/rate-limiter.ts` (`getRateLimitConfig`) |
@@ -530,5 +599,7 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 - **Edit event** has no separate end-date field and cannot replace the poster.
 - **Transactions** search/filter only apply to the currently loaded page.
 - `/test-event-api` is unauthenticated and reachable in production builds.
+- `components/users-page.tsx` still carries its own copy of `formatPhoneNumber` rather than
+  importing the shared `lib/phone.ts`.
 - Two unmounted alternates exist: `components/event-detail-page-new.tsx` and
   `components/dashboard-home-new.tsx`.
