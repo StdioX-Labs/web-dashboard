@@ -34,8 +34,18 @@ export default function LoginPage() {
   // Store login token for server-side OTP verification
   const [loginToken, setLoginToken] = useState<string | null>(null)
 
+  // Set when someone tries to sign up with an email that already has an account
+  const [existingAccount, setExistingAccount] = useState(false)
+
+  // Set when we switch modes on the user's behalf, to keep what they typed
+  const preserveOnModeChange = useRef(false)
+
   // Clear form when mode changes
   useEffect(() => {
+    if (preserveOnModeChange.current) {
+      preserveOnModeChange.current = false
+      return
+    }
     setEmail("")
     setEmailError("")
     setTouched(false)
@@ -43,6 +53,7 @@ export default function LoginPage() {
     setOtp("")
     setOtpError("")
     setOtpTouched(false)
+    setExistingAccount(false)
   }, [mode])
 
   // Update cursor style
@@ -116,8 +127,7 @@ export default function LoginPage() {
     setIsSubmitting(true)
 
     if (mode === "signup") {
-      // For sign up, redirect to full signup page
-      router.push('/signup')
+      await handleSignupContinue()
       return
     }
 
@@ -174,6 +184,81 @@ export default function LoginPage() {
 
       setIsSubmitting(false)
     }
+  }
+
+  /**
+   * Sign-up path: find out whether this email already has an account before
+   * sending anyone to the signup form.
+   *
+   * There is no dedicated "does this user exist" endpoint, but the OTP-login
+   * endpoint only issues a code for an account that exists, so it answers the
+   * question. When it does exist the code is exactly what they need anyway, so
+   * they go straight to verification rather than being bounced to the Login tab
+   * to start over.
+   */
+  const handleSignupContinue = async () => {
+    try {
+      const response = await api.auth.requestOtp(email, 'email')
+
+      if (response.status) {
+        // Account exists — sign them in instead of signing them up.
+        if (response.loginToken) {
+          setLoginToken(response.loginToken)
+        }
+
+        setExistingAccount(true)
+        // Keep the email they just typed when we flip to the Login tab
+        preserveOnModeChange.current = true
+        setMode("signin")
+        setShowOtpInput(true)
+        setIsSubmitting(false)
+
+        toast.info("You already have an account", {
+          description: `We've sent a sign-in code to ${email}.`,
+        })
+
+        setTimeout(() => otpInputRef.current?.focus(), 100)
+        return
+      }
+
+      // Reported failure without an exception — treat as "no account yet"
+      goToSignup()
+    } catch (error) {
+      console.error('Error checking for an existing account:', error)
+
+      if (error instanceof ApiError) {
+        // Don't mistake "we couldn't ask" for "no account exists" — sending
+        // someone to signup with an email that is already taken only fails
+        // later, after a company has been created for them.
+        if (error.statusCode === 429) {
+          const retryAfter = (error.response as { retryAfter?: number } | null)?.retryAfter
+          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
+
+          toast.error("Too many requests", {
+            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            duration: 10000,
+          })
+          setIsSubmitting(false)
+          return
+        }
+
+        if (error.statusCode === 0 || (error.statusCode ?? 0) >= 500) {
+          toast.error("Could not reach the server", {
+            description: "Please check your connection and try again.",
+          })
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      // A 4xx from the OTP endpoint for a well-formed email means no such user
+      goToSignup()
+    }
+  }
+
+  // Carry the email over so it does not have to be typed again
+  const goToSignup = () => {
+    router.push(`/signup?email=${encodeURIComponent(email)}`)
   }
 
   const handleOtpVerification = async (e: React.FormEvent) => {
@@ -332,6 +417,7 @@ export default function LoginPage() {
     setOtp("")
     setOtpError("")
     setOtpTouched(false)
+    setExistingAccount(false)
   }
 
   return (
@@ -588,6 +674,12 @@ export default function LoginPage() {
                             ? "Enter your email to access your dashboard"
                             : "Enter your email to create your account"}
                       </p>
+                      {existingAccount && showOtpInput && (
+                        <p className="text-xs text-[#8b5cf6] mt-3 px-4">
+                          You already have an account with this email, so we&apos;re signing
+                          you in instead of creating a new one.
+                        </p>
+                      )}
                     </motion.div>
                   </AnimatePresence>
 
@@ -692,7 +784,7 @@ export default function LoginPage() {
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                               />
-                              <span>{mode === "signin" ? "Sending code..." : "Redirecting..."}</span>
+                              <span>{mode === "signin" ? "Sending code..." : "Checking your email..."}</span>
                             </>
                           ) : (
                             <>
