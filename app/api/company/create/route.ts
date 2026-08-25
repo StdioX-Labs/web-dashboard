@@ -80,6 +80,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Upstream reports failures as `{ status: false, error: "..." }`, but the
+    // api-client and every caller downstream read `message` — so without this
+    // the real reason ("Company Name Already Taken") is dropped and signup
+    // falls back to a generic "Failed to create company". This is the same
+    // mirroring `lib/soldout-proxy.ts` already does for the routes it fronts.
+    //
+    // The status code is deliberately left as-is. signup-page handles a
+    // `status: false` body inline; turning a 200 into a 400 the way the shared
+    // proxy does would make api-client throw instead, pushing it into a catch
+    // block that reports a generic error — losing the message all over again.
+    if (!response.ok || data?.status === false) {
+      const message = data?.error || data?.message || `Request failed (${response.status})`
+      console.warn('Company create - error response:', response.status, message)
+
+      return NextResponse.json(
+        { ...data, status: false, message },
+        { status: response.status }
+      )
+    }
+
     return NextResponse.json(data, { status: response.status })
   } catch (error) {
     console.error('Company create error:', error)
