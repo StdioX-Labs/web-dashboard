@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { motion } from "framer-motion"
+import React, { useEffect, useRef, useState } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import { toast } from "sonner"
 import {
   ArrowLeft,
@@ -102,24 +102,57 @@ export default function CreateEventPage() {
     }
   }
 
+  // Id of the ticket form just added, so it can be highlighted and scrolled to
+  const [newTicketId, setNewTicketId] = useState<string | null>(null)
+  const ticketRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+
   const addTicketType = () => {
-    setTicketTypes([
-      ...ticketTypes,
-      { id: Date.now().toString(), name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
+    const id = Date.now().toString()
+    setTicketTypes((prev) => [
+      ...prev,
+      { id, name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
     ])
+    setNewTicketId(id)
   }
+
+  // Bring a freshly added ticket form into view and put the cursor in it. The
+  // entry animation reads as "something appeared"; this makes sure it is not
+  // missed when the new card lands below the fold.
+  useEffect(() => {
+    if (!newTicketId) return
+
+    const card = ticketRefs.current.get(newTicketId)
+    card?.scrollIntoView({ behavior: "smooth", block: "center" })
+    card?.querySelector("input")?.focus({ preventScroll: true })
+
+    const timer = setTimeout(() => setNewTicketId(null), 1400)
+    return () => clearTimeout(timer)
+  }, [newTicketId])
 
   const removeTicketType = (id: string) => {
     if (ticketTypes.length > 1) {
-      setTicketTypes(ticketTypes.filter((ticket) => ticket.id !== id))
+      setTicketTypes((prev) => prev.filter((ticket) => ticket.id !== id))
     }
   }
 
+  /**
+   * Patch one field. Functional so that two calls in the same event handler
+   * compose instead of the second silently discarding the first — reading
+   * `ticketTypes` from the render closure made batched updates clobber
+   * each other.
+   */
   const updateTicketType = (id: string, field: keyof TicketType, value: string | Date | undefined | boolean) => {
-    setTicketTypes(
-      ticketTypes.map((ticket) =>
+    setTicketTypes((prev) =>
+      prev.map((ticket) =>
         ticket.id === id ? { ...ticket, [field]: value } : ticket
       )
+    )
+  }
+
+  /** Patch several fields at once, for toggles that also seed a companion value. */
+  const patchTicketType = (id: string, patch: Partial<TicketType>) => {
+    setTicketTypes((prev) =>
+      prev.map((ticket) => (ticket.id === id ? { ...ticket, ...patch } : ticket))
     )
   }
 
@@ -700,10 +733,24 @@ export default function CreateEventPage() {
           </div>
 
           <div className="space-y-4">
+            <AnimatePresence initial={false}>
             {ticketTypes.map((ticket, index) => (
-              <div
+              <motion.div
                 key={ticket.id}
-                className="p-4 rounded-xl border border-border bg-secondary/30 relative"
+                ref={(el) => {
+                  if (el) ticketRefs.current.set(ticket.id, el)
+                  else ticketRefs.current.delete(ticket.id)
+                }}
+                layout
+                initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className={`p-4 rounded-xl border bg-secondary/30 relative transition-colors ${
+                  newTicketId === ticket.id
+                    ? "border-[#8b5cf6] ring-2 ring-[#8b5cf6]/30"
+                    : "border-border"
+                }`}
               >
                 {ticketTypes.length > 1 && (
                   <button
@@ -787,11 +834,12 @@ export default function CreateEventPage() {
                         <input
                           type="checkbox"
                           checked={ticket.isGroupTicket}
-                          onChange={(e) => {
-                            updateTicketType(ticket.id, "isGroupTicket", e.target.checked)
-                            if (!e.target.checked) updateTicketType(ticket.id, "ticketsToIssue", "1")
-                            else updateTicketType(ticket.id, "ticketsToIssue", "2")
-                          }}
+                          onChange={(e) =>
+                            patchTicketType(ticket.id, {
+                              isGroupTicket: e.target.checked,
+                              ticketsToIssue: e.target.checked ? "2" : "1",
+                            })
+                          }
                           className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
                         />
                         <span className="text-xs font-medium">Group ticket</span>
@@ -821,11 +869,12 @@ export default function CreateEventPage() {
                         <input
                           type="checkbox"
                           checked={ticket.restrictLimitPerPerson}
-                          onChange={(e) => {
-                            updateTicketType(ticket.id, "restrictLimitPerPerson", e.target.checked)
-                            if (!e.target.checked) updateTicketType(ticket.id, "limitPerPerson", "0")
-                            else updateTicketType(ticket.id, "limitPerPerson", "1")
-                          }}
+                          onChange={(e) =>
+                            patchTicketType(ticket.id, {
+                              restrictLimitPerPerson: e.target.checked,
+                              limitPerPerson: e.target.checked ? "1" : "0",
+                            })
+                          }
                           className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
                         />
                         <span className="text-xs font-medium">Restrict tickets per person</span>
@@ -891,8 +940,9 @@ export default function CreateEventPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
+            </AnimatePresence>
           </div>
 
           <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
