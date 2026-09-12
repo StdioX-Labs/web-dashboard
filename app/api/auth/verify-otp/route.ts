@@ -26,10 +26,16 @@ export async function POST(request: NextRequest) {
     const clientIp = getClientIp(request)
     console.log('Verify OTP proxy - Client IP:', clientIp)
 
-    // Check rate limit (use stricter limits for OTP verification)
+    // Check rate limit (use stricter limits for OTP verification).
+    //
+    // This window is deliberately its own setting rather than the shared
+    // RATE_LIMIT_WINDOW_MS. Guessing a 4-digit code is a brute-force problem —
+    // 10,000 combinations — so what matters here is attempts per unit time, and
+    // a shorter window means the allowance refills sooner. Inheriting the
+    // request-side window would quietly relax that every time it is shortened.
     const rateLimitConfig = {
       maxRequests: parseInt(process.env.OTP_VERIFY_RATE_LIMIT_MAX_REQUESTS || '5', 10),
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '300000', 10), // 5 minutes default
+      windowMs: parseInt(process.env.OTP_VERIFY_RATE_LIMIT_WINDOW_MS || '300000', 10), // 5 minutes default
       blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS || '900000', 10) // 15 minutes default
     }
 

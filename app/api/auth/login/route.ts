@@ -19,8 +19,8 @@ export const runtime = 'nodejs'
  *
  * Rate Limiting:
  * - Configurable via environment variables
- * - Default: 3 requests per 5 minutes
- * - Block duration: 15 minutes after exceeding limit
+ * - Default: 10 requests per minute
+ * - Exceeding it blocks progressively: 1, 15, 30 then 60 minutes
  */
 export async function POST(request: NextRequest) {
   try {

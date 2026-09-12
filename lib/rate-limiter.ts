@@ -43,6 +43,11 @@ export interface RateLimitConfig {
  * 2nd violation: 15 minutes
  * 3rd violation: 30 minutes
  * 4th+ violation: 60 minutes
+ *
+ * This escalation, not the per-window allowance, is what actually deters abuse:
+ * a generous burst allowance keeps normal use (a signup spends two requests, a
+ * resend a third) clear of the limit, while anyone hammering the endpoint hits
+ * rapidly lengthening blocks. The count resets after an hour of good behaviour.
  */
 function getProgressiveBlockDuration(violationCount: number): number {
   const durations = [
@@ -184,8 +189,8 @@ export function checkRateLimit(
  */
 export function getRateLimitConfig(): RateLimitConfig {
   return {
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '3', 10),
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '300000', 10), // 5 minutes default
+    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10),
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute default
     blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS || '900000', 10), // 15 minutes default (fallback for non-progressive)
     useProgressiveBlocking: process.env.USE_PROGRESSIVE_BLOCKING !== 'false', // Enabled by default
   }

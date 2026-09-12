@@ -35,7 +35,7 @@ never shipped to the browser.
 | Route guard | `lib/hooks/use-auth.ts` (`useAuth`) used by `app/dashboard/layout.tsx`; redirects to `/` when there is no valid session |
 | Login flow | Email → OTP. The OTP and user record stay server-side (`lib/pending-login-store.ts`); the client only holds an opaque `loginToken` |
 | Deactivated accounts | `/api/auth/verify-otp` returns **403** and withholds the user object when `is_active === false`, so no session can be minted even with a valid code. Checked at verification rather than at code request, so account status is only revealed to whoever received the code. `sessionManager.getSession()` also discards any stored session whose user is inactive |
-| Rate limiting | `lib/rate-limiter.ts`, IP-based, default 3 requests / 5 min, 15 min block, applied to `/api/auth/login` and `/api/auth/verify-otp` |
+| Rate limiting | `lib/rate-limiter.ts`, IP-based, applied to `/api/auth/login` (default 10 requests / min) and `/api/auth/verify-otp` (5 attempts / 5 min, its own window since guessing a 4-digit code is brute-force). Exceeding either blocks progressively — 1, 15, 30 then 60 min — with the violation count reset after an hour of good behaviour |
 
 `authToken` in `localStorage` is a local marker (`session_<userId>_<ts>`), not an upstream
 bearer token — real authentication happens with Basic auth inside the route handlers.
@@ -587,7 +587,9 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 | `META_TEST_EVENT_CODE` | Temporary: surfaces server events in the Events Manager Test Events tab. **Unset once verified** — events carrying a test code are excluded from optimisation and reporting |
 | `NEXT_PUBLIC_API_BASE_URL` | Overrides the upstream base in a few routes |
 | Contabo S3 credentials | Used by `/api/upload-image` (`eu2.contabostorage.com`) |
-| Rate-limit settings | Read by `lib/rate-limiter.ts` (`getRateLimitConfig`) |
+| `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_MS` | Request-side allowance for `/api/auth/login` (defaults 10 / 60000). Read by `getRateLimitConfig` |
+| `OTP_VERIFY_RATE_LIMIT_MAX_REQUESTS` / `OTP_VERIFY_RATE_LIMIT_WINDOW_MS` | Code-guessing allowance for `/api/auth/verify-otp` (defaults 5 / 300000), kept separate from the request-side window on purpose |
+| `RATE_LIMIT_BLOCK_DURATION_MS` / `USE_PROGRESSIVE_BLOCKING` | Flat block length, used only when progressive blocking is turned off with `false` |
 
 ---
 
