@@ -47,7 +47,7 @@ export function DatePicker({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       >
@@ -157,7 +157,7 @@ export function TimePicker({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       >
@@ -172,7 +172,7 @@ export function TimePicker({
             <div className="space-y-3 sm:space-y-4">
               {/* Current Selection Display */}
               <div className="text-center pb-2 sm:pb-3 border-b border-border">
-                <div className="text-xl sm:text-2xl font-bold text-[#8b5cf6]">
+                <div className="text-xl sm:text-2xl font-bold text-zinc-300">
                   {selectedHour}:{selectedMinute.toString().padStart(2, "0")} {selectedPeriod}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Selected Time</p>
@@ -182,7 +182,7 @@ export function TimePicker({
                 {/* Hour Selector */}
                 <div>
                   <label className="text-xs font-semibold block mb-1.5 sm:mb-2 text-foreground">Hour</label>
-                  <div className="h-32 sm:h-40 overflow-y-auto border border-border rounded-lg bg-secondary/30 scrollbar-thin scrollbar-thumb-[#8b5cf6] scrollbar-track-transparent">
+                  <div className="h-32 sm:h-40 overflow-y-auto border border-border rounded-lg bg-secondary/30 scrollbar-thin scrollbar-thumb-[#27272a] scrollbar-track-transparent">
                     {hours.map((hour) => (
                       <button
                         key={hour}
@@ -191,7 +191,7 @@ export function TimePicker({
                         className={cn(
                           "w-full px-2 sm:px-3 py-2 sm:py-2.5 text-sm font-medium text-center transition-all",
                           selectedHour === hour
-                            ? "bg-[#8b5cf6] text-white font-bold shadow-sm"
+                            ? "bg-zinc-700 text-white font-bold shadow-sm"
                             : "hover:bg-secondary/70 text-foreground"
                         )}
                       >
@@ -204,7 +204,7 @@ export function TimePicker({
                 {/* Minute Selector */}
                 <div>
                   <label className="text-xs font-semibold block mb-1.5 sm:mb-2 text-foreground">Min</label>
-                  <div className="h-32 sm:h-40 overflow-y-auto border border-border rounded-lg bg-secondary/30 scrollbar-thin scrollbar-thumb-[#8b5cf6] scrollbar-track-transparent">
+                  <div className="h-32 sm:h-40 overflow-y-auto border border-border rounded-lg bg-secondary/30 scrollbar-thin scrollbar-thumb-[#27272a] scrollbar-track-transparent">
                     {minutes.map((minute) => (
                       <button
                         key={minute}
@@ -213,7 +213,7 @@ export function TimePicker({
                         className={cn(
                           "w-full px-2 sm:px-3 py-2 sm:py-2.5 text-sm font-medium text-center transition-all",
                           selectedMinute === minute
-                            ? "bg-[#8b5cf6] text-white font-bold shadow-sm"
+                            ? "bg-zinc-700 text-white font-bold shadow-sm"
                             : "hover:bg-secondary/70 text-foreground"
                         )}
                       >
@@ -235,8 +235,8 @@ export function TimePicker({
                         className={cn(
                           "w-full px-2 sm:px-3 py-2.5 sm:py-3 text-sm sm:text-base font-bold text-center transition-all rounded-lg",
                           selectedPeriod === period
-                            ? "bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/30"
-                            : "hover:bg-secondary border-2 border-border text-foreground hover:border-[#8b5cf6]/50"
+                            ? "bg-gradient-to-br from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/30"
+                            : "hover:bg-secondary border-2 border-border text-foreground hover:border-zinc-500/50"
                         )}
                       >
                         {period}
@@ -258,7 +258,7 @@ export function TimePicker({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/30 transition-all"
                 >
                   Apply
                 </button>

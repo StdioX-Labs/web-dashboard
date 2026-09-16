@@ -238,7 +238,7 @@ export default function EventsPage() {
           </div>
           <Link
             href="/dashboard/events/create"
-            className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300 cursor-pointer"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Create Event
@@ -261,7 +261,7 @@ export default function EventsPage() {
             placeholder="Search events..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
           />
         </div>
 
@@ -281,8 +281,8 @@ export default function EventsPage() {
               className={cn(
                 "px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0",
                 statusFilter === filter.value
-                  ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/25"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-[#8b5cf6]/30"
+                  ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-zinc-500/30"
               )}
             >
               {filter.label}
@@ -301,7 +301,7 @@ export default function EventsPage() {
         {isLoadingInitial ? (
           <div className="flex items-center justify-center py-20">
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+              <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
               <p className="text-muted-foreground">Loading events...</p>
             </div>
           </div>
@@ -317,7 +317,7 @@ export default function EventsPage() {
             {!searchQuery && statusFilter === "all" && (
               <Link
                 href="/dashboard/events/create"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300 cursor-pointer"
               >
                 <Plus className="w-5 h-5" />
                 Create Event
@@ -343,7 +343,7 @@ export default function EventsPage() {
                     ? "border-blue-500/50 bg-blue-50/30 dark:bg-blue-950/10 hover:border-blue-500/70"
                     : eventStatus === "inactive"
                     ? "border-red-500/50 bg-red-50/30 dark:bg-red-950/10 hover:border-red-500/70"
-                    : "border-border hover:border-[#8b5cf6]/30"
+                    : "border-border hover:border-zinc-500/30"
                 )}
               >
                 {/* Pending Approval Banner */}
@@ -356,7 +356,7 @@ export default function EventsPage() {
                 <div className={cn("p-4 sm:p-6", eventStatus === "pending" && "pt-14")}>
                   <div className="flex flex-col sm:flex-row gap-4">
                     {/* Event Image */}
-                    <div className="relative w-full sm:w-48 h-32 sm:h-32 rounded-lg overflow-hidden bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex-shrink-0">
+                    <div className="relative w-full sm:w-48 h-32 sm:h-32 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-700 to-zinc-900 flex-shrink-0">
                       {event.eventPosterUrl ? (
                         <img
                           src={event.eventPosterUrl}
@@ -414,7 +414,7 @@ export default function EventsPage() {
                       <div className="flex gap-2">
                         <Link
                           href={`/dashboard/events/${event.id}`}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#8b5cf6] text-white text-sm font-medium hover:bg-[#7c3aed] transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-700 text-white text-sm font-medium hover:bg-zinc-600 transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                           View

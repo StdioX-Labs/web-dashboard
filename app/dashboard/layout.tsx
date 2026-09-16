@@ -14,7 +14,7 @@ export default function DashboardLayout({
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-[#8b5cf6] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div className="w-12 h-12 border-4 border-zinc-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>

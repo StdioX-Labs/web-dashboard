@@ -1519,7 +1519,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             
             /* Header with logo and branding */
             .report-header {
-              border-bottom: 3px solid #8b5cf6;
+              border-bottom: 3px solid #27272a;
               padding-bottom: 20px;
               margin-bottom: 30px;
               display: flex;
@@ -1532,7 +1532,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             .brand-name {
               font-size: 28px;
               font-weight: 700;
-              color: #8b5cf6;
+              color: #27272a;
               margin-bottom: 4px;
               letter-spacing: -0.5px;
             }
@@ -1575,7 +1575,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               gap: 20px;
             }
             .info-item {
-              border-left: 3px solid #8b5cf6;
+              border-left: 3px solid #27272a;
               padding-left: 12px;
             }
             .info-label {
@@ -1616,7 +1616,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             .summary-value {
               font-size: 22px;
               font-weight: 700;
-              color: #8b5cf6;
+              color: #27272a;
             }
 
             /* Table styling */
@@ -1640,7 +1640,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               overflow: hidden;
             }
             thead {
-              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+              background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
             }
             th {
               padding: 12px;
@@ -1697,7 +1697,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             }
             .footer-company {
               font-weight: 600;
-              color: #8b5cf6;
+              color: #27272a;
             }
 
             /* Mobile responsive styles */
@@ -2053,7 +2053,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             
             /* Professional Header - Enhanced Design */
             .report-header {
-              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+              background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
               padding: 30px 35px;
               margin-bottom: 0;
               color: white;
@@ -2135,7 +2135,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             /* Event Information Card */
             .event-info {
               background: #f8f9fa;
-              border-left: 4px solid #8b5cf6;
+              border-left: 4px solid #27272a;
               padding: 20px 25px;
               margin: 25px 30px;
               display: grid;
@@ -2193,7 +2193,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             .summary-value {
               font-size: 32px;
               font-weight: 700;
-              color: #8b5cf6;
+              color: #27272a;
               line-height: 1;
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             }
@@ -2211,7 +2211,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               gap: 20px;
             }
             .info-item {
-              border-left: 3px solid #8b5cf6;
+              border-left: 3px solid #27272a;
               padding-left: 12px;
             }
             .info-label {
@@ -2252,7 +2252,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             .summary-value {
               font-size: 22px;
               font-weight: 700;
-              color: #8b5cf6;
+              color: #27272a;
             }
 
             /* Table styling */
@@ -2277,7 +2277,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               overflow: hidden;
             }
             thead {
-              background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+              background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
             }
             th {
               padding: 12px;
@@ -2342,7 +2342,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             }
             .footer-company {
               font-weight: 600;
-              color: #8b5cf6;
+              color: #27272a;
             }
 
             /* Mobile responsive styles */
@@ -2663,7 +2663,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         ${attendee.complementary ? '<span class="comp-badge">COMP</span>' : ''}
                       </div>
                       <div style="font-size: 11px; font-family: 'Courier New', monospace; color: #6b7280; margin-top: 2px;">#${attendee.ticketId}</div>
-                      <div style="font-size: 11px; color: #8b5cf6; margin-top: 2px;">KES ${attendee.ticketPrice.toFixed(2)}</div>
+                      <div style="font-size: 11px; color: #27272a; margin-top: 2px;">KES ${attendee.ticketPrice.toFixed(2)}</div>
                     </td>
                     <td style="font-size: 12px;">${new Date(attendee.purchaseTime).toLocaleDateString('en-US', { 
                       year: 'numeric', 
@@ -2798,7 +2798,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       {isLoading && (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+            <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
             <p className="text-muted-foreground">Loading event details...</p>
           </div>
         </div>
@@ -2814,7 +2814,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             </p>
             <Link
               href="/dashboard/events"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
               Back to Events
@@ -2896,7 +2896,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               )}
               <Link
                 href={`/dashboard/events/${eventData.id}/edit`}
-                className="hidden lg:inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
+                className="hidden lg:inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300 cursor-pointer"
               >
                 <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>Edit Event</span>
@@ -3027,7 +3027,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
         {/* Event Balance Card - Mobile friendly */}
         {eventData.status !== "pending" && (
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-4 sm:p-6 lg:p-8 text-white mb-6">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 p-4 sm:p-6 lg:p-8 text-white mb-6">
           <div className="absolute -right-8 -top-8 w-40 h-40 sm:w-64 sm:h-64 rounded-full bg-white/10 blur-3xl pointer-events-none" />
           <div className="absolute -left-8 -bottom-8 w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-black/20 blur-2xl pointer-events-none" />
 
@@ -3111,13 +3111,13 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 className={cn(
                   "relative flex-1 min-w-max px-5 py-3.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors duration-200",
                   activeTab === tab.id
-                    ? "text-[#8b5cf6] dark:text-[#a78bfa]"
+                    ? "text-zinc-300 dark:text-zinc-300"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-zinc-700 to-zinc-900 rounded-t-full" />
                 )}
               </button>
             ))}
@@ -3130,7 +3130,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       {/* Floating Edit Button - Mobile */}
       <Link
         href={`/dashboard/events/${eventData.id}/edit`}
-        className="lg:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-full shadow-2xl shadow-[#8b5cf6]/40 flex items-center justify-center hover:scale-110 transition-all duration-300 cursor-pointer"
+        className="lg:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-full shadow-2xl shadow-zinc-500/40 flex items-center justify-center hover:scale-110 transition-all duration-300 cursor-pointer"
       >
         <Edit className="w-6 h-6" />
       </Link>
@@ -3165,7 +3165,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1e]" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed]" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-900" />
                 )}
 
                 {/* Dark Gradient Overlays for better text readability */}
@@ -3281,7 +3281,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   </button>
                   <button
                     onClick={() => setShowComplementaryModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300 cursor-pointer"
                   >
                     <Gift className="w-4 h-4" />
                     Issue Comp Ticket
@@ -3335,7 +3335,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     className={cn(
                       "rounded-2xl border border-border border-l-4 bg-card p-4 sm:p-6 transition-all duration-300",
                       statusConfig.border,
-                      (isClosed || isExpired) ? "opacity-75" : "hover:border-[#8b5cf6]/30 hover:border-l-current"
+                      (isClosed || isExpired) ? "opacity-75" : "hover:border-zinc-500/30 hover:border-l-current"
                     )}
                   >
                     {/* Header row */}
@@ -3348,7 +3348,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         </span>
                         {/* Free badge */}
                         {ticket.isFree && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950/30 text-violet-700 dark:text-violet-400 text-xs font-semibold border border-violet-200 dark:border-violet-900">
+                          <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 dark:bg-zinc-800/50 text-zinc-200 dark:text-zinc-300 text-xs font-semibold border border-zinc-700 dark:border-zinc-700">
                             Free
                           </span>
                         )}
@@ -3405,9 +3405,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
                           {/* Row 2 — Comps Issued + Comps Left */}
                           <div className="grid grid-cols-2 gap-3">
-                            <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
-                              <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-1">Comps Issued</p>
-                              <p className="text-2xl font-bold text-violet-600 dark:text-violet-400 leading-none">
+                            <div className="p-3 rounded-xl bg-zinc-600/10 border border-zinc-500/20">
+                              <p className="text-xs font-medium text-zinc-300 dark:text-zinc-300 mb-1">Comps Issued</p>
+                              <p className="text-2xl font-bold text-zinc-300 dark:text-zinc-300 leading-none">
                                 {hasBreakdown ? ticket.complementarySold : '–'}
                               </p>
                               <p className="text-xs text-muted-foreground mt-1">
@@ -3454,7 +3454,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                               {hasBreakdown ? (
                                 <>
                                   {paidPct  > 0 && <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${paidPct}%` }} />}
-                                  {compsPct > 0 && <div className="h-full bg-violet-500 transition-all duration-500" style={{ width: `${compsPct}%` }} />}
+                                  {compsPct > 0 && <div className="h-full bg-zinc-600 transition-all duration-500" style={{ width: `${compsPct}%` }} />}
                                 </>
                               ) : (
                                 <div className={cn("h-full bg-gradient-to-r transition-all duration-500", statusConfig.bar)} style={{ width: `${soldPct}%` }} />
@@ -3466,7 +3466,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />Paid ({paidPct.toFixed(0)}%)
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />Comps ({compsPct.toFixed(0)}%)
+                                  <span className="w-2 h-2 rounded-full bg-zinc-600 shrink-0" />Comps ({compsPct.toFixed(0)}%)
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                   <span className="w-2 h-2 rounded-full bg-secondary shrink-0" />Remaining
@@ -3560,9 +3560,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       placeholder="Search transactions..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                     />
-                    <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#8b5cf6] text-white rounded-md text-xs font-semibold hover:bg-[#7c3aed] transition-colors cursor-pointer">
+                    <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-zinc-700 text-white rounded-md text-xs font-semibold hover:bg-zinc-600 transition-colors cursor-pointer">
                       Search
                     </button>
                   </div>
@@ -3576,7 +3576,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </button>
                     <button
                       onClick={exportTransactionsToPDF}
-                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <Download className="w-4 h-4" />
                       PDF
@@ -3744,7 +3744,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           >
             {attendeesLoading ? (
               <div className="flex flex-col items-center justify-center gap-4 py-20">
-                <Loader2 className="w-12 h-12 animate-spin text-[#8b5cf6]" />
+                <Loader2 className="w-12 h-12 animate-spin text-zinc-300" />
                 <div className="text-center">
                   <p className="text-base font-medium text-foreground">Loading attendees...</p>
                   <p className="text-sm text-muted-foreground mt-1">Please wait while we fetch the data</p>
@@ -3773,9 +3773,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       placeholder="Search attendees..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                     />
-                    <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#8b5cf6] text-white rounded-md text-xs font-semibold hover:bg-[#7c3aed] transition-colors cursor-pointer">
+                    <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-zinc-700 text-white rounded-md text-xs font-semibold hover:bg-zinc-600 transition-colors cursor-pointer">
                       Search
                     </button>
                   </div>
@@ -3789,7 +3789,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </button>
                     <button
                       onClick={exportAttendeesToPDF}
-                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-2 h-11 px-4 py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap"
                     >
                       <Download className="w-4 h-4" />
                       PDF
@@ -3817,7 +3817,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           <tr>
                             <td colSpan={7} className="p-12">
                               <div className="flex flex-col items-center justify-center gap-4">
-                                <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                                <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
                                 <div className="text-center">
                                   <p className="text-sm font-medium text-foreground">Loading attendees...</p>
                                   <p className="text-xs text-muted-foreground mt-1">Please wait while we fetch the data</p>
@@ -3877,7 +3877,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 <div className="lg:hidden space-y-4">
                   {attendeesLoading ? (
                     <div className="flex flex-col items-center justify-center gap-4 p-12">
-                      <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                      <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
                       <div className="text-center">
                         <p className="text-sm font-medium text-foreground">Loading attendees...</p>
                         <p className="text-xs text-muted-foreground mt-1">Please wait while we fetch the data</p>
@@ -3999,7 +3999,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
             {/* Summary */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { label: "Affiliates", value: affiliates.length.toString(), icon: Users, bg: "bg-purple-50 dark:bg-purple-950/30", color: "text-[#8b5cf6]" },
+                { label: "Affiliates", value: affiliates.length.toString(), icon: Users, bg: "bg-zinc-800 dark:bg-zinc-800/50", color: "text-zinc-300" },
                 { label: "Checkouts", value: affiliateTotals.transactions.toLocaleString(), icon: CheckCircle, bg: "bg-blue-50 dark:bg-blue-950/30", color: "text-blue-600 dark:text-blue-400" },
                 { label: "Gross Sales", value: `${eventData.currency || currency} ${affiliateTotals.sales.toLocaleString()}`, icon: Eye, bg: "bg-green-50 dark:bg-green-950/30", color: "text-green-600 dark:text-green-400" },
                 { label: "Commission", value: `${eventData.currency || currency} ${affiliateTotals.commission.toLocaleString()}`, icon: Percent, bg: "bg-orange-50 dark:bg-orange-950/30", color: "text-orange-600 dark:text-orange-400" },
@@ -4026,12 +4026,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   placeholder="Search by name, code, or phone..."
                   value={affiliateSearch}
                   onChange={(e) => setAffiliateSearch(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                 />
               </div>
               <button
                 onClick={() => setShowOnboardModal(true)}
-                className="inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Affiliate
@@ -4040,7 +4040,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
             {affiliatesLoading ? (
               <div className="flex flex-col items-center justify-center gap-4 py-20">
-                <Loader2 className="w-12 h-12 animate-spin text-[#8b5cf6]" />
+                <Loader2 className="w-12 h-12 animate-spin text-zinc-300" />
                 <div className="text-center">
                   <p className="text-base font-medium text-foreground">Loading affiliates...</p>
                   <p className="text-sm text-muted-foreground mt-1">Please wait while we fetch the data</p>
@@ -4062,7 +4062,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 {!affiliateSearch && (
                   <button
                     onClick={() => setShowOnboardModal(true)}
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer"
                   >
                     <UserPlus className="w-4 h-4" />
                     Add Affiliate
@@ -4110,7 +4110,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                                     <button
                                       onClick={() => handleCopyAffiliateLink(link)}
                                       title={link.url}
-                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-[#8b5cf6]/50 transition-colors cursor-pointer max-w-[180px]"
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-zinc-500/50 transition-colors cursor-pointer max-w-[180px]"
                                     >
                                       {copiedLinkCode === link.code ? (
                                         <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
@@ -4132,7 +4132,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                                 ) : (
                                   <button
                                     onClick={() => handleIssueLink(affiliate)}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-zinc-500/50 transition-colors cursor-pointer"
                                   >
                                     <Link2 className="w-3.5 h-3.5" />
                                     Issue link
@@ -4225,7 +4225,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         {link ? (
                           <button
                             onClick={() => handleCopyAffiliateLink(link)}
-                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-background text-xs font-mono hover:border-zinc-500/50 transition-colors cursor-pointer"
                           >
                             {copiedLinkCode === link.code ? (
                               <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -4237,7 +4237,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         ) : (
                           <button
                             onClick={() => handleIssueLink(affiliate)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-[#8b5cf6]/50 transition-colors cursor-pointer"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-border text-xs font-medium hover:border-zinc-500/50 transition-colors cursor-pointer"
                           >
                             <Link2 className="w-4 h-4" />
                             Issue link for this event
@@ -4362,7 +4362,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={onboardName}
                     onChange={(e) => setOnboardName(e.target.value)}
                     placeholder="e.g., Jane Wanjiru"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
 
@@ -4375,7 +4375,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={onboardPhone}
                     onChange={(e) => setOnboardPhone(e.target.value)}
                     placeholder="0722000000"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">
                     0722000000, +254 722 000000 and 254722000000 all work.
@@ -4388,7 +4388,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <select
                       value={onboardModel}
                       onChange={(e) => setOnboardModel(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all cursor-pointer"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all cursor-pointer"
                     >
                       <option value="PERCENTAGE">Percentage</option>
                       <option value="FIXED_AMOUNT">Fixed amount</option>
@@ -4404,7 +4404,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setOnboardRevShare(e.target.value)}
                       min="0"
                       step="0.01"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -4414,7 +4414,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     type="checkbox"
                     checked={onboardCanWithdraw}
                     onChange={(e) => setOnboardCanWithdraw(e.target.checked)}
-                    className="w-5 h-5 rounded cursor-pointer accent-[#8b5cf6] mt-0.5"
+                    className="w-5 h-5 rounded cursor-pointer accent-zinc-300 mt-0.5"
                   />
                   <span>
                     <span className="text-sm font-medium block">Allow self-withdrawal</span>
@@ -4445,7 +4445,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <button
                     onClick={handleOnboardAffiliate}
                     disabled={isOnboarding}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {isOnboarding ? (
                       <>
@@ -4510,7 +4510,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     min="0"
                     step="0.01"
                     autoFocus
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">
                     Applies to sales from now on — commission already earned is unchanged.
@@ -4527,7 +4527,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <button
                     onClick={handleSaveRevShare}
                     disabled={isSavingRevShare}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   >
                     {isSavingRevShare ? (
                       <>
@@ -4584,8 +4584,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   className={cn(
                     "w-full text-left p-4 rounded-xl border-2 transition-all cursor-pointer",
                     removeScope === "event"
-                      ? "border-[#8b5cf6] bg-[#8b5cf6]/5"
-                      : "border-border hover:border-[#8b5cf6]/30"
+                      ? "border-zinc-500 bg-zinc-700/5"
+                      : "border-border hover:border-zinc-500/30"
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -4701,7 +4701,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                           : compEmail && !compEmailError
                           ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                          : "border-border focus:border-[#8b5cf6] focus:ring-[#8b5cf6]/10"
+                          : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
                       )}
                       style={{ position: 'relative' }}
                     />
@@ -4738,7 +4738,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                           : compPhone && !compPhoneError
                           ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                          : "border-border focus:border-[#8b5cf6] focus:ring-[#8b5cf6]/10"
+                          : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
                       )}
                       style={{ position: 'relative' }}
                     />
@@ -4769,7 +4769,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <select
                     value={compTicketType}
                     onChange={(e) => setCompTicketType(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                   >
                     <option value="">Select ticket type</option>
                     {ticketTypes.map((ticket: any) => (
@@ -4788,14 +4788,14 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={compQuantity}
                     onChange={(e) => setCompQuantity(e.target.value)}
                     min="1"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/30">
+                <div className="p-3 rounded-lg bg-zinc-800 dark:bg-zinc-800/40 border border-zinc-700 dark:border-zinc-700/50">
                   <div className="flex items-start gap-2">
-                    <Info className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-purple-800 dark:text-purple-300">
+                    <Info className="w-4 h-4 text-zinc-300 dark:text-zinc-300 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-zinc-200 dark:text-zinc-300">
                       The ticket will be sent to both the email and phone number provided. The recipient will receive a QR code for entry.
                     </p>
                   </div>
@@ -4810,7 +4810,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   </button>
                   <button
                     onClick={handleIssueCompTicket}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
                   >
                     <Gift className="w-4 h-4" />
                     Issue Ticket
@@ -4935,7 +4935,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           setSuspendError("")
                         }}
                         placeholder="••••"
-                        className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                        className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                       />
                       {suspendError && (
                         <p className="text-sm text-red-600 dark:text-red-400 mt-2">{suspendError}</p>
@@ -5005,7 +5005,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={editTicketName}
                     onChange={(e) => setEditTicketName(e.target.value)}
                     placeholder="e.g., VIP Pass"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -5033,7 +5033,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketQuantity(e.target.value)}
                       placeholder="e.g., 100"
                       min="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -5049,7 +5049,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketLimitPerPerson(e.target.value)}
                       placeholder="0 = No limit"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                   <div>
@@ -5062,7 +5062,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketComplementary(e.target.value)}
                       placeholder="0"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -5077,7 +5077,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     onChange={(e) => setEditTicketToIssue(e.target.value)}
                     placeholder="1"
                     min="1"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
 
@@ -5114,7 +5114,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   </button>
                   <button
                     onClick={handleSaveTicket}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
                     Save Changes
@@ -5161,7 +5161,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={addTicketName}
                     onChange={(e) => setAddTicketName(e.target.value)}
                     placeholder="e.g., VIP Pass"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -5175,7 +5175,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketPrice(e.target.value)}
                       placeholder="e.g., 2500"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                   <div>
@@ -5188,7 +5188,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketQuantity(e.target.value)}
                       placeholder="e.g., 100"
                       min="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -5201,7 +5201,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     onChange={(e) => setAddTicketDescription(e.target.value)}
                     placeholder="Add additional details about this ticket type..."
                     rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
                   />
                 </div>
 
@@ -5217,7 +5217,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketLimitPerPerson(e.target.value)}
                       min="0"
                       placeholder="0 = no limit"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                   <div>
@@ -5230,7 +5230,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketComplementary(e.target.value)}
                       min="0"
                       placeholder="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -5245,7 +5245,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketToIssue(e.target.value)}
                       min="1"
                       placeholder="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">
@@ -5254,7 +5254,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       id="addTicketIsFree"
                       checked={addTicketIsFree}
                       onChange={(e) => setAddTicketIsFree(e.target.checked)}
-                      className="w-5 h-5 rounded cursor-pointer accent-[#8b5cf6]"
+                      className="w-5 h-5 rounded cursor-pointer accent-zinc-300"
                     />
                     <label htmlFor="addTicketIsFree" className="text-sm font-medium cursor-pointer">
                       Free Ticket
@@ -5304,7 +5304,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   </button>
                   <button
                     onClick={handleSaveNewTicket}
-                    className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     Add Ticket

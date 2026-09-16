@@ -58,10 +58,10 @@ const generateMockAffiliates = (): Affiliate[] => [
 
 const roleDetails: Record<string, { label: string; description: string; color: string; bg: string; icon: any }> = {
   SUPER_ADMIN: { label: "Super Admin", description: "Full system access across all companies", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-950/30", icon: Shield },
-  COMPANY_OWNER: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-950/30", icon: Shield },
+  COMPANY_OWNER: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-zinc-300 dark:text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50", icon: Shield },
   STAFF: { label: "Event Staff", description: "Can view attendees and scan tickets", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-950/30", icon: UsersIcon },
   // Add lowercase aliases for compatibility with form inputs
-  owner: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-100 dark:bg-purple-950/30", icon: Shield },
+  owner: { label: "Company Owner", description: "Full access to all features including withdrawals and financial reports", color: "text-zinc-300 dark:text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50", icon: Shield },
   organizer: { label: "Event Organizer", description: "Can create and manage events", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-950/30", icon: User },
   staff: { label: "Event Staff", description: "Can view attendees and scan tickets", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-950/30", icon: UsersIcon },
 }
@@ -409,7 +409,7 @@ export default function UsersPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{activeTab === "users" ? "Users" : "Affiliates"}</h1>
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer">
+          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{activeTab === "users" ? "Add User" : "Add Affiliate"}</span>
           </button>
@@ -419,23 +419,23 @@ export default function UsersPage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-6">
         <div className="inline-flex rounded-xl border border-border bg-card p-1">
-          <button onClick={() => setActiveTab("users")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "users" ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25" : "text-muted-foreground hover:text-foreground")}>Users</button>
+          <button onClick={() => setActiveTab("users")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "users" ? "bg-zinc-700 text-white shadow-lg shadow-zinc-500/25" : "text-muted-foreground hover:text-foreground")}>Users</button>
           {ENABLE_AFFILIATES && (
-            <button onClick={() => setActiveTab("affiliates")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "affiliates" ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25" : "text-muted-foreground hover:text-foreground")}>Affiliates</button>
+            <button onClick={() => setActiveTab("affiliates")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "affiliates" ? "bg-zinc-700 text-white shadow-lg shadow-zinc-500/25" : "text-muted-foreground hover:text-foreground")}>Affiliates</button>
           )}
         </div>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {(activeTab === "users" ? [
-          { label: "Total Users", value: totalUsers, icon: UsersIcon, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Total Users", value: totalUsers, icon: UsersIcon, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Active", value: activeUsers, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Deactivated", value: suspendedUsers, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Super Admins", value: superAdminCount, icon: Shield, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-          { label: "Owners", value: ownerCount, icon: Shield, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Owners", value: ownerCount, icon: Shield, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Staff", value: staffCount, icon: UsersIcon, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
         ] : [
-          { label: "Total Affiliates", value: totalAffiliates, icon: UsersIcon, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Total Affiliates", value: totalAffiliates, icon: UsersIcon, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Active", value: activeAffiliates, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Suspended", value: suspendedAffiliates, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Total Sales", value: totalAffiliateSales, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
@@ -458,7 +458,7 @@ export default function UsersPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-xl border border-border bg-card p-4 sm:p-6 mb-6">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-          <input type="text" placeholder="Search by name, email, or ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all" />
+          <input type="text" placeholder="Search by name, email, or ID..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all" />
         </div>
 
         {activeTab === "users" && (
@@ -474,7 +474,7 @@ export default function UsersPage() {
                 className={cn(
                   "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer whitespace-nowrap flex-shrink-0",
                   statusFilter === filter.value
-                    ? "bg-[#8b5cf6] text-white shadow-lg shadow-[#8b5cf6]/25"
+                    ? "bg-zinc-700 text-white shadow-lg shadow-zinc-500/25"
                     : "bg-secondary text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -496,7 +496,7 @@ export default function UsersPage() {
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+                <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
                 <p className="text-muted-foreground">Loading users...</p>
               </div>
             </div>
@@ -504,7 +504,7 @@ export default function UsersPage() {
             const RoleIcon = roleDetails[user.roles]?.icon || User
             const roleInfo = roleDetails[user.roles] || roleDetails.STAFF
             return (
-              <motion.div key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className={cn("rounded-xl border bg-card p-4 sm:p-6 transition-all", user.active ? "border-border hover:border-[#8b5cf6]/30" : "border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10")}>
+              <motion.div key={user.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className={cn("rounded-xl border bg-card p-4 sm:p-6 transition-all", user.active ? "border-border hover:border-zinc-500/30" : "border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10")}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3 mb-3">
@@ -567,12 +567,12 @@ export default function UsersPage() {
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="space-y-4">
           {filteredAffiliates.map((affiliate, index) => (
-            <motion.div key={affiliate.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-[#8b5cf6]/30 transition-all">
+            <motion.div key={affiliate.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + index * 0.05 }} className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-zinc-500/30 transition-all">
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center flex-shrink-0"><LinkIcon className="w-6 h-6 text-white" /></div>
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center flex-shrink-0"><LinkIcon className="w-6 h-6 text-white" /></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h3 className="font-bold text-base sm:text-lg">{affiliate.name}</h3>
@@ -588,7 +588,7 @@ export default function UsersPage() {
                     <div className="bg-secondary/30 rounded-lg p-3 mb-3">
                       <p className="text-xs text-muted-foreground mb-1">Affiliate Link</p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs sm:text-sm font-mono text-[#8b5cf6] break-all">{affiliate.affiliateLink}</code>
+                        <code className="flex-1 text-xs sm:text-sm font-mono text-zinc-300 break-all">{affiliate.affiliateLink}</code>
                         <button onClick={() => copyAffiliateLink(affiliate.affiliateLink)} className="flex-shrink-0 p-2 hover:bg-secondary rounded-lg transition-colors cursor-pointer" title="Copy link"><Copy className="w-4 h-4" /></button>
                       </div>
                     </div>
@@ -600,7 +600,7 @@ export default function UsersPage() {
                     <div className="text-xs text-muted-foreground"><span className="font-medium">Joined:</span> {new Date(affiliate.joinedDate).toLocaleDateString()} • <span className="font-medium">Events:</span> {affiliate.events.length}</div>
                   </div>
                   <div className="flex sm:flex-col gap-2 sm:gap-3">
-                    <button onClick={() => openPaymentModal(affiliate)} className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer"><DollarSign className="w-4 h-4" />Pay</button>
+                    <button onClick={() => openPaymentModal(affiliate)} className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer"><DollarSign className="w-4 h-4" />Pay</button>
                     <button onClick={() => openEditAffiliateModal(affiliate)} className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-semibold hover:bg-blue-200 dark:hover:bg-blue-950/50 transition-all cursor-pointer border border-blue-200 dark:border-blue-900"><Edit className="w-4 h-4" />Edit</button>
                     <button onClick={() => openSuspendAffiliateModal(affiliate)} className={cn("flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border", affiliate.status === "active" ? "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-950/50 border-red-200 dark:border-red-900" : "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-950/50 border-green-200 dark:border-green-900")}>
                       {affiliate.status === "active" ? <><Ban className="w-4 h-4" />Suspend</> : <><CheckCircle className="w-4 h-4" />Activate</>}
@@ -623,23 +623,23 @@ export default function UsersPage() {
               <h3 className="text-xl font-bold mb-6">{activeTab === "users" ? "Add New User" : "Add New Affiliate"}</h3>
               {activeTab === "users" ? (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@example.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} placeholder="254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
-                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Add User</button></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@example.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} placeholder="254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
+                  <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Add User</button></div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={affiliateFormData.name} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, name: e.target.value })} placeholder="John Marketing" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={affiliateFormData.email} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, email: e.target.value })} placeholder="john@marketing.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={affiliateFormData.phone} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, phone: e.target.value })} placeholder="+254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={affiliateFormData.name} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, name: e.target.value })} placeholder="John Marketing" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={affiliateFormData.email} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, email: e.target.value })} placeholder="john@marketing.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={affiliateFormData.phone} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, phone: e.target.value })} placeholder="+254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Attach to Event *</label>
                     <select
                       value={affiliateFormData.eventId}
                       onChange={(e) => setAffiliateFormData({ ...affiliateFormData, eventId: e.target.value })}
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                     >
                       <option value="">Select an active event</option>
                       {activeEvents.map((event) => (
@@ -647,7 +647,7 @@ export default function UsersPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddAffiliate} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Add Affiliate</button></div>
+                  <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddAffiliate} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Add Affiliate</button></div>
                 </div>
               )}
             </motion.div>
@@ -664,24 +664,24 @@ export default function UsersPage() {
               <h3 className="text-xl font-bold mb-6">{activeTab === "users" ? "Edit User" : "Edit Affiliate"}</h3>
               {activeTab === "users" ? (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
-                  <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} placeholder="12345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-[#8b5cf6] bg-[#8b5cf6]/5" : "border-border hover:border-[#8b5cf6]/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Save Changes</button></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} placeholder="12345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
+                  <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Save Changes</button></div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={affiliateFormData.name} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={affiliateFormData.email} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={affiliateFormData.phone} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, phone: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={affiliateFormData.name} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={affiliateFormData.email} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={affiliateFormData.phone} onChange={(e) => setAffiliateFormData({ ...affiliateFormData, phone: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all" /></div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Attach to Event *</label>
                     <select
                       value={affiliateFormData.eventId}
                       onChange={(e) => setAffiliateFormData({ ...affiliateFormData, eventId: e.target.value })}
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                     >
                       <option value="">Select an active event</option>
                       {activeEvents.map((event) => (
@@ -689,7 +689,7 @@ export default function UsersPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditAffiliate} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all">Save Changes</button></div>
+                  <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditAffiliate} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Save Changes</button></div>
                 </div>
               )}
             </motion.div>
@@ -742,8 +742,8 @@ export default function UsersPage() {
               {!showOtpInput ? (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-[#8b5cf6]/10 flex items-center justify-center mx-auto mb-4">
-                      <DollarSign className="w-8 h-8 text-[#8b5cf6]" />
+                    <div className="w-16 h-16 rounded-full bg-zinc-700/10 flex items-center justify-center mx-auto mb-4">
+                      <DollarSign className="w-8 h-8 text-zinc-300" />
                     </div>
                     <h3 className="text-xl font-bold mb-2">Pay Affiliate Commission</h3>
                     <p className="text-sm text-muted-foreground">Review and submit payment request for approval</p>
@@ -766,7 +766,7 @@ export default function UsersPage() {
                       </div>
                       <div className="pt-2 border-t border-border flex justify-between">
                         <span className="font-semibold">Commission</span>
-                        <span className="font-bold text-lg text-[#8b5cf6]">KES {Number(paymentAmount).toLocaleString()}</span>
+                        <span className="font-bold text-lg text-zinc-300">KES {Number(paymentAmount).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -777,7 +777,7 @@ export default function UsersPage() {
                       type="number"
                       value={paymentAmount}
                       onChange={(e) => setPaymentAmount(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] text-lg font-semibold"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-zinc-400 text-lg font-semibold"
                       placeholder="Enter amount"
                     />
                     <p className="text-xs text-muted-foreground mt-2">You can adjust the payment amount if needed</p>
@@ -785,14 +785,14 @@ export default function UsersPage() {
 
                   <div className="flex gap-3">
                     <button onClick={() => { setShowPaymentModal(false); setSelectedAffiliate(null); setPaymentAmount(""); }} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button>
-                    <button onClick={() => setShowOtpInput(true)} disabled={!paymentAmount || Number(paymentAmount) <= 0} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Submit Request</button>
+                    <button onClick={() => setShowOtpInput(true)} disabled={!paymentAmount || Number(paymentAmount) <= 0} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Submit Request</button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-[#8b5cf6]/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle className="w-8 h-8 text-[#8b5cf6]" />
+                    <div className="w-16 h-16 rounded-full bg-zinc-700/10 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-8 h-8 text-zinc-300" />
                     </div>
                     <h3 className="text-xl font-bold mb-2">Verify Payment Request</h3>
                     <p className="text-sm text-muted-foreground">Enter the OTP sent to your email to confirm</p>
@@ -805,7 +805,7 @@ export default function UsersPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground text-sm">Amount</span>
-                      <span className="font-bold text-lg text-[#8b5cf6]">KES {Number(paymentAmount).toLocaleString()}</span>
+                      <span className="font-bold text-lg text-zinc-300">KES {Number(paymentAmount).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -815,7 +815,7 @@ export default function UsersPage() {
                       type="text"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] text-center text-2xl font-bold tracking-widest"
+                      className="w-full px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-zinc-400 text-center text-2xl font-bold tracking-widest"
                       placeholder="0000"
                       maxLength={4}
                     />
@@ -823,7 +823,7 @@ export default function UsersPage() {
 
                   <div className="flex gap-3">
                     <button onClick={() => { setShowOtpInput(false); setOtpInput(""); }} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Back</button>
-                    <button onClick={handlePayAffiliate} disabled={otpInput.length !== 4} className="flex-1 px-4 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Confirm Request</button>
+                    <button onClick={handlePayAffiliate} disabled={otpInput.length !== 4} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Confirm Request</button>
                   </div>
                 </div>
               )}

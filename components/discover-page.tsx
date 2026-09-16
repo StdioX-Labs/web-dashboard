@@ -15,7 +15,7 @@ const products = [
     icon: Users,
     title: "Audience Insights",
     description: "Deep analytics and insights about your attendees and their behavior",
-    color: "from-purple-500 to-pink-500"
+    color: "from-zinc-700 to-pink-500"
   },
   {
     icon: TrendingUp,
@@ -39,7 +39,7 @@ const products = [
     icon: CreditCard,
     title: "Payment Solutions",
     description: "Secure payment processing with multiple payment methods",
-    color: "from-indigo-500 to-purple-500"
+    color: "from-indigo-500 to-zinc-700"
   },
   {
     icon: Shield,
@@ -67,8 +67,8 @@ export default function DiscoverPage() {
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#8b5cf6]/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#7c3aed]/20 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-zinc-700/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-zinc-600/20 rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           <motion.div
@@ -77,11 +77,11 @@ export default function DiscoverPage() {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 mb-6">
               <Compass className="w-10 h-10 text-white" />
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-zinc-700 to-zinc-900 bg-clip-text text-transparent mb-6">
               Discover
             </h1>
 
@@ -89,9 +89,9 @@ export default function DiscoverPage() {
               Your One-Stop Shop to Setup, Manage, and Scale Your Events
             </p>
 
-            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#8b5cf6]/10 border border-[#8b5cf6]/20">
-              <Sparkles className="w-5 h-5 text-[#8b5cf6]" />
-              <span className="text-sm font-medium text-[#8b5cf6]">Coming Soon</span>
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-zinc-700/10 border border-zinc-500/20">
+              <Sparkles className="w-5 h-5 text-zinc-300" />
+              <span className="text-sm font-medium text-zinc-300">Coming Soon</span>
             </div>
           </motion.div>
         </div>
@@ -129,12 +129,12 @@ export default function DiscoverPage() {
                     backgroundImage: `linear-gradient(to right, var(--tw-gradient-stops))`,
                   }}
                 />
-                <div className="relative h-full bg-card border border-border rounded-2xl p-6 hover:border-[#8b5cf6]/50 transition-all duration-300 hover:shadow-xl hover:shadow-[#8b5cf6]/10 hover:-translate-y-1">
+                <div className="relative h-full bg-card border border-border rounded-2xl p-6 hover:border-zinc-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-zinc-500/10 hover:-translate-y-1">
                   <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br ${product.color} mb-4`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
 
-                  <h3 className="text-xl font-bold mb-2 group-hover:text-[#8b5cf6] transition-colors">
+                  <h3 className="text-xl font-bold mb-2 group-hover:text-zinc-300 transition-colors">
                     {product.title}
                   </h3>
 
@@ -154,7 +154,7 @@ export default function DiscoverPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-8 sm:p-12 text-center"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-zinc-700 to-zinc-900 p-8 sm:p-12 text-center"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
@@ -173,7 +173,7 @@ export default function DiscoverPage() {
             </p>
 
             <div className="inline-flex flex-col sm:flex-row gap-4">
-              <button className="px-8 py-4 bg-white text-[#8b5cf6] rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transform duration-200">
+              <button className="px-8 py-4 bg-white text-zinc-300 rounded-xl font-semibold hover:bg-white/90 transition-colors shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transform duration-200">
                 Notify Me When Available
               </button>
               <button className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-semibold hover:bg-white/30 transition-colors border border-white/20">
@@ -187,7 +187,7 @@ export default function DiscoverPage() {
       {/* Footer Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Have questions? <a href="#" className="text-[#8b5cf6] hover:underline font-medium">Contact our team</a> to learn more about upcoming features.
+          Have questions? <a href="#" className="text-zinc-300 hover:underline font-medium">Contact our team</a> to learn more about upcoming features.
         </p>
       </div>
     </div>

@@ -30,7 +30,7 @@ export default function ProfilePage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-zinc-700 to-zinc-900 bg-clip-text text-transparent">
             Profile
           </h1>
           <p className="text-muted-foreground">Your account information</p>
@@ -43,7 +43,7 @@ export default function ProfilePage() {
           transition={{ delay: 0.1 }}
           className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
         >
-          <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-6">
+          <div className="bg-gradient-to-r from-zinc-700 to-zinc-900 p-6">
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-2xl border-2 border-white/30">
                 {user.email?.charAt(0).toUpperCase() || 'U'}
@@ -57,7 +57,7 @@ export default function ProfilePage() {
 
           <div className="p-6 space-y-4">
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <Mail className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Mail className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Email</p>
                 <p className="font-semibold">{user.email}</p>
@@ -65,7 +65,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <Phone className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Phone className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
                 <p className="font-semibold">{user.phoneNumber}</p>
@@ -73,7 +73,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <Briefcase className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Briefcase className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Role</p>
                 <p className="font-semibold capitalize">{user.role}</p>
@@ -81,7 +81,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <Globe className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Globe className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Currency</p>
                 <p className="font-semibold">{user.currency}</p>
@@ -89,7 +89,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <User className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <User className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Account Status</p>
                 <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
@@ -111,7 +111,7 @@ export default function ProfilePage() {
           transition={{ delay: 0.2 }}
           className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
         >
-          <div className="bg-gradient-to-r from-[#7c3aed] to-[#6d28d9] p-6">
+          <div className="bg-gradient-to-r from-zinc-800 to-zinc-900 p-6">
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white border-2 border-white/30">
                 <Building className="w-10 h-10" />
@@ -126,7 +126,7 @@ export default function ProfilePage() {
           <div className="p-6 space-y-4">
 
             <div className="flex items-start gap-4 p-4 rounded-xl bg-secondary/50">
-              <Building className="w-5 h-5 text-[#7c3aed] flex-shrink-0 mt-0.5" />
+              <Building className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground mb-1">Company Name</p>
                 <p className="font-semibold text-lg">{user.company_name}</p>

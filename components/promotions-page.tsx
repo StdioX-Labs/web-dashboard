@@ -516,8 +516,8 @@ export default function PromotionsPage() {
             className={cn(
               "flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200",
               activeTab === "flash-sales"
-                ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/25"
-                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-[#8b5cf6]/30"
+                ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-zinc-500/30"
             )}
           >
             <Zap className="w-4 h-4" />
@@ -528,8 +528,8 @@ export default function PromotionsPage() {
             className={cn(
               "flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200",
               activeTab === "promo-codes"
-                ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/25"
-                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-[#8b5cf6]/30"
+                ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-zinc-500/30"
             )}
           >
             <Tag className="w-4 h-4" />
@@ -553,7 +553,7 @@ export default function PromotionsPage() {
             placeholder={`Search ${activeTab === "flash-sales" ? "flash sales" : "promo codes"}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
           />
         </div>
 
@@ -571,8 +571,8 @@ export default function PromotionsPage() {
               className={cn(
                 "px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0",
                 statusFilter === filter.value
-                  ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/25"
-                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-[#8b5cf6]/30"
+                  ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-zinc-500/30"
               )}
             >
               {filter.label}
@@ -583,7 +583,7 @@ export default function PromotionsPage() {
         {/* Create Button */}
         <button
           onClick={() => activeTab === "flash-sales" ? openFlashSaleModal() : openPromoCodeModal()}
-          className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300 whitespace-nowrap"
+          className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300 whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
           Create {activeTab === "flash-sales" ? "Flash Sale" : "Promo Code"}
@@ -610,7 +610,7 @@ export default function PromotionsPage() {
               {!searchQuery && statusFilter === "all" && (
                 <button
                   onClick={() => openFlashSaleModal()}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300"
                 >
                   <Plus className="w-5 h-5" />
                   Create Flash Sale
@@ -632,7 +632,7 @@ export default function PromotionsPage() {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-start gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center flex-shrink-0">
                             <Zap className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -666,7 +666,7 @@ export default function PromotionsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                       <div className="p-3 rounded-lg bg-secondary/50">
                         <p className="text-xs text-muted-foreground mb-1">Discount</p>
-                        <p className="text-lg font-bold text-[#8b5cf6]">{sale.discount}%</p>
+                        <p className="text-lg font-bold text-zinc-300">{sale.discount}%</p>
                       </div>
                       <div className="p-3 rounded-lg bg-secondary/50">
                         <p className="text-xs text-muted-foreground mb-1">Tickets Used</p>
@@ -700,7 +700,7 @@ export default function PromotionsPage() {
                       <div>
                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-zinc-700 to-zinc-900 transition-all duration-500"
                             style={{ width: `${(sale.ticketsUsed / sale.ticketsLimit) * 100}%` }}
                           />
                         </div>
@@ -734,7 +734,7 @@ export default function PromotionsPage() {
               {!searchQuery && statusFilter === "all" && (
                 <button
                   onClick={() => openPromoCodeModal()}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all duration-300"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all duration-300"
                 >
                   <Plus className="w-5 h-5" />
                   Create Promo Code
@@ -756,7 +756,7 @@ export default function PromotionsPage() {
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-start gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center flex-shrink-0">
                             <Tag className="w-5 h-5 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -799,7 +799,7 @@ export default function PromotionsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       <div className="p-3 rounded-lg bg-secondary/50">
                         <p className="text-xs text-muted-foreground mb-1">Discount</p>
-                        <p className="text-lg font-bold text-[#8b5cf6]">
+                        <p className="text-lg font-bold text-zinc-300">
                           {promo.discount}%
                         </p>
                       </div>
@@ -826,7 +826,7 @@ export default function PromotionsPage() {
                       <div>
                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-zinc-700 to-zinc-900 transition-all duration-500"
                             style={{ width: `${(promo.usageCount / promo.usageLimit) * 100}%` }}
                           />
                         </div>
@@ -870,7 +870,7 @@ export default function PromotionsPage() {
                   value={flashSaleForm.name}
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, name: e.target.value })}
                   placeholder="e.g., Early Bird Special"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   required
                 />
               </div>
@@ -882,7 +882,7 @@ export default function PromotionsPage() {
                 <select
                   value={flashSaleForm.eventId}
                   onChange={(e) => handleEventChange(e.target.value, true)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Select an event</option>
@@ -902,7 +902,7 @@ export default function PromotionsPage() {
                   <select
                     value={flashSaleForm.ticketTypeId}
                     onChange={(e) => handleTicketTypeChange(e.target.value, true)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select a ticket type</option>
@@ -937,7 +937,7 @@ export default function PromotionsPage() {
                           value={flashSaleForm.discountedPrice}
                           onChange={(e) => handleDiscountedPriceChange(e.target.value, true)}
                           placeholder="2000"
-                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                           required
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-medium">
@@ -948,11 +948,11 @@ export default function PromotionsPage() {
                   </div>
 
                   {flashSaleForm.calculatedDiscount > 0 && (
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-[#8b5cf6]/10 to-[#7c3aed]/10 border border-[#8b5cf6]/30">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-zinc-700/10 to-zinc-900/10 border border-zinc-500/30">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Calculated Discount</p>
-                          <p className="text-2xl font-bold text-[#8b5cf6]">{flashSaleForm.calculatedDiscount}% OFF</p>
+                          <p className="text-2xl font-bold text-zinc-300">{flashSaleForm.calculatedDiscount}% OFF</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground mb-1">Customer Saves</p>
@@ -1002,7 +1002,7 @@ export default function PromotionsPage() {
                   value={flashSaleForm.ticketsLimit}
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, ticketsLimit: e.target.value })}
                   placeholder="100"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1017,7 +1017,7 @@ export default function PromotionsPage() {
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, description: e.target.value })}
                   placeholder="Add any additional details about this flash sale..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
                 />
               </div>
 
@@ -1031,7 +1031,7 @@ export default function PromotionsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all"
                 >
                   {editingFlashSale ? "Update Flash Sale" : "Create Flash Sale"}
                 </button>
@@ -1071,7 +1071,7 @@ export default function PromotionsPage() {
                   value={promoCodeForm.code}
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, code: e.target.value.toUpperCase() })}
                   placeholder="e.g., SUMMER2026"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all font-mono"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all font-mono"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1086,7 +1086,7 @@ export default function PromotionsPage() {
                 <select
                   value={promoCodeForm.eventId}
                   onChange={(e) => handleEventChange(e.target.value, false)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Select an event</option>
@@ -1106,7 +1106,7 @@ export default function PromotionsPage() {
                   <select
                     value={promoCodeForm.ticketTypeId}
                     onChange={(e) => handleTicketTypeChange(e.target.value, false)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select a ticket type</option>
@@ -1141,7 +1141,7 @@ export default function PromotionsPage() {
                           value={promoCodeForm.discountedPrice}
                           onChange={(e) => handleDiscountedPriceChange(e.target.value, false)}
                           placeholder="2000"
-                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                           required
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-medium">
@@ -1152,11 +1152,11 @@ export default function PromotionsPage() {
                   </div>
 
                   {promoCodeForm.calculatedDiscount > 0 && (
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-[#8b5cf6]/10 to-[#7c3aed]/10 border border-[#8b5cf6]/30">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-zinc-700/10 to-zinc-900/10 border border-zinc-500/30">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Calculated Discount</p>
-                          <p className="text-2xl font-bold text-[#8b5cf6]">{promoCodeForm.calculatedDiscount}% OFF</p>
+                          <p className="text-2xl font-bold text-zinc-300">{promoCodeForm.calculatedDiscount}% OFF</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground mb-1">Customer Saves</p>
@@ -1190,7 +1190,7 @@ export default function PromotionsPage() {
                   value={promoCodeForm.usageLimit}
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, usageLimit: e.target.value })}
                   placeholder="Leave empty for unlimited uses"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Maximum number of times this code can be used
@@ -1204,7 +1204,7 @@ export default function PromotionsPage() {
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, description: e.target.value })}
                   placeholder="Add any additional details about this promo code..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
                 />
               </div>
 
@@ -1218,7 +1218,7 @@ export default function PromotionsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all"
                 >
                   {editingPromoCode ? "Update Promo Code" : "Create Promo Code"}
                 </button>

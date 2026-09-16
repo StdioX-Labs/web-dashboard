@@ -84,7 +84,7 @@ export default function EventDetailPage({ eventId }: EventDetailPageProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+          <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
           <p className="text-muted-foreground">Loading event details...</p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function EventDetailPage({ eventId }: EventDetailPageProps) {
           </p>
           <Link
             href="/dashboard/events"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Events

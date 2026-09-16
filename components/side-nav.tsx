@@ -105,7 +105,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
         {/* Sleek Expand/Collapse Button - Desktop only, subtle but visible */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-muted hover:bg-[#8b5cf6] text-muted-foreground hover:text-white items-center justify-center transition-all duration-200 hover:scale-105 z-10"
+          className="hidden lg:flex absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-muted hover:bg-zinc-700 text-muted-foreground hover:text-white items-center justify-center transition-all duration-200 hover:scale-105 z-10"
         >
           {isCollapsed ? (
             <ChevronRight className="w-3 h-3" />
@@ -138,7 +138,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
               className={cn(
                 "relative flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200",
                 isActive
-                  ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg shadow-[#8b5cf6]/25"
+                  ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary",
                 isCollapsed && "justify-center"
               )}
@@ -169,7 +169,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
           )}
         >
           <div className="relative flex-shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm sm:text-base">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-white font-bold text-sm sm:text-base">
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
@@ -239,7 +239,7 @@ function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
         className="relative flex-shrink-0"
         aria-label="Profile"
       >
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center text-white font-bold text-sm shadow-md shadow-[#8b5cf6]/25">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-zinc-500/25">
           {userName}
         </div>
         <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-card rounded-full" />

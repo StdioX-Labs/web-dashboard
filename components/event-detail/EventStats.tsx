@@ -59,7 +59,7 @@ export function EventStats({
         ? `${currency} ${eventData.balance.toLocaleString()}`
         : "••••••",
       icon: showBalance ? Eye : EyeOff,
-      color: "text-purple-400",
+      color: "text-zinc-300",
       isBalance: true,
     },
     {

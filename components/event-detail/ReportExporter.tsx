@@ -28,7 +28,7 @@ export class ReportExporter {
       padding: 20px;
     }
     .report-header {
-      border-bottom: 3px solid #8b5cf6;
+      border-bottom: 3px solid #27272a;
       padding-bottom: 20px;
       margin-bottom: 30px;
       display: flex;
@@ -38,7 +38,7 @@ export class ReportExporter {
     .brand-name {
       font-size: 28px;
       font-weight: 700;
-      color: #8b5cf6;
+      color: #27272a;
       margin-bottom: 4px;
     }
     .report-title {
@@ -59,7 +59,7 @@ export class ReportExporter {
       gap: 20px;
     }
     .info-item {
-      border-left: 3px solid #8b5cf6;
+      border-left: 3px solid #27272a;
       padding-left: 12px;
     }
     .info-label {
@@ -78,7 +78,7 @@ export class ReportExporter {
       margin-top: 20px;
     }
     th {
-      background: #8b5cf6;
+      background: #27272a;
       color: white;
       padding: 12px;
       text-align: left;
@@ -90,7 +90,7 @@ export class ReportExporter {
     }
     .footer-company {
       font-weight: 600;
-      color: #8b5cf6;
+      color: #27272a;
       margin-top: 40px;
       text-align: center;
     }
@@ -202,7 +202,7 @@ ${transactions.map(txn => `      <tr>
       padding: 20px;
     }
     .report-header {
-      border-bottom: 3px solid #8b5cf6;
+      border-bottom: 3px solid #27272a;
       padding-bottom: 20px;
       margin-bottom: 30px;
       display: flex;
@@ -212,7 +212,7 @@ ${transactions.map(txn => `      <tr>
     .brand-name {
       font-size: 28px;
       font-weight: 700;
-      color: #8b5cf6;
+      color: #27272a;
     }
     .report-title {
       font-size: 24px;
@@ -232,7 +232,7 @@ ${transactions.map(txn => `      <tr>
       gap: 20px;
     }
     .info-item {
-      border-left: 3px solid #8b5cf6;
+      border-left: 3px solid #27272a;
       padding-left: 12px;
     }
     .info-label {
@@ -251,7 +251,7 @@ ${transactions.map(txn => `      <tr>
       margin-top: 20px;
     }
     th {
-      background: #8b5cf6;
+      background: #27272a;
       color: white;
       padding: 12px;
       text-align: left;
@@ -263,7 +263,7 @@ ${transactions.map(txn => `      <tr>
     }
     .footer-company {
       font-weight: 600;
-      color: #8b5cf6;
+      color: #27272a;
       margin-top: 40px;
       text-align: center;
     }

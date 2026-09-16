@@ -159,7 +159,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 animate-spin text-[#8b5cf6]" />
+          <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
           <p className="text-muted-foreground">Loading event details...</p>
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
           <p className="text-muted-foreground mb-6">The event you're looking for doesn't exist or you don't have access to it.</p>
           <Link
             href="/dashboard/events"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
             Back to Events
@@ -236,7 +236,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
             </button>
             <Link
               href={`/dashboard/events/${eventId}/edit`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#8b5cf6] text-white hover:bg-[#7c3aed] transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-700 text-white hover:bg-zinc-600 transition-colors"
             >
               <Edit className="w-4 h-4" />
               Edit Event
@@ -255,7 +255,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
         {[
           { label: "Total Revenue", value: `${currency} ${stats.revenue.toLocaleString()}`, icon: DollarSign, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Tickets Sold", value: `${stats.ticketsSold} / ${stats.totalTickets}`, icon: Ticket, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Available Tickets", value: stats.availableTickets.toString(), icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Available Tickets", value: stats.availableTickets.toString(), icon: TrendingUp, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Sell Rate", value: `${Math.round((stats.ticketsSold / stats.totalTickets) * 100)}%`, icon: BarChart3, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
         ].map((stat, index) => {
           const Icon = stat.icon
@@ -287,7 +287,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
             transition={{ delay: 0.3 }}
             className="rounded-xl border border-border bg-card overflow-hidden"
           >
-            <div className="relative w-full h-64 sm:h-96 bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed]">
+            <div className="relative w-full h-64 sm:h-96 bg-gradient-to-br from-zinc-700 to-zinc-900">
               {event.eventPosterUrl ? (
                 <img
                   src={event.eventPosterUrl}
@@ -337,7 +337,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-[#8b5cf6]">
+                    <p className="text-lg font-bold text-zinc-300">
                       {currency} {ticket.ticketPrice.toLocaleString()}
                     </p>
                     <span
@@ -369,7 +369,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
             <h2 className="text-xl font-bold mb-4">Event Details</h2>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-[#8b5cf6] mt-0.5 flex-shrink-0" />
+                <Calendar className="w-5 h-5 text-zinc-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">Start Date</p>
                   <p className="font-medium">
@@ -385,7 +385,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
               </div>
 
               <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-[#8b5cf6] mt-0.5 flex-shrink-0" />
+                <Clock className="w-5 h-5 text-zinc-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">End Date</p>
                   <p className="font-medium">
@@ -401,7 +401,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
               </div>
 
               <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-[#8b5cf6] mt-0.5 flex-shrink-0" />
+                <MapPin className="w-5 h-5 text-zinc-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">Location</p>
                   <p className="font-medium">{event.eventLocation}</p>
@@ -409,7 +409,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
               </div>
 
               <div className="flex items-start gap-3">
-                <Users className="w-5 h-5 text-[#8b5cf6] mt-0.5 flex-shrink-0" />
+                <Users className="w-5 h-5 text-zinc-300 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground mb-1">Total Attendees</p>
                   <p className="font-medium">{stats.ticketsSold}</p>
@@ -474,7 +474,7 @@ export default function EventDetailPage({ eventId }: { eventId: string }) {
                   navigator.clipboard.writeText(`https://soldoutafrica.com/events/${event.slug}`)
                   toast.success("Link copied!")
                 }}
-                className="px-4 py-2 rounded-lg bg-[#8b5cf6] text-white hover:bg-[#7c3aed] transition-colors text-sm font-medium"
+                className="px-4 py-2 rounded-lg bg-zinc-700 text-white hover:bg-zinc-600 transition-colors text-sm font-medium"
               >
                 Copy
               </button>

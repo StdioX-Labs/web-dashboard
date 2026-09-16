@@ -401,7 +401,7 @@ export default function CreateEventPage() {
         <div className="flex items-center justify-center gap-4">
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-              currentStep === 'event' ? 'bg-[#8b5cf6] text-white' : 'bg-green-500 text-white'
+              currentStep === 'event' ? 'bg-zinc-700 text-white' : 'bg-green-500 text-white'
             }`}>
               {currentStep === 'event' ? '1' : <Check className="w-5 h-5" />}
             </div>
@@ -410,12 +410,12 @@ export default function CreateEventPage() {
             </span>
           </div>
           <div className={`h-0.5 w-16 sm:w-24 transition-all ${
-            currentStep === 'event' ? 'bg-border' : 'bg-[#8b5cf6]'
+            currentStep === 'event' ? 'bg-border' : 'bg-zinc-700'
           }`} />
           <div className="flex items-center gap-2">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
               currentStep === 'event' ? 'bg-border text-muted-foreground' : 
-              currentStep === 'tickets' ? 'bg-[#8b5cf6] text-white' : 
+              currentStep === 'tickets' ? 'bg-zinc-700 text-white' : 
               'bg-green-500 text-white'
             }`}>
               {currentStep === 'complete' ? <Check className="w-5 h-5" /> : '2'}
@@ -450,7 +450,7 @@ export default function CreateEventPage() {
                 value={eventName}
                 onChange={(e) => handleEventNameChange(e.target.value)}
                 placeholder="e.g., Summer Music Festival 2026"
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                 required
               />
             </div>
@@ -465,7 +465,7 @@ export default function CreateEventPage() {
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                 placeholder="e.g., summer-music-festival-2026"
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all font-mono"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all font-mono"
                 required
               />
               <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
@@ -489,7 +489,7 @@ export default function CreateEventPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                 required
               >
                 <option value="">Select a category</option>
@@ -533,7 +533,7 @@ export default function CreateEventPage() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                 required
               >
                 <option value="KES">KES - Kenyan Shilling</option>
@@ -553,7 +553,7 @@ export default function CreateEventPage() {
                   value={venue}
                   onChange={(e) => setVenue(e.target.value)}
                   placeholder="e.g., Uhuru Gardens, Nairobi"
-                  className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   required
                 />
               </div>
@@ -569,7 +569,7 @@ export default function CreateEventPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe your event in detail..."
                 rows={5}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all resize-none"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
                 required
               />
               <p className="text-xs text-muted-foreground mt-2">
@@ -614,7 +614,7 @@ export default function CreateEventPage() {
               <div className="relative">
                 {imagePreview ? (
                   <div className="space-y-3">
-                    <div className="relative w-full rounded-xl overflow-hidden border-2 border-[#8b5cf6] bg-black">
+                    <div className="relative w-full rounded-xl overflow-hidden border-2 border-zinc-500 bg-black">
                       <img
                         src={imagePreview}
                         alt="Event poster preview"
@@ -649,7 +649,7 @@ export default function CreateEventPage() {
                     </p>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-64 rounded-xl border-2 border-dashed border-border hover:border-[#8b5cf6] transition-colors cursor-pointer bg-secondary/30">
+                  <label className="flex flex-col items-center justify-center w-full h-64 rounded-xl border-2 border-dashed border-border hover:border-zinc-500 transition-colors cursor-pointer bg-secondary/30">
                     <ImageIcon className="w-12 h-12 text-muted-foreground mb-3" />
                     <p className="text-sm font-medium mb-1">Click to upload event poster</p>
                     <p className="text-xs text-muted-foreground">PNG, JPG, WebP up to 10MB</p>
@@ -686,7 +686,7 @@ export default function CreateEventPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating Event..." : "Create Event & Continue"}
           </button>
@@ -713,7 +713,7 @@ export default function CreateEventPage() {
             <button
               type="button"
               onClick={addTicketType}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer w-full sm:w-auto whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer w-full sm:w-auto whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               Add Ticket Type
@@ -736,7 +736,7 @@ export default function CreateEventPage() {
                 transition={{ duration: 0.25, ease: "easeOut" }}
                 className={`p-4 rounded-xl border bg-secondary/30 relative transition-colors ${
                   newTicketId === ticket.id
-                    ? "border-[#8b5cf6] ring-2 ring-[#8b5cf6]/30"
+                    ? "border-zinc-500 ring-2 ring-zinc-400/30"
                     : "border-border"
                 }`}
               >
@@ -763,7 +763,7 @@ export default function CreateEventPage() {
                           updateTicketType(ticket.id, "name", e.target.value)
                         }
                         placeholder="e.g., VIP Pass"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                       />
                     </div>
                     <div>
@@ -779,7 +779,7 @@ export default function CreateEventPage() {
                         placeholder="e.g., 2500"
                         min="0"
                         step="0.01"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                       />
                     </div>
                   </div>
@@ -796,7 +796,7 @@ export default function CreateEventPage() {
                         }
                         placeholder="e.g., 100"
                         min="1"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                       />
                     </div>
                     <div>
@@ -811,7 +811,7 @@ export default function CreateEventPage() {
                         }
                         placeholder="e.g., 10"
                         min="0"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                       />
                     </div>
                   </div>
@@ -828,7 +828,7 @@ export default function CreateEventPage() {
                               ticketsToIssue: e.target.checked ? "2" : "1",
                             })
                           }
-                          className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
+                          className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-zinc-400 focus:ring-offset-0"
                         />
                         <span className="text-xs font-medium">Group ticket</span>
                       </label>
@@ -847,7 +847,7 @@ export default function CreateEventPage() {
                               updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
                             }
                             min="2"
-                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
                             {TICKET_FIELD_HELP.groupOn}
@@ -868,7 +868,7 @@ export default function CreateEventPage() {
                               limitPerPerson: e.target.checked ? "1" : "0",
                             })
                           }
-                          className="w-4 h-4 rounded border-border text-[#8b5cf6] focus:ring-[#8b5cf6] focus:ring-offset-0"
+                          className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-zinc-400 focus:ring-offset-0"
                         />
                         <span className="text-xs font-medium">Restrict tickets per person</span>
                       </label>
@@ -887,7 +887,7 @@ export default function CreateEventPage() {
                               updateTicketType(ticket.id, "limitPerPerson", e.target.value)
                             }
                             min="1"
-                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
                             {TICKET_FIELD_HELP.limitOn}
@@ -907,7 +907,7 @@ export default function CreateEventPage() {
                         updateTicketType(ticket.id, "description", e.target.value)
                       }
                       placeholder="e.g., Includes backstage access"
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
 
@@ -970,7 +970,7 @@ export default function CreateEventPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-auto px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Adding Tickets..." : "Add Tickets & Complete"}
           </button>

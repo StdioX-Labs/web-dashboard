@@ -486,7 +486,7 @@ export default function SignupPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-zinc-700 to-zinc-900 bg-clip-text text-transparent mb-2">
             SoldOut Africa
           </h1>
           <p className="text-muted-foreground">
@@ -502,12 +502,12 @@ export default function SignupPage() {
               <React.Fragment key={s}>
                 {i > 0 && (
                   <div className={`h-0.5 w-8 ${
-                    stepIndex >= i ? "bg-[#8b5cf6]" : "bg-secondary"
+                    stepIndex >= i ? "bg-zinc-700" : "bg-secondary"
                   }`} />
                 )}
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
                   stepIndex >= i
-                    ? "bg-[#8b5cf6] text-white"
+                    ? "bg-zinc-700 text-white"
                     : "bg-secondary text-muted-foreground"
                 }`}>
                   {stepIndex > i || step === "success"
@@ -540,7 +540,7 @@ export default function SignupPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="John Doe"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -554,7 +554,7 @@ export default function SignupPage() {
                     value={idNumber}
                     onChange={(e) => setIdNumber(e.target.value)}
                     placeholder="12345678 — needed later for payouts"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -571,7 +571,7 @@ export default function SignupPage() {
                       setMobileNumber(formatted)
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX (auto-corrects from 0712345678)</p>
@@ -586,7 +586,7 @@ export default function SignupPage() {
                     value={emailAddress}
                     onChange={(e) => setEmailAddress(e.target.value)}
                     placeholder="john@example.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -601,7 +601,7 @@ export default function SignupPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                   <button
                     type="button"
@@ -628,7 +628,7 @@ export default function SignupPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                   <button
                     type="button"
@@ -647,7 +647,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={isCheckingAccount}
-                className="w-full py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isCheckingAccount ? (
                   <>
@@ -687,7 +687,7 @@ export default function SignupPage() {
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Acme Events"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -704,7 +704,7 @@ export default function SignupPage() {
                       setCompanyPhone(formatted)
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -718,7 +718,7 @@ export default function SignupPage() {
                     value={companyEmail}
                     onChange={(e) => setCompanyEmail(e.target.value)}
                     placeholder="info@acmeevents.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -732,7 +732,7 @@ export default function SignupPage() {
                     value={physicalAddress}
                     onChange={(e) => setPhysicalAddress(e.target.value)}
                     placeholder="123 Main St, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -746,7 +746,7 @@ export default function SignupPage() {
                     value={postalAddress}
                     onChange={(e) => setPostalAddress(e.target.value)}
                     placeholder="P.O. Box 123, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                   />
                 </div>
               </div>
@@ -756,7 +756,7 @@ export default function SignupPage() {
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                 >
                   <option value="KES">KES - Kenyan Shilling</option>
                   <option value="USD">USD - US Dollar</option>
@@ -768,7 +768,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -806,7 +806,7 @@ export default function SignupPage() {
               </div>
 
               <div className="flex items-start gap-3 rounded-xl border border-border bg-secondary/40 p-3">
-                <ShieldCheck className="w-5 h-5 text-[#8b5cf6] shrink-0 mt-0.5" />
+                <ShieldCheck className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
                 <p className="text-sm text-muted-foreground">
                   {verifyReason === "existing" ? (
                     <>
@@ -844,7 +844,7 @@ export default function SignupPage() {
                   className={`w-full h-12 px-4 rounded-xl border bg-background text-center text-lg tracking-[0.5em] outline-none transition-all ${
                     otpError && otpTouched
                       ? "border-destructive ring-4 ring-destructive/10"
-                      : "border-border focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10"
+                      : "border-border focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10"
                   }`}
                 />
                 <AnimatePresence mode="wait">
@@ -867,7 +867,7 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={isVerifyingOtp || isSendingCode || otp.length !== 4}
-                className="w-full py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isVerifyingOtp ? (
                   <>
@@ -887,7 +887,7 @@ export default function SignupPage() {
                   type="button"
                   onClick={() => sendVerificationCode(emailAddress.toLowerCase().trim())}
                   disabled={isSendingCode || isVerifyingOtp}
-                  className="text-sm text-[#8b5cf6] hover:underline disabled:opacity-50 disabled:no-underline"
+                  className="text-sm text-zinc-300 hover:underline disabled:opacity-50 disabled:no-underline"
                 >
                   {isSendingCode ? "Sending..." : "Resend code"}
                 </button>
@@ -902,7 +902,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => router.push("/")}
-                    className="text-[#8b5cf6] hover:underline"
+                    className="text-zinc-300 hover:underline"
                   >
                     sign in
                   </button>{" "}
@@ -927,7 +927,7 @@ export default function SignupPage() {
                   : "Your email is verified and your account is ready. Redirecting to dashboard..."}
               </p>
               <div className="flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-[#8b5cf6]" />
+                <Loader2 className="w-5 h-5 animate-spin text-zinc-300" />
                 <span className="text-sm text-muted-foreground">Loading dashboard</span>
               </div>
             </div>

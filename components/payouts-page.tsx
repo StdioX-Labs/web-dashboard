@@ -174,15 +174,15 @@ export default function PayoutsPage() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', sans-serif; padding: 20px; }
-          .header { border-bottom: 3px solid #8b5cf6; padding-bottom: 20px; margin-bottom: 30px; }
-          .brand-name { font-size: 28px; font-weight: 700; color: #8b5cf6; }
+          .header { border-bottom: 3px solid #27272a; padding-bottom: 20px; margin-bottom: 30px; }
+          .brand-name { font-size: 28px; font-weight: 700; color: #27272a; }
           .report-title { font-size: 24px; font-weight: 700; margin-top: 10px; }
           .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
           .summary-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; }
           .summary-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
           .summary-value { font-size: 24px; font-weight: 700; margin-top: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+          th { background: linear-gradient(135deg, #27272a, #18181b); color: white; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
           td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
           .status-pending { color: #f59e0b; font-weight: 600; }
           .status-completed { color: #059669; font-weight: 600; }
@@ -300,7 +300,7 @@ export default function PayoutsPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={exportPayoutsReport}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Export</span>
@@ -320,7 +320,7 @@ export default function PayoutsPage() {
         className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8"
       >
         {[
-          { label: "Total Amount", value: `KES ${(totalAmount / 1000).toFixed(0)}K`, icon: TrendingUp, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Total Amount", value: `KES ${(totalAmount / 1000).toFixed(0)}K`, icon: TrendingUp, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Pending", value: totalPending, icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
           { label: "Approved", value: totalApproved, icon: CheckCircle, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Completed", value: totalCompleted, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
@@ -364,7 +364,7 @@ export default function PayoutsPage() {
               placeholder="Search by ID, affiliate name, or amount..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
             />
           </div>
 
@@ -373,7 +373,7 @@ export default function PayoutsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="h-11 px-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all cursor-pointer"
+              className="h-11 px-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all cursor-pointer"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -385,7 +385,7 @@ export default function PayoutsPage() {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="h-11 px-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all cursor-pointer"
+              className="h-11 px-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all cursor-pointer"
             >
               <option value="all">All Types</option>
               <option value="withdraw">Withdrawals</option>
@@ -431,15 +431,15 @@ export default function PayoutsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 + index * 0.05 }}
-              className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-[#8b5cf6]/30 transition-all"
+              className="rounded-xl border border-border bg-card p-4 sm:p-6 hover:border-zinc-500/30 transition-all"
             >
               <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                 {/* Icon */}
-                <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0", payout.type === "withdraw" ? "bg-blue-100 dark:bg-blue-950/30" : "bg-purple-100 dark:bg-purple-950/30")}>
+                <div className={cn("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0", payout.type === "withdraw" ? "bg-blue-100 dark:bg-blue-950/30" : "bg-zinc-800 dark:bg-zinc-800/50")}>
                   {payout.type === "withdraw" ? (
                     <Send className={cn("w-6 h-6", "text-blue-600 dark:text-blue-400")} />
                   ) : (
-                    <DollarSign className={cn("w-6 h-6", "text-purple-600 dark:text-purple-400")} />
+                    <DollarSign className={cn("w-6 h-6", "text-zinc-300 dark:text-zinc-300")} />
                   )}
                 </div>
 
@@ -459,7 +459,7 @@ export default function PayoutsPage() {
                       <p className="text-sm text-muted-foreground font-mono">{payout.id}</p>
                     </div>
                     <div className="text-left sm:text-right flex-shrink-0">
-                      <p className="text-2xl font-bold text-[#8b5cf6]">KES {payout.amount.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-zinc-300">KES {payout.amount.toLocaleString()}</p>
                     </div>
                   </div>
 

@@ -225,7 +225,7 @@ export default function PurchaseTicketPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl lg:text-4xl font-bold mb-2 flex items-center gap-3">
-            <ShoppingCart className="w-8 h-8 text-[#8b5cf6]" />
+            <ShoppingCart className="w-8 h-8 text-zinc-300" />
             Purchase Tickets
           </h1>
           <p className="text-muted-foreground">Select an event and tickets to purchase</p>
@@ -237,13 +237,13 @@ export default function PurchaseTicketPage() {
             {/* Event Selection */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card rounded-2xl border border-border p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-[#8b5cf6]" />
+                <Calendar className="w-5 h-5 text-zinc-300" />
                 Select Event
               </h2>
 
               {isLoadingEvents ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
                 </div>
               ) : events.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
@@ -259,8 +259,8 @@ export default function PurchaseTicketPage() {
                       className={cn(
                         "text-left p-4 rounded-xl border-2 transition-all",
                         selectedEvent?.id === event.id
-                          ? "border-[#8b5cf6] bg-[#8b5cf6]/5"
-                          : "border-border hover:border-[#8b5cf6]/50"
+                          ? "border-zinc-500 bg-zinc-700/5"
+                          : "border-border hover:border-zinc-500/50"
                       )}
                     >
                       <div className="font-semibold">{event.name}</div>
@@ -277,13 +277,13 @@ export default function PurchaseTicketPage() {
             {selectedEvent && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-card rounded-2xl border border-border p-6">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-[#8b5cf6]" />
+                  <Ticket className="w-5 h-5 text-zinc-300" />
                   Available Tickets
                 </h2>
 
                 {isLoadingTickets ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                    <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
                   </div>
                 ) : tickets.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
@@ -341,7 +341,7 @@ export default function PurchaseTicketPage() {
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="customer@example.com"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                   <div>
@@ -351,7 +351,7 @@ export default function PurchaseTicketPage() {
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="254712345678"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                     <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p>
                   </div>
@@ -362,7 +362,7 @@ export default function PurchaseTicketPage() {
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                       placeholder="Enter coupon code"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                     />
                   </div>
                 </div>
@@ -417,8 +417,8 @@ export default function PurchaseTicketPage() {
                         className={cn(
                           "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
                           channel === "mpesa"
-                            ? "border-[#8b5cf6] bg-[#8b5cf6]/5"
-                            : "border-border hover:border-[#8b5cf6]/50"
+                            ? "border-zinc-500 bg-zinc-700/5"
+                            : "border-border hover:border-zinc-500/50"
                         )}
                       >
                         <Smartphone className="w-6 h-6" />
@@ -429,8 +429,8 @@ export default function PurchaseTicketPage() {
                         className={cn(
                           "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
                           channel === "card"
-                            ? "border-[#8b5cf6] bg-[#8b5cf6]/5"
-                            : "border-border hover:border-[#8b5cf6]/50"
+                            ? "border-zinc-500 bg-zinc-700/5"
+                            : "border-border hover:border-zinc-500/50"
                         )}
                       >
                         <CreditCard className="w-6 h-6" />
@@ -442,7 +442,7 @@ export default function PurchaseTicketPage() {
                   <button
                     onClick={handlePurchase}
                     disabled={isPurchasing || !customerEmail || !customerPhone}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isPurchasing ? (
                       <>

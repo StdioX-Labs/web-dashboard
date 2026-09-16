@@ -183,7 +183,7 @@ export function EventDetail({ eventId }: EventDetailProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-indigo-900 text-white p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <EventDetailHeader
           eventData={eventData}

@@ -547,14 +547,14 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
                     whileHover={{ y: -2, scale: 1.02 }}
-                    className="group relative overflow-hidden rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm p-3 xl:p-4 hover:border-[#8b5cf6]/30 transition-all duration-300"
+                    className="group relative overflow-hidden rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm p-3 xl:p-4 hover:border-zinc-500/30 transition-all duration-300"
                   >
                     {/* Gradient overlay on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#8b5cf6]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-zinc-700/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                     <div className="relative flex flex-col items-center justify-center text-center space-y-1">
-                      <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center group-hover:bg-[#8b5cf6]/20 transition-colors">
-                        <stat.Icon className="w-4 h-4 xl:w-5 xl:h-5 text-[#8b5cf6]" />
+                      <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-lg bg-zinc-700/10 flex items-center justify-center group-hover:bg-zinc-700/20 transition-colors">
+                        <stat.Icon className="w-4 h-4 xl:w-5 xl:h-5 text-zinc-300" />
                       </div>
                       <div className="text-lg xl:text-xl 2xl:text-2xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
                         {stat.value}
@@ -675,7 +675,7 @@ export default function LoginPage() {
                             : "Enter your email to create your account"}
                       </p>
                       {existingAccount && showOtpInput && (
-                        <p className="text-xs text-[#8b5cf6] mt-3 px-4">
+                        <p className="text-xs text-zinc-300 mt-3 px-4">
                           You already have an account with this email, so we&apos;re signing
                           you in instead of creating a new one.
                         </p>
@@ -720,8 +720,8 @@ export default function LoginPage() {
                                 emailError && touched
                                   ? "border-destructive ring-4 ring-destructive/10"
                                   : isFocused
-                                    ? "border-[#8b5cf6] ring-4 ring-[#8b5cf6]/10"
-                                    : "border-border hover:border-[#8b5cf6]/30"
+                                    ? "border-zinc-500 ring-4 ring-zinc-400/10"
+                                    : "border-border hover:border-zinc-500/30"
                               )}
                               aria-invalid={!!emailError && touched}
                               aria-describedby={emailError && touched ? "email-error" : undefined}
@@ -733,7 +733,7 @@ export default function LoginPage() {
                                 emailError && touched
                                   ? "text-destructive"
                                   : isFocused
-                                    ? "text-[#8b5cf6]"
+                                    ? "text-zinc-300"
                                     : "text-muted-foreground"
                               )}
                             />
@@ -769,8 +769,8 @@ export default function LoginPage() {
                             "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
                             "flex items-center justify-center gap-2",
                             "transition-all duration-300",
-                            "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white",
-                            "hover:shadow-lg hover:shadow-[#8b5cf6]/25",
+                            "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white",
+                            "hover:shadow-lg hover:shadow-zinc-500/25",
                             "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
                           )}
                         >
@@ -827,7 +827,7 @@ export default function LoginPage() {
                                 "placeholder:text-muted-foreground text-center tracking-widest",
                                 otpError && otpTouched
                                   ? "border-destructive ring-4 ring-destructive/10"
-                                  : "border-[#8b5cf6] ring-4 ring-[#8b5cf6]/10"
+                                  : "border-zinc-500 ring-4 ring-zinc-400/10"
                               )}
                               aria-invalid={!!otpError && otpTouched}
                               aria-describedby={otpError && otpTouched ? "otp-error" : undefined}
@@ -864,8 +864,8 @@ export default function LoginPage() {
                             "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
                             "flex items-center justify-center gap-2",
                             "transition-all duration-300",
-                            "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white",
-                            "hover:shadow-lg hover:shadow-[#8b5cf6]/25",
+                            "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white",
+                            "hover:shadow-lg hover:shadow-zinc-500/25",
                             "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
                           )}
                         >
@@ -896,7 +896,7 @@ export default function LoginPage() {
                             disabled={isSubmitting}
                             onMouseEnter={() => setCursorType("pointer")}
                             onMouseLeave={() => setCursorType("default")}
-                            className="text-muted-foreground hover:text-[#8b5cf6] transition-colors disabled:opacity-50"
+                            className="text-muted-foreground hover:text-zinc-300 transition-colors disabled:opacity-50"
                           >
                             Resend code
                           </button>
@@ -906,7 +906,7 @@ export default function LoginPage() {
                             onClick={handleBackToEmail}
                             onMouseEnter={() => setCursorType("pointer")}
                             onMouseLeave={() => setCursorType("default")}
-                            className="text-muted-foreground hover:text-[#8b5cf6] transition-colors"
+                            className="text-muted-foreground hover:text-zinc-300 transition-colors"
                           >
                             Change email
                           </button>

@@ -203,7 +203,7 @@ export default function TransactionsPage() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
       >
         {[
-          { label: "Total Tickets Sold", value: stats.ticketsSold.toString(), icon: TrendingUp, color: "text-[#8b5cf6]", bg: "bg-purple-50 dark:bg-purple-950/30" },
+          { label: "Total Tickets Sold", value: stats.ticketsSold.toString(), icon: TrendingUp, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
           { label: "Total Sales", value: `${currency} ${stats.totalSales.toLocaleString()}`, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Platform Liability", value: `${currency} ${stats.platformLiability.toLocaleString()}`, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
           { label: "Total Transactions", value: pagination.totalElements.toString(), icon: TrendingUp, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
@@ -245,7 +245,7 @@ export default function TransactionsPage() {
               placeholder="Search by event, customer, or transaction ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
+              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
             />
           </div>
 
@@ -258,7 +258,7 @@ export default function TransactionsPage() {
                 className={cn(
                   "px-4 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer",
                   filterStatus === status
-                    ? "bg-[#8b5cf6] text-white"
+                    ? "bg-zinc-700 text-white"
                     : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                 )}
               >

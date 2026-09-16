@@ -159,7 +159,7 @@ export default function GetStartedPage() {
           </p>
           <a
             href="/signup"
-            className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-[#8b5cf6] text-white text-sm font-semibold hover:bg-[#7c3aed] transition-colors"
+            className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-zinc-700 text-white text-sm font-semibold hover:bg-zinc-600 transition-colors"
           >
             Set up my account now
             <ArrowRight className="w-4 h-4" />
@@ -170,7 +170,7 @@ export default function GetStartedPage() {
   }
 
   const fieldClass =
-    "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+    "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
   const iconClass =
     "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none"
 
@@ -297,7 +297,7 @@ export default function GetStartedPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 rounded-xl bg-[#8b5cf6] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#7c3aed] disabled:opacity-60 transition-colors"
+              className="w-full h-12 rounded-xl bg-zinc-700 text-white text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-zinc-600 disabled:opacity-60 transition-colors"
             >
               {isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -311,7 +311,7 @@ export default function GetStartedPage() {
 
             <p className="text-xs text-muted-foreground text-center">
               Already have an account?{" "}
-              <a href="/" className="text-[#8b5cf6] font-medium hover:underline">
+              <a href="/" className="text-zinc-300 font-medium hover:underline">
                 Sign in
               </a>
             </p>

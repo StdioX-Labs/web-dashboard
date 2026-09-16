@@ -582,7 +582,7 @@ export default function ScanEventsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-1 sm:space-y-2"
         >
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-zinc-700 to-zinc-900 bg-clip-text text-transparent">
             Scan & Sell Tickets
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
@@ -617,7 +617,7 @@ export default function ScanEventsPage() {
               }}
               className={`flex flex-col items-center justify-center gap-1 px-2 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all ${
                 scanMode === mode
-                  ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white shadow-lg"
+                  ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -638,8 +638,8 @@ export default function ScanEventsPage() {
             {!selectedEvent ? (
               <div className="p-4 sm:p-6 md:p-8">
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#8b5cf6]/20 to-[#7c3aed]/20 flex items-center justify-center">
-                    <Camera className="w-8 h-8 text-[#8b5cf6]" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-zinc-700/20 to-zinc-900/20 flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-zinc-300" />
                   </div>
                   <h3 className="text-xl font-bold">Select Event to Scan</h3>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -649,7 +649,7 @@ export default function ScanEventsPage() {
 
                 {isLoadingEvents ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                    <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
                   </div>
                 ) : events.length > 0 ? (
                   <div className="space-y-3">
@@ -657,11 +657,11 @@ export default function ScanEventsPage() {
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-[#8b5cf6] hover:bg-[#8b5cf6]/5 transition-all group"
+                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-zinc-500 hover:bg-zinc-700/5 transition-all group"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base truncate group-hover:text-[#8b5cf6] transition-colors">
+                            <p className="font-semibold text-base truncate group-hover:text-zinc-300 transition-colors">
                               {event.name}
                             </p>
                             <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
@@ -679,7 +679,7 @@ export default function ScanEventsPage() {
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-[#8b5cf6] transition-colors flex-shrink-0 ml-3" />
+                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-zinc-300 transition-colors flex-shrink-0 ml-3" />
                         </div>
                       </button>
                     ))}
@@ -696,7 +696,7 @@ export default function ScanEventsPage() {
               /* Step 2: Scanner is active */
               <div className="relative">
                 {/* Top bar */}
-                <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-3 sm:p-4 text-white">
+                <div className="bg-gradient-to-r from-zinc-700 to-zinc-900 p-3 sm:p-4 text-white">
                   <div className="flex items-center justify-between">
                     <button
                       onClick={handleBackToEvents}
@@ -759,12 +759,12 @@ export default function ScanEventsPage() {
                         if (e.key === "Enter") handleManualBarcodeScan()
                       }}
                       placeholder="e.g. 5VBM0W"
-                      className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] transition-all"
+                      className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
                     />
                     <button
                       onClick={handleManualBarcodeScan}
                       disabled={isValidating || !manualBarcode.trim()}
-                      className="px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Scan"}
                     </button>
@@ -899,7 +899,7 @@ export default function ScanEventsPage() {
                     onClick={dismissModal}
                     className={`w-full py-3.5 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${
                       modalStatus === "success"
-                        ? "bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] hover:from-[#7c3aed] hover:to-[#6d28d9] text-white shadow-lg"
+                        ? "bg-gradient-to-r from-zinc-700 to-zinc-900 hover:from-zinc-800 hover:to-zinc-900 text-white shadow-lg"
                         : modalStatus === "already"
                         ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg"
                         : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg"
@@ -936,7 +936,7 @@ export default function ScanEventsPage() {
 
                 {isLoadingEvents ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                    <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
                   </div>
                 ) : events.length > 0 ? (
                   <div className="space-y-3">
@@ -944,11 +944,11 @@ export default function ScanEventsPage() {
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-[#8b5cf6] hover:bg-[#8b5cf6]/5 transition-all group"
+                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-zinc-500 hover:bg-zinc-700/5 transition-all group"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base truncate group-hover:text-[#8b5cf6] transition-colors">
+                            <p className="font-semibold text-base truncate group-hover:text-zinc-300 transition-colors">
                               {event.name}
                             </p>
                             <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
@@ -966,7 +966,7 @@ export default function ScanEventsPage() {
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-[#8b5cf6] transition-colors flex-shrink-0 ml-3" />
+                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-zinc-300 transition-colors flex-shrink-0 ml-3" />
                         </div>
                       </button>
                     ))}
@@ -1013,12 +1013,12 @@ export default function ScanEventsPage() {
                   {/* Ticket type selection */}
                   {isLoadingTickets ? (
                     <div className="flex items-center justify-center py-10">
-                      <Loader2 className="w-7 h-7 animate-spin text-[#8b5cf6]" />
+                      <Loader2 className="w-7 h-7 animate-spin text-zinc-300" />
                     </div>
                   ) : tickets.length > 0 ? (
                     <div>
                       <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
-                        <Ticket className="w-4 h-4 text-[#8b5cf6]" />
+                        <Ticket className="w-4 h-4 text-zinc-300" />
                         Select Ticket Type
                       </label>
                       <div className="grid gap-2.5">
@@ -1033,13 +1033,13 @@ export default function ScanEventsPage() {
                               }}
                               className={`relative w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
                                 isSelected
-                                  ? "border-[#8b5cf6] bg-[#8b5cf6]/5 shadow-md shadow-[#8b5cf6]/10 ring-2 ring-[#8b5cf6]/20 scale-[1.02]"
-                                  : "border-border hover:border-[#8b5cf6]/50"
+                                  ? "border-zinc-500 bg-zinc-700/5 shadow-md shadow-zinc-500/10 ring-2 ring-zinc-400/20 scale-[1.02]"
+                                  : "border-border hover:border-zinc-500/50"
                               }`}
                             >
                               {/* Selected accent strip */}
                               {isSelected && (
-                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-[#8b5cf6] to-[#7c3aed]" />
+                                <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-zinc-700 to-zinc-900" />
                               )}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -1047,7 +1047,7 @@ export default function ScanEventsPage() {
                                   <div
                                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                                       isSelected
-                                        ? "border-[#8b5cf6] bg-[#8b5cf6]"
+                                        ? "border-zinc-500 bg-zinc-700"
                                         : "border-border"
                                     }`}
                                   >
@@ -1056,7 +1056,7 @@ export default function ScanEventsPage() {
                                     )}
                                   </div>
                                   <div>
-                                    <p className={`font-semibold text-sm transition-colors ${isSelected ? "text-[#8b5cf6]" : ""}`}>
+                                    <p className={`font-semibold text-sm transition-colors ${isSelected ? "text-zinc-300" : ""}`}>
                                       {ticket.ticketName}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -1065,7 +1065,7 @@ export default function ScanEventsPage() {
                                   </div>
                                 </div>
                                 <div className="text-right flex-shrink-0 ml-3">
-                                  <p className={`font-bold ${isSelected ? "text-[#8b5cf6]" : "text-foreground"}`}>
+                                  <p className={`font-bold ${isSelected ? "text-zinc-300" : "text-foreground"}`}>
                                     KES {ticket.ticketPrice.toLocaleString()}
                                   </p>
                                 </div>
@@ -1090,7 +1090,7 @@ export default function ScanEventsPage() {
                       animate={{ opacity: 1, y: 0 }}
                     >
                       <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
-                        <Hash className="w-4 h-4 text-[#8b5cf6]" />
+                        <Hash className="w-4 h-4 text-zinc-300" />
                         Quantity
                       </label>
                       <div className="flex items-center justify-center gap-4 p-3 bg-muted/30 rounded-xl border border-border">
@@ -1125,7 +1125,7 @@ export default function ScanEventsPage() {
                       transition={{ delay: 0.05 }}
                     >
                       <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
-                        <Phone className="w-4 h-4 text-[#8b5cf6]" />
+                        <Phone className="w-4 h-4 text-zinc-300" />
                         Customer Phone Number
                       </label>
                       <div className="relative">
@@ -1140,7 +1140,7 @@ export default function ScanEventsPage() {
                             setCustomerPhone("254" + raw)
                           }}
                           placeholder="712345678"
-                          className="w-full h-12 pl-16 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all"
+                          className="w-full h-12 pl-16 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5">
@@ -1171,7 +1171,7 @@ export default function ScanEventsPage() {
                       </div>
                       <div className="border-t border-border pt-3 flex items-center justify-between">
                         <span className="font-semibold">Total</span>
-                        <span className="font-bold text-lg text-[#8b5cf6]">
+                        <span className="font-bold text-lg text-zinc-300">
                           KES {(selectedTicket.ticketPrice * ticketQuantity).toLocaleString()}
                         </span>
                       </div>
@@ -1215,8 +1215,8 @@ export default function ScanEventsPage() {
             {!selectedEvent ? (
               <div className="p-4 sm:p-6 md:p-8">
                 <div className="text-center mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#8b5cf6]/20 to-[#7c3aed]/20 flex items-center justify-center">
-                    <Users className="w-8 h-8 text-[#8b5cf6]" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-zinc-700/20 to-zinc-900/20 flex items-center justify-center">
+                    <Users className="w-8 h-8 text-zinc-300" />
                   </div>
                   <h3 className="text-xl font-bold">Group Ticket Lookup</h3>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -1226,7 +1226,7 @@ export default function ScanEventsPage() {
 
                 {isLoadingEvents ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#8b5cf6]" />
+                    <Loader2 className="w-8 h-8 animate-spin text-zinc-300" />
                   </div>
                 ) : events.length > 0 ? (
                   <div className="space-y-3">
@@ -1234,11 +1234,11 @@ export default function ScanEventsPage() {
                       <button
                         key={event.id}
                         onClick={() => setSelectedEvent(event)}
-                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-[#8b5cf6] hover:bg-[#8b5cf6]/5 transition-all group"
+                        className="w-full text-left p-4 rounded-xl border-2 border-border hover:border-zinc-500 hover:bg-zinc-700/5 transition-all group"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-base truncate group-hover:text-[#8b5cf6] transition-colors">
+                            <p className="font-semibold text-base truncate group-hover:text-zinc-300 transition-colors">
                               {event.name}
                             </p>
                             <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
@@ -1256,7 +1256,7 @@ export default function ScanEventsPage() {
                               </span>
                             </div>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-[#8b5cf6] transition-colors flex-shrink-0 ml-3" />
+                          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-zinc-300 transition-colors flex-shrink-0 ml-3" />
                         </div>
                       </button>
                     ))}
@@ -1273,7 +1273,7 @@ export default function ScanEventsPage() {
               /* Step 2: Enter group code */
               <div>
                 {/* Event header bar */}
-                <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-3 sm:p-4 text-white">
+                <div className="bg-gradient-to-r from-zinc-700 to-zinc-900 p-3 sm:p-4 text-white">
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => {
@@ -1301,7 +1301,7 @@ export default function ScanEventsPage() {
                 <div className="p-4 sm:p-6 space-y-5">
                   <div>
                     <label className="text-sm font-medium mb-3 flex items-center gap-1.5">
-                      <Search className="w-4 h-4 text-[#8b5cf6]" />
+                      <Search className="w-4 h-4 text-zinc-300" />
                       Enter Group Code
                     </label>
                     <div className="flex gap-2">
@@ -1317,13 +1317,13 @@ export default function ScanEventsPage() {
                             if (e.key === "Enter" && manualGroupCode.trim()) handleManualGroupCodeLookup()
                           }}
                           placeholder="e.g. HCGF08"
-                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-sm font-mono tracking-wider outline-none focus:border-[#8b5cf6] focus:ring-4 focus:ring-[#8b5cf6]/10 transition-all uppercase"
+                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-sm font-mono tracking-wider outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all uppercase"
                         />
                       </div>
                       <button
                         onClick={handleManualGroupCodeLookup}
                         disabled={isValidating || !manualGroupCode.trim()}
-                        className="h-12 px-5 bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#8b5cf6]/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="h-12 px-5 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {isValidating ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
@@ -1355,7 +1355,7 @@ export default function ScanEventsPage() {
               className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-[#8b5cf6] to-[#7c3aed] p-4 sm:p-5 text-white">
+              <div className="bg-gradient-to-r from-zinc-700 to-zinc-900 p-4 sm:p-5 text-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -1395,7 +1395,7 @@ export default function ScanEventsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-sm sm:text-base flex items-center gap-1.5">
-                      <CheckCircle className="w-4 h-4 text-[#8b5cf6]" />
+                      <CheckCircle className="w-4 h-4 text-zinc-300" />
                       Select Tickets to Redeem
                     </h4>
                     <div className="flex items-center gap-2">
@@ -1412,7 +1412,7 @@ export default function ScanEventsPage() {
                               selectedBarcodes.length === validBarcodes.length ? [] : validBarcodes
                             )
                           }}
-                          className="text-xs font-medium text-[#8b5cf6] hover:text-[#7c3aed] transition-colors"
+                          className="text-xs font-medium text-zinc-300 hover:text-white transition-colors"
                         >
                           {selectedBarcodes.length ===
                           groupTickets.tickets.filter((t) => t.status === "VALID").length
@@ -1438,8 +1438,8 @@ export default function ScanEventsPage() {
                             isRedeemed
                               ? "border-border bg-muted/30 opacity-50 cursor-not-allowed"
                               : isSelected
-                              ? "border-[#8b5cf6] bg-[#8b5cf6]/5 shadow-sm"
-                              : "border-border hover:border-[#8b5cf6]/40 cursor-pointer"
+                              ? "border-zinc-500 bg-zinc-700/5 shadow-sm"
+                              : "border-border hover:border-zinc-500/40 cursor-pointer"
                           }`}
                           onClick={() => !isRedeemed && toggleBarcodeSelection(ticket.barcode)}
                         >
@@ -1449,7 +1449,7 @@ export default function ScanEventsPage() {
                                 isRedeemed
                                   ? "border-muted-foreground/30 bg-muted"
                                   : isSelected
-                                  ? "border-[#8b5cf6] bg-[#8b5cf6]"
+                                  ? "border-zinc-500 bg-zinc-700"
                                   : "border-border"
                               }`}
                             >
@@ -1545,7 +1545,7 @@ export default function ScanEventsPage() {
           className="bg-muted/30 border border-border rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4"
         >
           <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-[#8b5cf6]" />
+            <Ticket className="w-5 h-5 text-zinc-300" />
             How to Use
           </h3>
           <div className="space-y-3 text-xs sm:text-sm">
@@ -1559,7 +1559,7 @@ export default function ScanEventsPage() {
               </div>
             </div>
             <div className="flex gap-3 p-3 bg-card rounded-lg border border-border">
-              <Camera className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Camera className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-foreground mb-1">QR Scan Mode</p>
                 <p className="text-muted-foreground">
@@ -1568,7 +1568,7 @@ export default function ScanEventsPage() {
               </div>
             </div>
             <div className="flex gap-3 p-3 bg-card rounded-lg border border-border">
-              <Keyboard className="w-5 h-5 text-[#8b5cf6] flex-shrink-0 mt-0.5" />
+              <Keyboard className="w-5 h-5 text-zinc-300 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-foreground mb-1">Group Code Mode</p>
                 <p className="text-muted-foreground">

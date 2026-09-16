@@ -127,29 +127,21 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #8b5cf6;
+  background: #52525b;
   border-radius: 10px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #7c3aed;
+  background: #71717a;
 }
 
 .scrollbar-track-transparent::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.scrollbar-thumb-purple::-webkit-scrollbar-thumb {
-  background: #8b5cf6;
-}
-
-.scrollbar-thumb-purple::-webkit-scrollbar-thumb:hover {
-  background: #7c3aed;
-}
-
 /* React Day Picker Custom Styles */
 .rdp-custom {
-  --rdp-accent-color: #8b5cf6;
+  --rdp-accent-color: #52525b;
   --rdp-background-color: hsl(var(--card));
   margin: 0;
   background-color: hsl(var(--card));
@@ -232,12 +224,12 @@ body {
 }
 
 .rdp-custom .rdp-day:hover:not(.rdp-day_selected):not(.rdp-day_disabled) {
-  background-color: #8b5cf6;
+  background-color: #52525b;
   color: white;
 }
 
 .rdp-custom .rdp-day_selected {
-  background-color: #8b5cf6;
+  background-color: #52525b;
   color: white;
   font-weight: 600;
 }
@@ -249,7 +241,7 @@ body {
 
 .rdp-custom .rdp-day_today {
   font-weight: 600;
-  color: #8b5cf6;
+  color: #52525b;
 }
 
 .rdp-custom .rdp-day_today.rdp-day_selected {
@@ -305,13 +297,13 @@ body {
 
 .pagination-button:hover:not(.pagination-button-active) {
   background: hsl(var(--secondary));
-  border-color: #8b5cf6;
+  border-color: #52525b;
 }
 
 .pagination-button-active {
-  background: #8b5cf6;
+  background: #52525b;
   color: white;
-  border-color: #8b5cf6;
+  border-color: #52525b;
   font-weight: 700;
 }
 
@@ -330,8 +322,8 @@ body {
 }
 
 .pagination-nav-button:hover:not(:disabled) {
-  background: #8b5cf6;
-  border-color: #8b5cf6;
+  background: #52525b;
+  border-color: #52525b;
   color: white;
 }
 
