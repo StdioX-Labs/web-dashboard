@@ -472,7 +472,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="e.g., Summer Music Festival 2026"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   required
                 />
               </div>
@@ -485,7 +485,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                   required
                 >
                   <option value="">Select a category</option>
@@ -521,7 +521,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                     value={venue}
                     onChange={(e) => setVenue(e.target.value)}
                     placeholder="e.g., Uhuru Gardens, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     required
                   />
                 </div>
@@ -537,7 +537,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your event in detail..."
                   rows={5}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-2">
@@ -681,7 +681,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                             updateTicketType(ticket.id, "name", e.target.value)
                           }
                           placeholder="e.g., VIP Pass"
-                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                         />
                       </div>
                       <div>
@@ -696,7 +696,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           }
                           placeholder="e.g., 2500"
                           min="0"
-                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                         />
                       </div>
                     </div>
@@ -713,7 +713,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           }
                           placeholder="e.g., 100"
                           min="1"
-                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                         />
                       </div>
                       <div>
@@ -728,7 +728,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           }
                           placeholder="0"
                           min="0"
-                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                         />
                       </div>
                     </div>
@@ -747,7 +747,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                                   : "1",
                               })
                             }
-                            className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-zinc-400 focus:ring-offset-0"
+                            className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-brand focus:ring-offset-0"
                           />
                           <span className="text-xs font-medium">Group ticket</span>
                         </label>
@@ -766,7 +766,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                                 updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
                               }
                               min="2"
-                              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
                               {TICKET_FIELD_HELP.groupOn}
@@ -789,7 +789,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                                   : "0",
                               })
                             }
-                            className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-zinc-400 focus:ring-offset-0"
+                            className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-brand focus:ring-offset-0"
                           />
                           <span className="text-xs font-medium">Restrict tickets per person</span>
                         </label>
@@ -808,7 +808,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                                 updateTicketType(ticket.id, "limitPerPerson", e.target.value)
                               }
                               min="1"
-                              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                              className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
                               {TICKET_FIELD_HELP.limitOn}
@@ -825,7 +825,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           onChange={(e) =>
                             updateTicketType(ticket.id, "isFree", e.target.checked)
                           }
-                          className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-zinc-400 focus:ring-offset-0"
+                          className="w-4 h-4 rounded border-border text-zinc-300 focus:ring-brand focus:ring-offset-0"
                         />
                         <span className="text-xs font-medium">This is a free ticket</span>
                       </label>
@@ -841,7 +841,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           updateTicketType(ticket.id, "description", e.target.value)
                         }
                         placeholder="e.g., Includes backstage access"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                       />
                     </div>
 

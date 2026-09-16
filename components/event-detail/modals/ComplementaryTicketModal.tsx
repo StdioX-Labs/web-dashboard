@@ -86,7 +86,7 @@ export function ComplementaryTicketModal({
                         ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                         : email && !emailError
                         ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                        : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
+                        : "border-border focus:border-brand focus:ring-brand/25"
                     )}
                     style={{ position: 'relative' }}
                   />
@@ -125,7 +125,7 @@ export function ComplementaryTicketModal({
                         ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                         : phone && !phoneError
                         ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                        : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
+                        : "border-border focus:border-brand focus:ring-brand/25"
                     )}
                     style={{ position: 'relative' }}
                   />
@@ -158,7 +158,7 @@ export function ComplementaryTicketModal({
                 <select
                   value={ticketType}
                   onChange={(e) => onTicketTypeChange(e.target.value)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                 >
                   <option value="">Select ticket type</option>
                   {ticketTypes.map((ticket) => (
@@ -179,7 +179,7 @@ export function ComplementaryTicketModal({
                   value={quantity}
                   onChange={(e) => onQuantityChange(e.target.value)}
                   min="1"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                 />
               </div>
 

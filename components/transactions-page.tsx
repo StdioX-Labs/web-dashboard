@@ -245,7 +245,7 @@ export default function TransactionsPage() {
               placeholder="Search by event, customer, or transaction ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+              className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
             />
           </div>
 

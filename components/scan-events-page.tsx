@@ -759,7 +759,7 @@ export default function ScanEventsPage() {
                         if (e.key === "Enter") handleManualBarcodeScan()
                       }}
                       placeholder="e.g. 5VBM0W"
-                      className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand transition-all"
                     />
                     <button
                       onClick={handleManualBarcodeScan}
@@ -1140,7 +1140,7 @@ export default function ScanEventsPage() {
                             setCustomerPhone("254" + raw)
                           }}
                           placeholder="712345678"
-                          className="w-full h-12 pl-16 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-12 pl-16 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5">
@@ -1317,7 +1317,7 @@ export default function ScanEventsPage() {
                             if (e.key === "Enter" && manualGroupCode.trim()) handleManualGroupCodeLookup()
                           }}
                           placeholder="e.g. HCGF08"
-                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-sm font-mono tracking-wider outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all uppercase"
+                          className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-background text-sm font-mono tracking-wider outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all uppercase"
                         />
                       </div>
                       <button

@@ -170,7 +170,7 @@ export default function GetStartedPage() {
   }
 
   const fieldClass =
-    "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+    "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
   const iconClass =
     "absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none"
 
@@ -311,7 +311,7 @@ export default function GetStartedPage() {
 
             <p className="text-xs text-muted-foreground text-center">
               Already have an account?{" "}
-              <a href="/" className="text-zinc-300 font-medium hover:underline">
+              <a href="/" className="text-brand-soft font-medium hover:underline">
                 Sign in
               </a>
             </p>

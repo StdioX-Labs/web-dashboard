@@ -341,7 +341,7 @@ export default function PurchaseTicketPage() {
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="customer@example.com"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                   <div>
@@ -351,7 +351,7 @@ export default function PurchaseTicketPage() {
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="254712345678"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                     <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p>
                   </div>
@@ -362,7 +362,7 @@ export default function PurchaseTicketPage() {
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
                       placeholder="Enter coupon code"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>

@@ -47,7 +47,7 @@ export function DatePicker({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       >
@@ -157,7 +157,7 @@ export function TimePicker({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={cn(
-          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+          "w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm text-left outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}
       >

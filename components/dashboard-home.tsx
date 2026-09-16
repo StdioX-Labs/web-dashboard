@@ -44,11 +44,23 @@ interface CompanyEvent {
 
 /**
  * Guilloche — the interference line-work printed on banknotes and struck into
- * metal payment cards. Each rosette is a real hypotrochoid rather than a
- * decorative squiggle: a point at distance `d` from the centre of a circle of
- * radius `r` rolling inside one of radius `R`. Choosing r as an exact divisor
- * of R closes the curve in a single revolution, which keeps the path short
- * enough to inline. Built once at module scope — it never changes.
+ * metal payment cards. Two families of curve, because real security engraving
+ * is never just one.
+ *
+ * `rosettePath` traces a hypotrochoid: a point at distance `d` from the centre
+ * of a circle of radius `r` rolling inside one of radius `R`. Keeping r an exact
+ * divisor of R closes the curve in a single revolution, which keeps the path
+ * short enough to inline. The medallion layers pairs of rosettes that share R
+ * and r but differ in `d` — same closure, different petal amplitude — so they
+ * interfere and shimmer the way a rose engine's work does. Detuning `r` instead
+ * would give the same shimmer but break the closure, leaving a visible seam
+ * where the path snaps shut.
+ *
+ * `lathePath` is the straight lathe work filling the field behind it: two sine
+ * terms of different frequency per line, so the ground never resolves into an
+ * obviously repeating wave.
+ *
+ * Both are built once at module scope — neither ever changes.
  */
 function rosettePath(R: number, r: number, d: number, stepsPerPetal = 16): string {
   const petals = Math.round(R / r)
@@ -64,24 +76,113 @@ function rosettePath(R: number, r: number, d: number, stepsPerPetal = 16): strin
   return "M" + points.join("L") + "Z"
 }
 
+function lathePath(baseY: number, amp: number, phase: number, width = 400, steps = 72): string {
+  const points: string[] = []
+  for (let i = 0; i <= steps; i++) {
+    const x = (i / steps) * width
+    const y =
+      baseY +
+      amp * Math.sin((x / width) * Math.PI * 4 + phase) +
+      amp * 0.42 * Math.sin((x / width) * Math.PI * 9 - phase * 1.7)
+    points.push(`${x.toFixed(1)},${y.toFixed(1)}`)
+  }
+  return "M" + points.join("L")
+}
+
+/** Rows drift in phase rather than marching in step — that drift is what makes
+ *  the field read as watered silk instead of as ruled lines. */
+const LATHE_LINES = Array.from({ length: 30 }, (_, i) =>
+  lathePath(-12 + i * 9.5, 5.5 + (i % 3) * 0.9, i * 0.38)
+)
+
 const GUILLOCHE_ROSETTES = [
-  // d ≈ r gives clean cusps; d far from r tangles the curve into scribble.
-  { d: rosettePath(128, 12.8, 12.8), opacity: 0.5, rotate: 0 },
-  { d: rosettePath(128, 10.6, 10.6), opacity: 0.32, rotate: 9 },
-  { d: rosettePath(92, 11.5, 11.5), opacity: 0.45, rotate: 4 },
-  { d: rosettePath(58, 9.6, 9.6), opacity: 0.38, rotate: 0 },
+  // R/r is a whole number in every pair, so every curve closes cleanly.
+  { d: rosettePath(128, 12.8, 12.8), opacity: 0.55, rotate: 0, width: 0.6 },
+  { d: rosettePath(128, 12.8, 10.2), opacity: 0.3, rotate: 5, width: 0.45 },
+  { d: rosettePath(92, 11.5, 11.5), opacity: 0.5, rotate: 4, width: 0.55 },
+  { d: rosettePath(92, 11.5, 8.8), opacity: 0.26, rotate: -4, width: 0.4 },
+  { d: rosettePath(57.6, 9.6, 9.6), opacity: 0.42, rotate: 0, width: 0.6 },
 ]
+
+/** The lathe ground: full-bleed, stretched, and faded out across the diagonal so
+ *  coverage is never uniform — real cards concentrate their engraving. */
+function LatheGround({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 400 250" fill="none" preserveAspectRatio="none" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="latheFalloff" x1="400" y1="0" x2="40" y2="250" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.9" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <mask id="latheFade">
+          <rect x="0" y="0" width="400" height="250" fill="url(#latheFalloff)" />
+        </mask>
+      </defs>
+      <g mask="url(#latheFade)">
+        {LATHE_LINES.map((d, i) => (
+          <path
+            key={i}
+            d={d}
+            stroke="currentColor"
+            strokeWidth={i % 2 === 0 ? 0.5 : 0.35}
+            opacity={i % 2 === 0 ? 0.5 : 0.26}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </g>
+    </svg>
+  )
+}
 
 function Guilloche({ className }: { className?: string }) {
   return (
     <svg viewBox="-140 -140 280 280" fill="none" className={className} aria-hidden="true">
-      <g stroke="currentColor" strokeWidth="0.5" vectorEffect="non-scaling-stroke">
+      <defs>
+        {/* Foil banding. The lines catch light across the medallion rather than
+            sitting at one flat tone, which is what sells them as struck metal. */}
+        <linearGradient id="foilStroke" x1="-140" y1="-140" x2="140" y2="140" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#6E5A32" />
+          <stop offset="0.3" stopColor="#D8C48C" />
+          <stop offset="0.48" stopColor="#F6EDD3" />
+          <stop offset="0.62" stopColor="#B99C5E" />
+          <stop offset="0.82" stopColor="#E3D2A2" />
+          <stop offset="1" stopColor="#5E4D2B" />
+        </linearGradient>
+        <radialGradient id="medallionFalloff">
+          <stop offset="0.3" stopColor="#fff" stopOpacity="1" />
+          <stop offset="0.72" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+        </radialGradient>
+        <mask id="medallionFade">
+          <rect x="-140" y="-140" width="280" height="280" fill="url(#medallionFalloff)" />
+        </mask>
+      </defs>
+      <g mask="url(#medallionFade)" fill="none">
         {GUILLOCHE_ROSETTES.map((ring, i) => (
-          <path key={i} d={ring.d} opacity={ring.opacity} transform={`rotate(${ring.rotate})`} />
+          <path
+            key={i}
+            d={ring.d}
+            stroke="url(#foilStroke)"
+            strokeWidth={ring.width}
+            opacity={ring.opacity}
+            transform={`rotate(${ring.rotate})`}
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
-        {/* Engine-turned rings framing the medallion */}
-        {[134, 130, 96, 62, 26, 20].map((r, i) => (
-          <circle key={r} cx="0" cy="0" r={r} opacity={i % 2 === 0 ? 0.35 : 0.18} />
+        {/* Engine-turned rings framing the medallion, alternating weight the way
+            a rose engine steps through its index plate. */}
+        {[136, 132, 129, 98, 94, 62, 28, 22, 19].map((r, i) => (
+          <circle
+            key={r}
+            cx="0"
+            cy="0"
+            r={r}
+            stroke="url(#foilStroke)"
+            strokeWidth={i % 3 === 0 ? 0.65 : 0.4}
+            opacity={i % 2 === 0 ? 0.42 : 0.2}
+            vectorEffect="non-scaling-stroke"
+          />
         ))}
       </g>
     </svg>
@@ -303,7 +404,7 @@ export default function DashboardHome() {
       value: isLoading ? "—" : `${currency} ${formatCurrency(totalRevenue, true)}`,
       hint: "Gross, before fees",
       icon: Wallet,
-      tint: "bg-zinc-500/10 text-zinc-300",
+      tint: "bg-brand/15 text-brand-soft",
     },
   ]
 
@@ -333,13 +434,14 @@ export default function DashboardHome() {
         className="mb-8 sm:mb-10 grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center"
       >
         <div className="relative w-full max-w-[420px] mx-auto lg:mx-0">
-          <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-[1.25rem] sm:rounded-[1.5rem] bg-gradient-to-br from-[#26262C] via-[#161619] to-[#0B0B0D] p-4 sm:p-6 text-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
+          <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-[1.25rem] sm:rounded-[1.5rem] bg-gradient-to-br from-[#232A2D] via-[#15171A] to-[#0B0B0D] p-4 sm:p-6 text-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
             {/* Brushed metal: fine vertical grain, then a soft sheen across it. */}
             <div
               className="pointer-events-none absolute inset-0 opacity-[0.035]"
               style={{ backgroundImage: "repeating-linear-gradient(90deg,#fff 0 1px,transparent 1px 3px)" }}
             />
-            <Guilloche className="pointer-events-none absolute -right-[22%] top-1/2 h-[215%] w-auto -translate-y-1/2 text-white opacity-[0.14]" />
+            <LatheGround className="pointer-events-none absolute inset-0 h-full w-full text-white opacity-[0.09]" />
+            <Guilloche className="pointer-events-none absolute -right-[22%] top-1/2 h-[215%] w-auto -translate-y-1/2 opacity-[0.5]" />
             <div className="pointer-events-none absolute -inset-x-1/4 -top-1/2 h-[200%] rotate-[24deg] bg-gradient-to-b from-white/12 via-white/[0.03] to-transparent" />
             <motion.div
               animate={{ opacity: [0.18, 0.3, 0.18] }}
@@ -501,7 +603,7 @@ export default function DashboardHome() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
           <h2 className="text-lg font-bold sm:text-xl">Upcoming Events</h2>
-          <Link href="/dashboard/events" className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-300 hover:text-white">
+          <Link href="/dashboard/events" className="flex shrink-0 items-center gap-1 text-sm font-medium text-brand-soft hover:text-white">
             View All
             <ArrowUpRight className="h-4 w-4" />
           </Link>

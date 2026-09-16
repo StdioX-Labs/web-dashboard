@@ -68,6 +68,14 @@
   --input: 0 0% 14.9%;
   --ring: 0 0% 100%;
   --radius: 0.5rem;
+
+  /* Brand accent — a petrol teal. Deliberately off the indigo/violet that
+     reads as stock UI, and far enough from the emerald that carries "money"
+     here that the two are never confused. Spent sparingly: active nav,
+     focus, links, pagination. Retune these three lines, not call sites. */
+  --brand: 190 52% 30%;
+  --brand-hover: 190 52% 37%;
+  --brand-soft: 187 44% 64%;
 }
 
 @theme inline {
@@ -86,6 +94,9 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-brand: hsl(var(--brand));
+  --color-brand-hover: hsl(var(--brand-hover));
+  --color-brand-soft: hsl(var(--brand-soft));
 }
 
 * {
@@ -141,7 +152,7 @@ body {
 
 /* React Day Picker Custom Styles */
 .rdp-custom {
-  --rdp-accent-color: #52525b;
+  --rdp-accent-color: hsl(var(--brand));
   --rdp-background-color: hsl(var(--card));
   margin: 0;
   background-color: hsl(var(--card));
@@ -224,12 +235,12 @@ body {
 }
 
 .rdp-custom .rdp-day:hover:not(.rdp-day_selected):not(.rdp-day_disabled) {
-  background-color: #52525b;
+  background-color: hsl(var(--brand));
   color: white;
 }
 
 .rdp-custom .rdp-day_selected {
-  background-color: #52525b;
+  background-color: hsl(var(--brand));
   color: white;
   font-weight: 600;
 }
@@ -241,7 +252,7 @@ body {
 
 .rdp-custom .rdp-day_today {
   font-weight: 600;
-  color: #52525b;
+  color: hsl(var(--brand-soft));
 }
 
 .rdp-custom .rdp-day_today.rdp-day_selected {
@@ -297,13 +308,13 @@ body {
 
 .pagination-button:hover:not(.pagination-button-active) {
   background: hsl(var(--secondary));
-  border-color: #52525b;
+  border-color: hsl(var(--brand));
 }
 
 .pagination-button-active {
-  background: #52525b;
+  background: hsl(var(--brand));
   color: white;
-  border-color: #52525b;
+  border-color: hsl(var(--brand));
   font-weight: 700;
 }
 
@@ -322,8 +333,8 @@ body {
 }
 
 .pagination-nav-button:hover:not(:disabled) {
-  background: #52525b;
-  border-color: #52525b;
+  background: hsl(var(--brand));
+  border-color: hsl(var(--brand));
   color: white;
 }
 

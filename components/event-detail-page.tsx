@@ -3560,7 +3560,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       placeholder="Search transactions..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                     />
                     <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-zinc-700 text-white rounded-md text-xs font-semibold hover:bg-zinc-600 transition-colors cursor-pointer">
                       Search
@@ -3773,7 +3773,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       placeholder="Search attendees..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                     />
                     <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-zinc-700 text-white rounded-md text-xs font-semibold hover:bg-zinc-600 transition-colors cursor-pointer">
                       Search
@@ -4026,7 +4026,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   placeholder="Search by name, code, or phone..."
                   value={affiliateSearch}
                   onChange={(e) => setAffiliateSearch(e.target.value)}
-                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-11 pl-10 pr-4 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                 />
               </div>
               <button
@@ -4362,7 +4362,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={onboardName}
                     onChange={(e) => setOnboardName(e.target.value)}
                     placeholder="e.g., Jane Wanjiru"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
 
@@ -4375,7 +4375,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={onboardPhone}
                     onChange={(e) => setOnboardPhone(e.target.value)}
                     placeholder="0722000000"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">
                     0722000000, +254 722 000000 and 254722000000 all work.
@@ -4388,7 +4388,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <select
                       value={onboardModel}
                       onChange={(e) => setOnboardModel(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all cursor-pointer"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all cursor-pointer"
                     >
                       <option value="PERCENTAGE">Percentage</option>
                       <option value="FIXED_AMOUNT">Fixed amount</option>
@@ -4404,7 +4404,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setOnboardRevShare(e.target.value)}
                       min="0"
                       step="0.01"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>
@@ -4510,7 +4510,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     min="0"
                     step="0.01"
                     autoFocus
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                   <p className="text-xs text-muted-foreground mt-1.5">
                     Applies to sales from now on — commission already earned is unchanged.
@@ -4701,7 +4701,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                           : compEmail && !compEmailError
                           ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                          : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
+                          : "border-border focus:border-brand focus:ring-brand/25"
                       )}
                       style={{ position: 'relative' }}
                     />
@@ -4738,7 +4738,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                           : compPhone && !compPhoneError
                           ? "border-green-500 focus:border-green-500 focus:ring-green-500/10"
-                          : "border-border focus:border-zinc-500 focus:ring-zinc-400/10"
+                          : "border-border focus:border-brand focus:ring-brand/25"
                       )}
                       style={{ position: 'relative' }}
                     />
@@ -4769,7 +4769,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <select
                     value={compTicketType}
                     onChange={(e) => setCompTicketType(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                   >
                     <option value="">Select ticket type</option>
                     {ticketTypes.map((ticket: any) => (
@@ -4788,7 +4788,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={compQuantity}
                     onChange={(e) => setCompQuantity(e.target.value)}
                     min="1"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
 
@@ -4935,7 +4935,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                           setSuspendError("")
                         }}
                         placeholder="••••"
-                        className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                        className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                       />
                       {suspendError && (
                         <p className="text-sm text-red-600 dark:text-red-400 mt-2">{suspendError}</p>
@@ -5005,7 +5005,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={editTicketName}
                     onChange={(e) => setEditTicketName(e.target.value)}
                     placeholder="e.g., VIP Pass"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -5033,7 +5033,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketQuantity(e.target.value)}
                       placeholder="e.g., 100"
                       min="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>
@@ -5049,7 +5049,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketLimitPerPerson(e.target.value)}
                       placeholder="0 = No limit"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                   <div>
@@ -5062,7 +5062,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setEditTicketComplementary(e.target.value)}
                       placeholder="0"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>
@@ -5077,7 +5077,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     onChange={(e) => setEditTicketToIssue(e.target.value)}
                     placeholder="1"
                     min="1"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
 
@@ -5161,7 +5161,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     value={addTicketName}
                     onChange={(e) => setAddTicketName(e.target.value)}
                     placeholder="e.g., VIP Pass"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -5175,7 +5175,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketPrice(e.target.value)}
                       placeholder="e.g., 2500"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                   <div>
@@ -5188,7 +5188,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketQuantity(e.target.value)}
                       placeholder="e.g., 100"
                       min="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>
@@ -5201,7 +5201,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     onChange={(e) => setAddTicketDescription(e.target.value)}
                     placeholder="Add additional details about this ticket type..."
                     rows={3}
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none"
                   />
                 </div>
 
@@ -5217,7 +5217,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketLimitPerPerson(e.target.value)}
                       min="0"
                       placeholder="0 = no limit"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                   <div>
@@ -5230,7 +5230,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketComplementary(e.target.value)}
                       min="0"
                       placeholder="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                 </div>
@@ -5245,7 +5245,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(e) => setAddTicketToIssue(e.target.value)}
                       min="1"
                       placeholder="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>
                   <div className="flex items-center gap-3 pt-6">

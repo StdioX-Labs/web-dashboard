@@ -105,7 +105,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
         {/* Sleek Expand/Collapse Button - Desktop only, subtle but visible */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-muted hover:bg-zinc-700 text-muted-foreground hover:text-white items-center justify-center transition-all duration-200 hover:scale-105 z-10"
+          className="hidden lg:flex absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-muted hover:bg-brand text-muted-foreground hover:text-white items-center justify-center transition-all duration-200 hover:scale-105 z-10"
         >
           {isCollapsed ? (
             <ChevronRight className="w-3 h-3" />
@@ -138,7 +138,7 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
               className={cn(
                 "relative flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200",
                 isActive
-                  ? "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white shadow-lg shadow-zinc-500/25"
+                  ? "bg-brand text-white shadow-lg shadow-brand/30"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary",
                 isCollapsed && "justify-center"
               )}

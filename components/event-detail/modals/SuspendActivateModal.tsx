@@ -143,7 +143,7 @@ export function SuspendActivateModal({
                         onOtpChange(value)
                       }}
                       placeholder="••••"
-                      className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                      className="w-full h-14 px-4 rounded-xl border border-border bg-background text-2xl font-mono text-center outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                     {error && (
                       <p className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</p>

@@ -553,7 +553,7 @@ export default function PromotionsPage() {
             placeholder={`Search ${activeTab === "flash-sales" ? "flash sales" : "promo codes"}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+            className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
           />
         </div>
 
@@ -870,7 +870,7 @@ export default function PromotionsPage() {
                   value={flashSaleForm.name}
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, name: e.target.value })}
                   placeholder="e.g., Early Bird Special"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   required
                 />
               </div>
@@ -882,7 +882,7 @@ export default function PromotionsPage() {
                 <select
                   value={flashSaleForm.eventId}
                   onChange={(e) => handleEventChange(e.target.value, true)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Select an event</option>
@@ -902,7 +902,7 @@ export default function PromotionsPage() {
                   <select
                     value={flashSaleForm.ticketTypeId}
                     onChange={(e) => handleTicketTypeChange(e.target.value, true)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select a ticket type</option>
@@ -937,7 +937,7 @@ export default function PromotionsPage() {
                           value={flashSaleForm.discountedPrice}
                           onChange={(e) => handleDiscountedPriceChange(e.target.value, true)}
                           placeholder="2000"
-                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                           required
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-medium">
@@ -1002,7 +1002,7 @@ export default function PromotionsPage() {
                   value={flashSaleForm.ticketsLimit}
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, ticketsLimit: e.target.value })}
                   placeholder="100"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1017,7 +1017,7 @@ export default function PromotionsPage() {
                   onChange={(e) => setFlashSaleForm({ ...flashSaleForm, description: e.target.value })}
                   placeholder="Add any additional details about this flash sale..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none"
                 />
               </div>
 
@@ -1071,7 +1071,7 @@ export default function PromotionsPage() {
                   value={promoCodeForm.code}
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, code: e.target.value.toUpperCase() })}
                   placeholder="e.g., SUMMER2026"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all font-mono"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all font-mono"
                   required
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1086,7 +1086,7 @@ export default function PromotionsPage() {
                 <select
                   value={promoCodeForm.eventId}
                   onChange={(e) => handleEventChange(e.target.value, false)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Select an event</option>
@@ -1106,7 +1106,7 @@ export default function PromotionsPage() {
                   <select
                     value={promoCodeForm.ticketTypeId}
                     onChange={(e) => handleTicketTypeChange(e.target.value, false)}
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer"
                     required
                   >
                     <option value="">Select a ticket type</option>
@@ -1141,7 +1141,7 @@ export default function PromotionsPage() {
                           value={promoCodeForm.discountedPrice}
                           onChange={(e) => handleDiscountedPriceChange(e.target.value, false)}
                           placeholder="2000"
-                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                          className="w-full h-12 px-4 pr-14 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                           required
                         />
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-medium">
@@ -1190,7 +1190,7 @@ export default function PromotionsPage() {
                   value={promoCodeForm.usageLimit}
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, usageLimit: e.target.value })}
                   placeholder="Leave empty for unlimited uses"
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Maximum number of times this code can be used
@@ -1204,7 +1204,7 @@ export default function PromotionsPage() {
                   onChange={(e) => setPromoCodeForm({ ...promoCodeForm, description: e.target.value })}
                   placeholder="Add any additional details about this promo code..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none"
                 />
               </div>
 

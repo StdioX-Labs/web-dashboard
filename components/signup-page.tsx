@@ -540,7 +540,7 @@ export default function SignupPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="John Doe"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -554,7 +554,7 @@ export default function SignupPage() {
                     value={idNumber}
                     onChange={(e) => setIdNumber(e.target.value)}
                     placeholder="12345678 — needed later for payouts"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -571,7 +571,7 @@ export default function SignupPage() {
                       setMobileNumber(formatted)
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX (auto-corrects from 0712345678)</p>
@@ -586,7 +586,7 @@ export default function SignupPage() {
                     value={emailAddress}
                     onChange={(e) => setEmailAddress(e.target.value)}
                     placeholder="john@example.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -601,7 +601,7 @@ export default function SignupPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                   <button
                     type="button"
@@ -628,7 +628,7 @@ export default function SignupPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-11 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                   <button
                     type="button"
@@ -687,7 +687,7 @@ export default function SignupPage() {
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Acme Events"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -704,7 +704,7 @@ export default function SignupPage() {
                       setCompanyPhone(formatted)
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -718,7 +718,7 @@ export default function SignupPage() {
                     value={companyEmail}
                     onChange={(e) => setCompanyEmail(e.target.value)}
                     placeholder="info@acmeevents.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -732,7 +732,7 @@ export default function SignupPage() {
                     value={physicalAddress}
                     onChange={(e) => setPhysicalAddress(e.target.value)}
                     placeholder="123 Main St, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -746,7 +746,7 @@ export default function SignupPage() {
                     value={postalAddress}
                     onChange={(e) => setPostalAddress(e.target.value)}
                     placeholder="P.O. Box 123, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
                 </div>
               </div>
@@ -756,7 +756,7 @@ export default function SignupPage() {
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10 transition-all"
+                  className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                 >
                   <option value="KES">KES - Kenyan Shilling</option>
                   <option value="USD">USD - US Dollar</option>
@@ -844,7 +844,7 @@ export default function SignupPage() {
                   className={`w-full h-12 px-4 rounded-xl border bg-background text-center text-lg tracking-[0.5em] outline-none transition-all ${
                     otpError && otpTouched
                       ? "border-destructive ring-4 ring-destructive/10"
-                      : "border-border focus:border-zinc-500 focus:ring-4 focus:ring-zinc-400/10"
+                      : "border-border focus:border-brand focus:ring-4 focus:ring-brand/25"
                   }`}
                 />
                 <AnimatePresence mode="wait">
