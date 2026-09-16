@@ -90,12 +90,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Return the response even if not ok, so the client can see the error message
-    if (!response.ok) {
+    // Upstream reports failures as `{ status: false, error: "..." }` while the
+    // api-client and its callers read `message`, so without mirroring it the
+    // real reason is dropped and the toast falls back to a generic failure.
+    // Same fix as `/api/company/create` and `lib/soldout-proxy.ts`.
+    if (!response.ok || data?.status === false) {
       console.error('API returned error status:', response.status)
       console.error('Error details:', data)
+      const message = data?.error || data?.message || `Request failed (${response.status})`
+
       return NextResponse.json(
         {
           ...data,
+          status: false,
+          message,
           _httpStatus: response.status,
           _statusText: response.statusText
         },

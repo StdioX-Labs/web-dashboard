@@ -20,6 +20,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DateTimePicker, DatePicker, TimePicker } from "@/components/ui/date-time-picker"
 import { api } from "@/lib/api-client"
+import { EVENT_CATEGORIES } from "@/lib/event-categories"
+import { TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 import { sessionManager } from "@/lib/session-manager"
 import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
 
@@ -491,25 +493,11 @@ export default function CreateEventPage() {
                 required
               >
                 <option value="">Select a category</option>
-                <option value="1">Music Events</option>
-                <option value="2">Sports Events</option>
-                <option value="3">Cultural & Community Events</option>
-                <option value="4">Business & Networking Events</option>
-                <option value="5">Entertainment & Arts</option>
-                <option value="6">Food & Drink Events</option>
-                <option value="7">Workshops & Training</option>
-                <option value="8">Family & Kids</option>
-                <option value="9">Conventions & Expos</option>
-                <option value="10">Virtual & Online Events</option>
-                <option value="11">Health & Wellness Events</option>
-                <option value="12">Fashion & Beauty</option>
-                <option value="13">Nightlife & Social Events</option>
-                <option value="14">Academic & Educational Events</option>
-                <option value="15">Private Events</option>
-                <option value="16">Seasonal & Holiday Events</option>
-                <option value="17">Adventure & Outdoor Events</option>
-                <option value="18">Fundraisers & Charity Events</option>
-                <option value="19">Professional Competitions</option>
+                {EVENT_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -844,6 +832,11 @@ export default function CreateEventPage() {
                         />
                         <span className="text-xs font-medium">Group ticket</span>
                       </label>
+                      {!ticket.isGroupTicket && (
+                        <p className="text-xs text-muted-foreground">
+                          {TICKET_FIELD_HELP.groupOff}
+                        </p>
+                      )}
                       {ticket.isGroupTicket && (
                         <div>
                           <label className="text-xs font-medium mb-1.5 block">Group of</label>
@@ -857,7 +850,7 @@ export default function CreateEventPage() {
                             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
-                            Tickets issued per purchase (e.g. 2 for a couple's ticket)
+                            {TICKET_FIELD_HELP.groupOn}
                           </p>
                         </div>
                       )}
@@ -879,6 +872,11 @@ export default function CreateEventPage() {
                         />
                         <span className="text-xs font-medium">Restrict tickets per person</span>
                       </label>
+                      {!ticket.restrictLimitPerPerson && (
+                        <p className="text-xs text-muted-foreground">
+                          {TICKET_FIELD_HELP.limitOff}
+                        </p>
+                      )}
                       {ticket.restrictLimitPerPerson && (
                         <div>
                           <label className="text-xs font-medium mb-1.5 block">Limit to</label>
@@ -892,7 +890,7 @@ export default function CreateEventPage() {
                             className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                           />
                           <p className="text-xs text-muted-foreground mt-1">
-                            Maximum tickets one person can purchase
+                            {TICKET_FIELD_HELP.limitOn}
                           </p>
                         </div>
                       )}

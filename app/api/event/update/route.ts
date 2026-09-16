@@ -77,8 +77,18 @@ export async function POST(request: NextRequest) {
 
     console.log('API Response data:', data)
 
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status })
+    // Upstream reports failures as `{ status: false, error: "..." }` while the
+    // api-client and its callers read `message`, so without mirroring it the
+    // real reason is dropped and the toast falls back to a generic failure.
+    // Same fix as `/api/company/create` and `lib/soldout-proxy.ts`.
+    if (!response.ok || data?.status === false) {
+      const message = data?.error || data?.message || `Request failed (${response.status})`
+      console.warn('Event update - error response:', response.status, message)
+
+      return NextResponse.json(
+        { ...data, status: false, message },
+        { status: response.status }
+      )
     }
 
     return NextResponse.json(data)

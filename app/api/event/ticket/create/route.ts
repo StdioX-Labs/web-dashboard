@@ -73,8 +73,16 @@ export async function POST(request: NextRequest) {
 
     console.log('API Response data:', JSON.stringify(data, null, 2))
 
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status })
+    // Mirror upstream's `error` onto `message`, which is what the api-client and
+    // its callers read. Same fix as `/api/company/create` and the update routes.
+    if (!response.ok || data?.status === false) {
+      const message = data?.error || data?.message || `Request failed (${response.status})`
+      console.warn('Ticket create - error response:', response.status, message)
+
+      return NextResponse.json(
+        { ...data, status: false, message },
+        { status: response.status }
+      )
     }
 
     return NextResponse.json(data)

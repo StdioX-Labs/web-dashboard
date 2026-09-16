@@ -18,6 +18,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api } from "@/lib/api-client"
+import { uploadToContabo } from "@/lib/contabo-uploader"
+import { EVENT_CATEGORIES, findCategoryIdByName } from "@/lib/event-categories"
+import { clampTicketsToIssue, TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 
 interface TicketType {
   id: string
@@ -41,6 +44,16 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Poster: the url already on the event, plus a file if one has just been
+  // picked. The file is uploaded on save, not on selection, so backing out of
+  // the form does not leave an orphaned upload behind.
+  const [posterUrl, setPosterUrl] = useState("")
+  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null)
+
+  // Ids the API gave us. Anything not in here was added in this session and has
+  // to be created rather than updated.
+  const [existingTicketIds, setExistingTicketIds] = useState<Set<string>>(new Set())
 
   // Form state
   const [eventName, setEventName] = useState("")
@@ -80,10 +93,15 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
           setEventName(eventDetails.eventName || "")
           setVenue(eventDetails.eventLocation || "")
           setDescription(eventDetails.eventDescription || "")
-          setCategory(eventDetails.category?.toLowerCase() || "")
+          // The form posts a category id. Prefer the id the API gives us and
+          // fall back to matching on the display name.
+          const categoryId =
+            eventDetails.eventCategoryId || findCategoryIdByName(eventDetails.category)
+          setCategory(categoryId ? String(categoryId) : "")
 
           // Set event poster image
           if (eventDetails.eventPosterUrl) {
+            setPosterUrl(eventDetails.eventPosterUrl)
             setImagePreview(eventDetails.eventPosterUrl)
           }
 
@@ -122,6 +140,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
             console.log('Setting tickets:', formattedTickets)
             setTicketTypes(formattedTickets)
+            setExistingTicketIds(new Set(formattedTickets.map((t) => t.id)))
           }
         } else {
           const errorMsg = response.message || 'Failed to fetch event details'
@@ -144,6 +163,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      setUploadedImageFile(file)
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
@@ -249,9 +269,24 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
     }
 
     try {
-      // 1. Update Event
+      // 1. Upload a new poster, if one was picked. Done first so a failure here
+      // stops the save rather than leaving the event pointing at the old image
+      // while the form claims everything was saved.
+      let eventPosterUrl = posterUrl
+      if (uploadedImageFile) {
+        toast.info("Uploading event poster...")
+        const uploadResult = await uploadToContabo(uploadedImageFile)
+
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(uploadResult.error || "Failed to upload the event poster")
+        }
+
+        eventPosterUrl = uploadResult.url
+      }
+
+      // 2. Update Event
       console.log('Updating event...')
-      const eventUpdateData = {
+      const eventUpdateData: Record<string, unknown> = {
         eventName,
         eventDescription: description,
         eventLocation: venue,
@@ -261,6 +296,11 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
         ticketSaleEndDate: saleEndDateTime.toISOString(),
       }
 
+      // Both were collected and validated by the form but never sent, so
+      // changing either silently did nothing.
+      if (eventPosterUrl) eventUpdateData.eventPosterUrl = eventPosterUrl
+      if (category) eventUpdateData.eventCategoryId = parseInt(category)
+
       const eventResponse = await api.event.update(eventId, eventUpdateData)
 
       if (!eventResponse.status) {
@@ -269,38 +309,78 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
       console.log('Event updated successfully')
 
-      // 2. Update Each Ticket Separately
-      console.log('Updating tickets...')
-      const ticketUpdatePromises = validTickets.map(async (ticket) => {
-        const ticketId = parseInt(ticket.id)
+      // 3. Save each ticket. Ones the API gave us are updated; ones added in
+      // this session have no server id yet — their `id` is a timestamp from
+      // addTicketType — so they have to be created. Updating against that
+      // timestamp is what used to make new ticket types vanish on save.
+      console.log('Saving tickets...')
+      const ticketResults = await Promise.all(
+        validTickets.map(async (ticket) => {
+          const price = parseFloat(ticket.price) || 0
+          const isFree = price === 0
+          const quantity = parseInt(ticket.quantity) || 0
 
-        const ticketUpdateData: Record<string, unknown> = {
-          ticketName: ticket.name,
-          quantityAvailable: parseInt(ticket.quantity),
-          ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
-          numberOfComplementary: parseInt(ticket.complementary || "0"),
-          ticketsToIssue: parseInt(ticket.ticketsToIssue || "1"),
-        }
+          const common = {
+            ticketName: ticket.name,
+            ticketPrice: price,
+            quantityAvailable: quantity,
+            ticketsToIssue: clampTicketsToIssue(ticket.ticketsToIssue, quantity),
+            ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
+            numberOfComplementary: parseInt(ticket.complementary || "0"),
+            isFree,
+          }
 
-        // Add ticket sale dates if provided
-        if (ticket.saleStartDate) {
-          ticketUpdateData.ticketSaleStartDate = ticket.saleStartDate.toISOString()
-        }
-        if (ticket.saleEndDate) {
-          ticketUpdateData.ticketSaleEndDate = ticket.saleEndDate.toISOString()
-        }
+          // Fall back to the event-wide sale window, as creating does.
+          const startDate = ticket.saleStartDate || saleStartDateTime
+          const endDate = ticket.saleEndDate || saleEndDateTime
 
-        console.log('Updating ticket:', ticketId, ticketUpdateData)
-        return api.ticket.update(ticketId, ticketUpdateData)
-      })
+          try {
+            if (existingTicketIds.has(ticket.id)) {
+              const payload: Record<string, unknown> = { ...common }
+              if (ticket.saleStartDate) {
+                payload.ticketSaleStartDate = ticket.saleStartDate.toISOString()
+              }
+              if (ticket.saleEndDate) {
+                payload.ticketSaleEndDate = ticket.saleEndDate.toISOString()
+              }
 
-      const ticketResponses = await Promise.all(ticketUpdatePromises)
+              console.log('Updating ticket:', ticket.id, payload)
+              const response = await api.ticket.update(parseInt(ticket.id), payload)
+              return { name: ticket.name, ok: response.status, message: response.message }
+            }
 
-      // Check if all tickets updated successfully
-      const failedTickets = ticketResponses.filter(r => !r.status)
-      if (failedTickets.length > 0) {
-        console.error('Some tickets failed to update:', failedTickets)
-        toast.error(`${failedTickets.length} ticket(s) failed to update`)
+            console.log('Creating ticket:', ticket.name)
+            const response = await api.company.createTicket({
+              ...common,
+              event: { id: eventId },
+              ticketSaleStartDate: startDate.toISOString(),
+              ticketSaleEndDate: endDate.toISOString(),
+            })
+            return { name: ticket.name, ok: response.status, message: response.message }
+          } catch (ticketError) {
+            console.error(`Error saving ticket "${ticket.name}":`, ticketError)
+            return {
+              name: ticket.name,
+              ok: false,
+              message: ticketError instanceof Error ? ticketError.message : undefined,
+            }
+          }
+        })
+      )
+
+      const failed = ticketResults.filter((r) => !r.ok)
+
+      // The event itself saved, so this is a partial success — say so rather
+      // than following the failure with a blanket "updated successfully".
+      if (failed.length > 0) {
+        console.error('Some tickets failed to save:', failed)
+        toast.error(`${failed.length} of ${ticketResults.length} ticket(s) could not be saved`, {
+          description: failed[0].message
+            ? `${failed[0].name}: ${failed[0].message}`
+            : `Check ${failed.map((f) => f.name).join(", ")} and try again.`,
+          duration: 10000,
+        })
+        return
       }
 
       toast.success("Event and tickets updated successfully!", {
@@ -409,14 +489,11 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                   required
                 >
                   <option value="">Select a category</option>
-                  <option value="music">Music & Concerts</option>
-                  <option value="sports">Sports & Fitness</option>
-                  <option value="food">Food & Drink</option>
-                  <option value="arts">Arts & Culture</option>
-                  <option value="business">Business & Networking</option>
-                  <option value="tech">Technology</option>
-                  <option value="education">Education</option>
-                  <option value="other">Other</option>
+                  {EVENT_CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -674,6 +751,11 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           />
                           <span className="text-xs font-medium">Group ticket</span>
                         </label>
+                        {!ticket.isGroupTicket && (
+                          <p className="text-xs text-muted-foreground">
+                            {TICKET_FIELD_HELP.groupOff}
+                          </p>
+                        )}
                         {ticket.isGroupTicket && (
                           <div>
                             <label className="text-xs font-medium mb-1.5 block">Group of</label>
@@ -687,7 +769,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Tickets issued per purchase (e.g. 2 for a couple's ticket)
+                              {TICKET_FIELD_HELP.groupOn}
                             </p>
                           </div>
                         )}
@@ -711,6 +793,11 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                           />
                           <span className="text-xs font-medium">Restrict tickets per person</span>
                         </label>
+                        {!ticket.restrictLimitPerPerson && (
+                          <p className="text-xs text-muted-foreground">
+                            {TICKET_FIELD_HELP.limitOff}
+                          </p>
+                        )}
                         {ticket.restrictLimitPerPerson && (
                           <div>
                             <label className="text-xs font-medium mb-1.5 block">Limit to</label>
@@ -724,7 +811,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                               className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#8b5cf6] focus:ring-2 focus:ring-[#8b5cf6]/10 transition-all"
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                              Maximum tickets one person can purchase
+                              {TICKET_FIELD_HELP.limitOn}
                             </p>
                           </div>
                         )}
