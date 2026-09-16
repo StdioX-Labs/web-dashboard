@@ -41,6 +41,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  colorScheme: "dark",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -49,10 +51,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes"/>
-        <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
         <meta name="format-detection" content="telephone=no"/>
         <meta name="mobile-web-app-capable" content="yes"/>
         <meta charSet="UTF-8"/>
@@ -70,7 +72,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
-        <Toaster position="top-center" richColors closeButton />
+        <Toaster position="top-center" theme="dark" richColors closeButton />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18374176127"
           strategy="afterInteractive"
