@@ -1,10 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Wallet, TrendingUp, Calendar, Users, Plus, Eye, EyeOff, Download, Send, Megaphone, ArrowUpRight, DollarSign, X } from "lucide-react"
+import { motion } from "framer-motion"
+import { TrendingUp, Calendar, Wallet, Plus, Eye, EyeOff, Send, Megaphone, ArrowUpRight, Ticket, ScanLine, UserPlus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { toast } from "sonner"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
@@ -17,6 +16,9 @@ import { sessionManager } from "@/lib/session-manager"
  * @default false
  */
 const ENABLE_PROMOTIONS = false
+
+/** Withdrawals aren't integrated yet, so the button raises a request by email. */
+const WITHDRAWAL_EMAIL = "info@soldoutafrica.com"
 
 
 interface CompanySummary {
@@ -40,20 +42,84 @@ interface CompanyEvent {
   currency: string
 }
 
-interface Transaction {
-  id: number
-  amount: number
-  currency: string
-  status: string
-  transactionType: string
-  createdAt: string
-  eventName?: string
-  ticketName?: string
-  quantity?: number
-  customerName?: string
-  customerEmail?: string
-  paymentMethod?: string
-  reference?: string
+/**
+ * Guilloche — the interference line-work printed on banknotes and struck into
+ * metal payment cards. Each rosette is a real hypotrochoid rather than a
+ * decorative squiggle: a point at distance `d` from the centre of a circle of
+ * radius `r` rolling inside one of radius `R`. Choosing r as an exact divisor
+ * of R closes the curve in a single revolution, which keeps the path short
+ * enough to inline. Built once at module scope — it never changes.
+ */
+function rosettePath(R: number, r: number, d: number, stepsPerPetal = 16): string {
+  const petals = Math.round(R / r)
+  const steps = petals * stepsPerPetal
+  const k = (R - r) / r
+  const points: string[] = []
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * 2 * Math.PI
+    const x = (R - r) * Math.cos(t) + d * Math.cos(k * t)
+    const y = (R - r) * Math.sin(t) - d * Math.sin(k * t)
+    points.push(`${x.toFixed(1)},${y.toFixed(1)}`)
+  }
+  return "M" + points.join("L") + "Z"
+}
+
+const GUILLOCHE_ROSETTES = [
+  // d ≈ r gives clean cusps; d far from r tangles the curve into scribble.
+  { d: rosettePath(128, 12.8, 12.8), opacity: 0.5, rotate: 0 },
+  { d: rosettePath(128, 10.6, 10.6), opacity: 0.32, rotate: 9 },
+  { d: rosettePath(92, 11.5, 11.5), opacity: 0.45, rotate: 4 },
+  { d: rosettePath(58, 9.6, 9.6), opacity: 0.38, rotate: 0 },
+]
+
+function Guilloche({ className }: { className?: string }) {
+  return (
+    <svg viewBox="-140 -140 280 280" fill="none" className={className} aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="0.5" vectorEffect="non-scaling-stroke">
+        {GUILLOCHE_ROSETTES.map((ring, i) => (
+          <path key={i} d={ring.d} opacity={ring.opacity} transform={`rotate(${ring.rotate})`} />
+        ))}
+        {/* Engine-turned rings framing the medallion */}
+        {[134, 130, 96, 62, 26, 20].map((r, i) => (
+          <circle key={r} cx="0" cy="0" r={r} opacity={i % 2 === 0 ? 0.35 : 0.18} />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+/** The EMV contact plate. Drawn rather than imported so it inherits the card's scale. */
+function CardChip({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 36" fill="none" className={className} aria-hidden="true">
+      <rect x="0.5" y="0.5" width="47" height="35" rx="5.5" fill="url(#chipPlate)" stroke="rgba(255,255,255,0.35)" />
+      <g stroke="rgba(60,60,66,0.7)" strokeWidth="1.2">
+        <path d="M0 12h13M0 24h13M35 12h13M35 24h13M17 0v6M31 0v6M17 30v6M31 30v6" />
+        <rect x="13" y="6" width="22" height="24" rx="3.5" fill="none" />
+        <path d="M13 18h22" />
+      </g>
+      <defs>
+        <linearGradient id="chipPlate" x1="0" y1="0" x2="48" y2="36" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#E8E8EC" />
+          <stop offset="0.5" stopColor="#B4B4BD" />
+          <stop offset="1" stopColor="#8A8A93" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+/** The contactless-payment mark, sitting beside the chip as it does on a real card. */
+function ContactlessMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.55">
+        <path d="M6.5 8.5a5 5 0 0 1 0 7" />
+        <path d="M10 6a8.5 8.5 0 0 1 0 12" />
+        <path d="M13.5 3.5a12 12 0 0 1 0 17" />
+      </g>
+    </svg>
+  )
 }
 
 export default function DashboardHome() {
@@ -61,23 +127,23 @@ export default function DashboardHome() {
   const [summary, setSummary] = useState<CompanySummary | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currency, setCurrency] = useState("KES")
+  const [companyName, setCompanyName] = useState("")
   const [upcomingEvents, setUpcomingEvents] = useState<CompanyEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
-  const [transactionsLoading, setTransactionsLoading] = useState(true)
   const [calculatedRevenue, setCalculatedRevenue] = useState(0)
   const [calculatedFees, setCalculatedFees] = useState(0)
+  const [isPreparingRequest, setIsPreparingRequest] = useState(false)
 
   useEffect(() => {
     const user = sessionManager.getUser()
     if (!user || !user.company_id) {
       setIsLoading(false)
       setEventsLoading(false)
-      setTransactionsLoading(false)
       return
     }
 
     setCurrency(user.currency || "KES")
+    setCompanyName(user.company_name || "")
 
     // Stage 1: Fetch summary (critical data) - loads first to show main dashboard
     const fetchSummary = async () => {
@@ -133,61 +199,15 @@ export default function DashboardHome() {
       }
     }
 
-    // Stage 3: Fetch recent transactions (background) - loads independently
-    const fetchRecentTransactions = async () => {
-      try {
-        const transactionsResponse = await api.transactions.fetchDetailed({
-          id: user.company_id,
-          idType: 'company',
-          transactionType: 'TICKET_SALE',
-          page: 0,
-          size: 5,
-        })
-
-        if (transactionsResponse.data && transactionsResponse.data.data) {
-          // Transform the API data for display
-          const transformedTransactions = transactionsResponse.data.data.map((txn) => {
-            // Get customer name
-            const customerName = txn.buyer.firstName && txn.buyer.lastName
-              ? `${txn.buyer.firstName} ${txn.buyer.lastName}`
-              : txn.buyer.firstName || txn.buyer.lastName || 'Unknown'
-
-            return {
-              id: txn.id,
-              amount: txn.transactionAmount,
-              currency: txn.event.currency,
-              status: 'completed',
-              transactionType: txn.transactionType,
-              createdAt: txn.createdAt,
-              eventName: txn.event.eventName,
-              ticketName: txn.ticket.ticketName,
-              quantity: 1,
-              customerName: customerName,
-              customerEmail: txn.buyer.email || 'N/A',
-              reference: txn.transactionId,
-            }
-          }).slice(0, 5) // Take only the first 5
-
-          setRecentTransactions(transformedTransactions)
-        }
-      } catch (error) {
-        console.error("Failed to fetch transactions:", error)
-      } finally {
-        setTransactionsLoading(false)
-      }
-    }
-
-    // Execute: Summary first (shows main dashboard), then events and transactions in parallel (background)
+    // Execute: Summary first (shows main dashboard), then events in the background
     fetchSummary()
     fetchUpcomingEvents()
-    fetchRecentTransactions()
   }, [])
 
   // Use calculated values from events API (accurate), fallback to summary API
   const totalRevenue = calculatedRevenue || summary?.totalRevenue || 0
   const commissionAndFees = calculatedFees || summary?.totalFees || 0
-  const withdrawn = 0
-  const availableBalance = totalRevenue - commissionAndFees - withdrawn
+  const availableBalance = totalRevenue - commissionAndFees
 
   // Helper function to format large numbers for mobile
   const formatCurrency = (amount: number, compact = false): string => {
@@ -204,12 +224,96 @@ export default function DashboardHome() {
     return Math.round(amount).toLocaleString()
   }
 
-  const stats = {
-    totalEvents: summary?.totalEvents || 0,
-    activeEvents: summary?.activeEvents || 0,
-    totalTickets: summary?.totalTicketsSold || 0,
-    totalRevenue: totalRevenue,
+  /**
+   * Withdrawals have no integration yet, so this raises one by email instead.
+   *
+   * The session carries no person's name — only company, email and phone — so
+   * the requester's name is looked up from the company's user list and matched
+   * on user id, then email, then phone. The mail still opens if that lookup
+   * fails; it just says the name wasn't on file.
+   */
+  const requestWithdrawal = async () => {
+    const user = sessionManager.getUser()
+    if (!user) return
+
+    setIsPreparingRequest(true)
+    let requesterName = ""
+
+    // No company on the session means there is no user list to match against.
+    if (user.company_id) {
+      try {
+        const response = await api.company.getUsers(user.company_id)
+        const users = response.users || []
+        const match =
+          users.find((u) => u.id === user.user_id) ||
+          users.find((u) => u.emailAddress?.toLowerCase() === user.email?.toLowerCase()) ||
+          users.find((u) => u.mobileNumber === user.phoneNumber)
+        requesterName = match?.fullName || ""
+      } catch (error) {
+        console.error("Could not resolve the requester's name:", error)
+      }
+    }
+
+    setIsPreparingRequest(false)
+
+    const body = [
+      "Hello SoldOutAfrica team,",
+      "",
+      "I would like to request a withdrawal of my available balance.",
+      "",
+      `Name: ${requesterName || "Not on file"}`,
+      `Company: ${user.company_name || "—"}`,
+      `Email: ${user.email || "—"}`,
+      `Phone: ${user.phoneNumber || "—"}`,
+      `Available balance: ${currency} ${formatCurrency(availableBalance)}`,
+      "",
+      "Please advise on the next steps.",
+      "",
+      "Thank you.",
+    ].join("\n")
+
+    const subject = `Withdrawal request - ${user.company_name || "SoldOutAfrica"}`
+    window.location.href = `mailto:${WITHDRAWAL_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
+
+  const stats = [
+    {
+      label: "Total Events",
+      value: isLoading ? "—" : (summary?.totalEvents || 0).toLocaleString(),
+      hint: "All time",
+      icon: Calendar,
+      tint: "bg-zinc-500/10 text-zinc-300",
+    },
+    {
+      label: "Active Events",
+      value: isLoading ? "—" : (summary?.activeEvents || 0).toLocaleString(),
+      hint: "On sale now",
+      icon: TrendingUp,
+      tint: "bg-emerald-500/10 text-emerald-400",
+    },
+    {
+      label: "Tickets Sold",
+      value: isLoading ? "—" : (summary?.totalTicketsSold || 0).toLocaleString(),
+      hint: "All time",
+      icon: Ticket,
+      tint: "bg-zinc-500/10 text-zinc-300",
+    },
+    {
+      label: "Total Revenue",
+      value: isLoading ? "—" : `${currency} ${formatCurrency(totalRevenue, true)}`,
+      hint: "Gross, before fees",
+      icon: Wallet,
+      tint: "bg-zinc-500/10 text-zinc-300",
+    },
+  ]
+
+  const quickActions = [
+    { label: "Create Event", description: "Set up a new event", icon: Plus, href: "/dashboard/events/create" },
+    { label: "View Events", description: "Manage what's live", icon: Calendar, href: "/dashboard/events" },
+    { label: "Scan Tickets", description: "Check people in", icon: ScanLine, href: "/dashboard/scan" },
+    { label: "Add Users", description: "Manage your team", icon: UserPlus, href: "/dashboard/users" },
+    { label: "Promotions", description: "Run a campaign", icon: Megaphone, href: "/dashboard/promotions", enabled: ENABLE_PROMOTIONS },
+  ].filter(action => action.enabled !== false)
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
@@ -218,90 +322,132 @@ export default function DashboardHome() {
         <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here&apos;s what&apos;s happening with your events.</p>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6 sm:mb-8">
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#5b21b6] p-5 sm:p-6 lg:p-8 text-white shadow-2xl">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none"
-          />
+      {/* Balance, as a payment card. The card keeps a real card's proportions at
+          every breakpoint — stretching it to the full width of a desktop screen
+          is what makes this kind of panel stop reading as a card — so on wide
+          screens it sits beside the breakdown rather than growing. */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8 sm:mb-10 grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center"
+      >
+        <div className="relative w-full max-w-[420px] mx-auto lg:mx-0">
+          <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-[1.25rem] sm:rounded-[1.5rem] bg-gradient-to-br from-[#26262C] via-[#161619] to-[#0B0B0D] p-4 sm:p-6 text-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
+            {/* Brushed metal: fine vertical grain, then a soft sheen across it. */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.035]"
+              style={{ backgroundImage: "repeating-linear-gradient(90deg,#fff 0 1px,transparent 1px 3px)" }}
+            />
+            <Guilloche className="pointer-events-none absolute -right-[22%] top-1/2 h-[215%] w-auto -translate-y-1/2 text-white opacity-[0.14]" />
+            <div className="pointer-events-none absolute -inset-x-1/4 -top-1/2 h-[200%] rotate-[24deg] bg-gradient-to-b from-white/12 via-white/[0.03] to-transparent" />
+            <motion.div
+              animate={{ opacity: [0.18, 0.3, 0.18] }}
+              transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+              className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-zinc-300/20 blur-3xl"
+            />
 
-          <button
-            type="button"
-            onClick={() => setShowBalance(!showBalance)}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 sm:p-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all cursor-pointer z-20 border border-white/30"
-          >
-            {showBalance ? <Eye className="w-4 h-4 sm:w-5 sm:h-5" /> : <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </button>
-
-          <div className="relative z-10">
-            <div className="mb-6 lg:mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0">
-                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
+            <div className="relative z-10 flex h-full flex-col justify-between">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <CardChip className="h-7 w-9 sm:h-9 sm:w-12 drop-shadow" />
+                  <ContactlessMark className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm opacity-70 mb-1">Total Revenue</p>
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">
-                    {isLoading ? (
-                      <span className="animate-pulse">Loading...</span>
-                    ) : showBalance ? (
-                      <>
-                        <span className="sm:hidden">{currency} {formatCurrency(totalRevenue, true)}</span>
-                        <span className="hidden sm:inline">{currency} {formatCurrency(totalRevenue)}</span>
-                      </>
-                    ) : (
-                      "••••••••"
-                    )}
-                  </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] sm:text-xs uppercase tracking-[0.18em] text-white/60">Available</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowBalance(!showBalance)}
+                    aria-label={showBalance ? "Hide balance" : "Show balance"}
+                    aria-pressed={!showBalance}
+                    className="rounded-lg border border-white/15 bg-white/10 p-1.5 backdrop-blur-sm transition-colors hover:bg-white/20 cursor-pointer"
+                  >
+                    {showBalance ? <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                  </button>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="p-4 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 min-w-0">
-                <p className="text-xs sm:text-sm text-white/70 mb-2 sm:mb-3">Commission & Fees</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold break-words">
-                  {isLoading ? "..." : showBalance ? `- ${currency} ${commissionAndFees.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : "- ••••••"}
+              <div className="min-w-0">
+                <p className="truncate text-[26px] leading-none font-bold tabular-nums tracking-tight sm:text-4xl">
+                  {isLoading ? (
+                    <span className="inline-block h-[0.8em] w-40 animate-pulse rounded-md bg-white/20 align-middle" />
+                  ) : showBalance ? (
+                    <>
+                      <span className="sm:hidden">{currency} {formatCurrency(availableBalance, true)}</span>
+                      <span className="hidden sm:inline">{currency} {formatCurrency(availableBalance)}</span>
+                    </>
+                  ) : (
+                    "•••• ••••"
+                  )}
                 </p>
+                <p className="mt-1.5 text-[10px] uppercase tracking-[0.18em] text-white/50 sm:text-xs">Available balance</p>
               </div>
 
-              <div className="p-4 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 min-w-0">
-                <p className="text-xs sm:text-sm text-white/70 mb-2 sm:mb-3">Withdrawn</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold break-words">
-                  {isLoading ? "..." : showBalance ? `- ${currency} ${withdrawn.toLocaleString()}` : "- ••••••"}
+              <div>
+                <div className="flex items-end justify-between gap-3">
+                  <p className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85 sm:text-sm">
+                    {companyName || " "}
+                  </p>
+                  <span className="shrink-0 text-[9px] font-bold uppercase leading-none tracking-[0.2em] text-white/60 sm:text-[11px]">
+                    SoldOutAfrica
+                  </span>
+                </div>
+                <p className="mt-1.5 truncate text-[10px] text-white/45 sm:text-xs">
+                  {isLoading ? (
+                    " "
+                  ) : showBalance ? (
+                    <>Revenue {formatCurrency(totalRevenue, true)} · Fees {formatCurrency(commissionAndFees, true)}</>
+                  ) : (
+                    "Revenue •••• · Fees ••••"
+                  )}
                 </p>
-              </div>
-
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-400/30 min-w-0">
-                <p className="text-xs sm:text-sm text-green-200 mb-2 sm:mb-3">Available Balance</p>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-200 break-words">
-                  {isLoading ? "..." : showBalance ? `${currency} ${Math.round(availableBalance).toLocaleString()}` : "••••••"}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 justify-center">
-                <button className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white text-[#7c3aed] rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-white/95 transition-colors">
-                  <Send className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Withdraw</span>
-                </button>
-                <button className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border border-white/20 transition-colors">
-                  <Download className="w-4 h-4 shrink-0" />
-                  <span className="truncate">Report</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
-      </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-        {[
-          { label: "Total Events", value: isLoading ? "..." : stats.totalEvents, icon: Calendar, bgColor: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Active Events", value: isLoading ? "..." : stats.activeEvents, icon: Calendar, bgColor: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Tickets Sold", value: isLoading ? "..." : stats.totalTickets.toLocaleString(), icon: Users, bgColor: "bg-orange-50 dark:bg-orange-950/30" },
-          { label: "Total Revenue", value: isLoading ? "..." : `${(stats.totalRevenue / 1000).toFixed(0)}K`, icon: TrendingUp, bgColor: "bg-purple-50 dark:bg-purple-950/30" },
-        ].map((stat, index) => {
+        {/* Breakdown + action. Under the card on mobile, beside it on desktop. */}
+        <div className="w-full max-w-[420px] mx-auto lg:mx-0 lg:max-w-none">
+          <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            {[
+              { label: "Total revenue", value: totalRevenue, sign: "" },
+              { label: "Commission & fees", value: commissionAndFees, sign: "- " },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5">
+                <dt className="text-sm text-muted-foreground">{row.label}</dt>
+                <dd className="text-sm font-semibold tabular-nums sm:text-base">
+                  {isLoading ? "—" : showBalance ? `${row.sign}${currency} ${formatCurrency(row.value)}` : `${row.sign}••••••`}
+                </dd>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-3 bg-emerald-500/5 px-4 py-3 sm:px-5 sm:py-3.5">
+              <dt className="text-sm font-medium text-emerald-400">Available balance</dt>
+              <dd className="text-base font-bold tabular-nums text-emerald-400 sm:text-lg">
+                {isLoading ? "—" : showBalance ? `${currency} ${formatCurrency(availableBalance)}` : "••••••"}
+              </dd>
+            </div>
+          </dl>
+
+          <button
+            onClick={requestWithdrawal}
+            disabled={isPreparingRequest}
+            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-zinc-100 text-sm font-bold text-zinc-900 transition-colors hover:bg-white disabled:opacity-60 cursor-pointer"
+          >
+            <Send className="h-4 w-4 shrink-0" />
+            <span className="truncate">{isPreparingRequest ? "Preparing request..." : "Request withdrawal"}</span>
+          </button>
+        </div>
+      </motion.section>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8 sm:mb-10"
+      >
+        <h2 className="mb-4 text-lg font-bold sm:text-xl">Overview</h2>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+        {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
             <motion.div
@@ -309,37 +455,41 @@ export default function DashboardHome() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + index * 0.05 }}
-              className="rounded-2xl border border-border bg-card p-6 hover:border-[#8b5cf6]/30 transition-all"
+              className="relative overflow-hidden rounded-xl bg-secondary/25 p-4 ring-1 ring-inset ring-white/5 sm:p-5"
             >
-              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4", stat.bgColor)}>
-                <Icon className="w-6 h-6" />
+              <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
+                <p className="min-h-[2.2em] text-[11px] font-medium uppercase leading-tight tracking-wider text-muted-foreground sm:text-xs">{stat.label}</p>
+                <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:h-9 sm:w-9", stat.tint)}>
+                  <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                </div>
               </div>
-              <h3 className="text-3xl font-bold mb-1">{stat.value}</h3>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <p className="truncate text-xl font-bold tabular-nums tracking-tight sm:text-2xl lg:text-3xl">{stat.value}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{stat.hint}</p>
             </motion.div>
           )
         })}
+        </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: "Create Event", icon: Plus, gradient: "from-[#8b5cf6] to-[#7c3aed]", href: "/dashboard/events/create" },
-            { label: "View Events", icon: Calendar, gradient: "from-blue-500 to-blue-600", href: "/dashboard/events" },
-            { label: "Transactions", icon: Download, gradient: "from-green-500 to-green-600", href: "/dashboard/transactions" },
-            { label: "Promotions", icon: Megaphone, gradient: "from-orange-500 to-orange-600", href: "/dashboard/promotions", enabled: ENABLE_PROMOTIONS },
-          ].filter(action => action.enabled !== false).map((action) => {
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-8 sm:mb-10">
+        <h2 className="mb-4 text-lg font-bold sm:text-xl">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
+          {quickActions.map((action) => {
             const Icon = action.icon
             return (
-              <Link key={action.label} href={action.href}>
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} className="group relative rounded-2xl bg-card border border-border p-6 hover:border-transparent transition-all cursor-pointer shadow-lg hover:shadow-2xl">
-                  <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl", action.gradient)} />
-                  <div className="relative">
-                    <div className={cn("w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4 shadow-md", action.gradient)}>
-                      <Icon className="w-7 h-7 text-white" />
+              <Link key={action.label} href={action.href} className="h-full">
+                <motion.div
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="group relative h-full overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-900 p-4 shadow-lg shadow-black/40 transition-colors hover:border-zinc-500 hover:bg-zinc-800 active:bg-zinc-800 sm:p-5"
+                >
+                  <div className="relative flex h-full flex-col">
+                    <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-800 ring-1 ring-white/10 transition-colors group-hover:bg-zinc-100 sm:mb-4 sm:h-12 sm:w-12">
+                      <Icon className="h-5 w-5 text-zinc-200 transition-colors group-hover:text-zinc-900 sm:h-6 sm:w-6" />
                     </div>
-                    <p className="text-base font-bold group-hover:text-white transition-colors">{action.label}</p>
+                    <p className="text-sm font-bold sm:text-base">{action.label}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">{action.description}</p>
+                    <ArrowUpRight className="absolute right-0 top-0 h-4 w-4 text-zinc-500 transition-colors group-hover:text-white" />
                   </div>
                 </motion.div>
               </Link>
@@ -348,82 +498,38 @@ export default function DashboardHome() {
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Upcoming Events</h2>
-            <Link href="/dashboard/events" className="text-sm text-[#8b5cf6] hover:text-[#7c3aed] font-medium flex items-center gap-1">
-              View All
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {eventsLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading events...</div>
-            ) : upcomingEvents.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No upcoming events</div>
-            ) : (
-              upcomingEvents.map((event) => {
-                // Calculate total revenue for this event
-                const totalRevenue = event.tickets.reduce(
-                  (sum, ticket) => sum + (ticket.ticketPrice * ticket.soldQuantity),
-                  0
-                )
-                // Calculate total tickets sold
-                const totalTickets = event.tickets.reduce(
-                  (sum, ticket) => sum + ticket.soldQuantity,
-                  0
-                )
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
+          <h2 className="text-lg font-bold sm:text-xl">Upcoming Events</h2>
+          <Link href="/dashboard/events" className="flex shrink-0 items-center gap-1 text-sm font-medium text-zinc-300 hover:text-white">
+            View All
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="space-y-3 sm:space-y-4">
+          {eventsLoading ? (
+            <div className="py-8 text-center text-muted-foreground">Loading events...</div>
+          ) : upcomingEvents.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">No upcoming events</div>
+          ) : (
+            upcomingEvents.map((event) => {
+              // Calculate total revenue for this event
+              const eventRevenue = event.tickets.reduce(
+                (sum, ticket) => sum + (ticket.ticketPrice * ticket.soldQuantity),
+                0
+              )
+              // Calculate total tickets sold
+              const totalTickets = event.tickets.reduce(
+                (sum, ticket) => sum + ticket.soldQuantity,
+                0
+              )
 
-                return (
-                  <div key={event.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                    <div className="flex-1 min-w-0 pr-3">
-                      <h3 className="font-semibold mb-1 truncate">{event.eventName}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(event.eventStartDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">{event.eventLocation}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold">{event.currency} {totalRevenue.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">{totalTickets} tickets</p>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="rounded-2xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Recent Transactions</h2>
-            <Link href="/dashboard/transactions" className="text-sm text-[#8b5cf6] hover:text-[#7c3aed] font-medium flex items-center gap-1">
-              View All
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {transactionsLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
-            ) : recentTransactions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No recent transactions</div>
-            ) : (
-              recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
-                  <div className="flex-1 min-w-0 pr-3">
-                    <h3 className="font-semibold mb-1 truncate">
-                      {transaction.eventName || 'Transaction'}
-                      {transaction.ticketName && ` - ${transaction.ticketName}`}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(transaction.createdAt).toLocaleDateString('en-US', {
+              return (
+                <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl bg-secondary/30 p-3 transition-colors hover:bg-secondary/50 sm:p-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="mb-1 truncate font-semibold">{event.eventName}</h3>
+                    <p className="text-xs text-muted-foreground sm:text-sm">
+                      {new Date(event.eventStartDate).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
@@ -431,33 +537,18 @@ export default function DashboardHome() {
                         minute: '2-digit'
                       })}
                     </p>
-                    {transaction.customerName && (
-                      <p className="text-xs text-muted-foreground mt-1">{transaction.customerName}</p>
-                    )}
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{event.eventLocation}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">{transaction.currency} {transaction.amount.toLocaleString()}</p>
-                    {transaction.quantity && (
-                      <p className="text-sm text-muted-foreground">{transaction.quantity} ticket{transaction.quantity > 1 ? 's' : ''}</p>
-                    )}
-                    <div className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium mt-1",
-                      transaction.status.toLowerCase() === "completed" || transaction.status.toLowerCase() === "success"
-                        ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                        : transaction.status.toLowerCase() === "pending"
-                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
-                        : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
-                    )}>
-                      {transaction.status}
-                    </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-bold tabular-nums">{event.currency} {eventRevenue.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground sm:text-sm">{totalTickets} tickets</p>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </motion.div>
-      </div>
+              )
+            })
+          )}
+        </div>
+      </motion.div>
     </div>
   )
 }
-
