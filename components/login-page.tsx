@@ -599,8 +599,20 @@ export default function LoginPage() {
 
               {/* Auth card - Sleeker styling with increased height */}
               <div className="relative overflow-visible">
+                {/* Lightning pulse. The bloom sits outside the 1px mask below so
+                    it haloes past the card edge; the arc sits inside it and is
+                    trimmed to the hairline border. Radius tracks the inset:
+                    24px (rounded-3xl) + 3px of outset = 27px. */}
+                <div
+                  aria-hidden="true"
+                  className="lightning-arc pointer-events-none absolute -inset-[3px] rounded-[27px] blur-[7px] opacity-70"
+                />
                 {/* Subtle gradient background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-foreground/[0.03] to-foreground/[0.06] rounded-3xl" />
+                <div
+                  aria-hidden="true"
+                  className="lightning-arc pointer-events-none absolute inset-0 rounded-3xl"
+                />
                 <div className="absolute inset-[1px] bg-background rounded-3xl" />
 
                 <div className="relative px-6 py-16 sm:px-8 sm:py-20 xl:px-10 xl:py-24 2xl:px-12 2xl:py-28">
