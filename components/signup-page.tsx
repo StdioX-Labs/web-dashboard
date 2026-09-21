@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { api, ApiError } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
+import { normalizeEmail } from "@/lib/email"
 import { formatPhoneNumber } from "@/lib/phone"
 import { GADS_SIGNUP_CONVERSION } from "@/lib/google-ads"
 
@@ -78,8 +79,8 @@ export default function SignupPage() {
 
     if (name) setFullName(name)
     if (email) {
-      setEmailAddress(email)
-      setCompanyEmail(email)
+      setEmailAddress(normalizeEmail(email))
+      setCompanyEmail(normalizeEmail(email))
     }
     if (phone) {
       setMobileNumber(phone)
@@ -184,7 +185,7 @@ export default function SignupPage() {
     e.preventDefault()
     if (!validateUserForm()) return
 
-    const email = emailAddress.toLowerCase().trim()
+    const email = normalizeEmail(emailAddress)
     setIsCheckingAccount(true)
 
     try {
@@ -402,7 +403,7 @@ export default function SignupPage() {
         physicalAddress: physicalAddress || "PENDING",
         postalAddress: postalAddress || "PENDING",
         phoneNumber: formatPhoneNumber(companyPhone),
-        emailAddress: companyEmail.toLowerCase().trim(),
+        emailAddress: normalizeEmail(companyEmail),
         currency: currency,
         profileType: "EVENT_ORGANIZER",
         billingAccountType: "MPESA",
@@ -432,7 +433,7 @@ export default function SignupPage() {
         idNumber,
         mobileNumber: formatPhoneNumber(mobileNumber),
         password,
-        emailAddress: emailAddress.toLowerCase().trim(),
+        emailAddress: normalizeEmail(emailAddress),
         isExternal: false,
         company: { id: companyId },
         roles: "COMPANY_OWNER",
@@ -464,7 +465,7 @@ export default function SignupPage() {
         setStep("verify")
         setIsSubmitting(false)
 
-        await sendVerificationCode(emailAddress.toLowerCase().trim())
+        await sendVerificationCode(normalizeEmail(emailAddress))
       } else {
         toast.error(userResponse.message || "Failed to create user account")
         setIsSubmitting(false)
@@ -584,7 +585,7 @@ export default function SignupPage() {
                   <input
                     type="email"
                     value={emailAddress}
-                    onChange={(e) => setEmailAddress(e.target.value)}
+                    onChange={(e) => setEmailAddress(normalizeEmail(e.target.value))}
                     placeholder="john@example.com"
                     className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
@@ -716,7 +717,7 @@ export default function SignupPage() {
                   <input
                     type="email"
                     value={companyEmail}
-                    onChange={(e) => setCompanyEmail(e.target.value)}
+                    onChange={(e) => setCompanyEmail(normalizeEmail(e.target.value))}
                     placeholder="info@acmeevents.com"
                     className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   />
@@ -885,7 +886,7 @@ export default function SignupPage() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => sendVerificationCode(emailAddress.toLowerCase().trim())}
+                  onClick={() => sendVerificationCode(normalizeEmail(emailAddress))}
                   disabled={isSendingCode || isVerifyingOtp}
                   className="text-sm text-zinc-300 hover:underline disabled:opacity-50 disabled:no-underline"
                 >

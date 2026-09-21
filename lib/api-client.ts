@@ -1,3 +1,5 @@
+import { normalizeEmail, normalizeLoginId } from './email'
+
 const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 const USE_PROXY = true // Set to true to use Next.js API proxy
 const PROXY_BASE_URL = '/api'
@@ -148,7 +150,7 @@ export const api = {
         status: boolean
       }>('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ id, method }),
+        body: JSON.stringify({ id: normalizeLoginId(id, method), method }),
       }, true) // Use proxy
     },
     verifyOtp: async (loginToken: string, otp: string) => {
@@ -210,7 +212,7 @@ export const api = {
         }
       }>(`/user/create`, {
         method: 'POST',
-        body: JSON.stringify(userData),
+        body: JSON.stringify({ ...userData, emailAddress: normalizeEmail(userData.emailAddress) }),
       }, true) // Use proxy route
     },
     edit: async (
@@ -647,7 +649,7 @@ export const api = {
         }
       }>('/company/create', {
         method: 'POST',
-        body: JSON.stringify(companyData),
+        body: JSON.stringify({ ...companyData, emailAddress: normalizeEmail(companyData.emailAddress) }),
       }, true) // Use proxy route
     },
   },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, getClientIp, getRateLimitConfig } from '@/lib/rate-limiter'
 import { storePendingLogin } from '@/lib/pending-login-store'
+import { normalizeLoginId } from '@/lib/email'
 
 const API_BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 
@@ -54,11 +55,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, method } = body
+    const { method } = body
 
-    console.log('Login proxy - Received request:', { id, method, ip: clientIp, remaining: rateLimitResult.remaining })
+    console.log('Login proxy - Received request:', { id: body.id, method, ip: clientIp, remaining: rateLimitResult.remaining })
 
-    if (!id || !method) {
+    if (!body.id || !method) {
       return NextResponse.json(
         {
           status: false,
@@ -67,6 +68,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Normalise here too, not just in the API client: this route is reachable
+    // directly, so the client's version is a convenience and this one is the
+    // guarantee. Without it, Foo@x.com and foo@x.com are two different
+    // accounts to the upstream service.
+    const id = normalizeLoginId(body.id, method)
 
     const apiUrl = `${API_BASE_URL}/user/otp/login`
     console.log('Login proxy - Calling external API:', apiUrl)

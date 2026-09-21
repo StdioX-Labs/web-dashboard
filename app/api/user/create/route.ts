@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { normalizeEmail } from '@/lib/email'
 
 const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    // Same guarantee as the login proxy: this route is reachable directly,
+    // so the API client's normalisation is a convenience and this is the
+    // backstop. Signing up must not be able to create an account whose
+    // address differs from the one sign-in will later look up.
+    if (typeof body?.emailAddress === 'string') {
+      body.emailAddress = normalizeEmail(body.emailAddress)
+    }
 
     console.log('=== User Create API Proxy ===')
     console.log('Request body:', JSON.stringify(body, null, 2))

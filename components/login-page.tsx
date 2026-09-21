@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 import { api, ApiError } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
+import { normalizeEmail } from "@/lib/email"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
@@ -101,11 +102,13 @@ export default function LoginPage() {
     return true
   }
 
-  // Handle email change with validation
+  // Handle email change with validation. Canonicalised as it is typed, so the
+  // address shown in the field is exactly the one that gets sent and validated.
   const handleEmailChange = (value: string) => {
-    setEmail(value)
+    const next = normalizeEmail(value)
+    setEmail(next)
     if (touched) {
-      validateEmail(value)
+      validateEmail(next)
     }
   }
 
