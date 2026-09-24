@@ -108,6 +108,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [isOnboarding, setIsOnboarding] = useState(false)
   const [revShareTarget, setRevShareTarget] = useState<AffiliateSummary | null>(null)
   const [revShareValue, setRevShareValue] = useState("")
+  // The model was fixed at onboarding and could only be changed by removing and
+  // re-onboarding the affiliate. It is editable here now.
+  const [revShareModel, setRevShareModel] = useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE")
   const [isSavingRevShare, setIsSavingRevShare] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<AffiliateSummary | null>(null)
   const [removeScope, setRemoveScope] = useState<"event" | "all">("event")
@@ -600,7 +603,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
-    if (revShareTarget.revShareModel === "PERCENTAGE" && value > 100) {
+    if (revShareModel === "PERCENTAGE" && value > 100) {
       toast.error("A percentage revenue share cannot exceed 100")
       return
     }
@@ -611,7 +614,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       const response = await api.affiliates.adjustRevShare(
         revShareTarget.affiliateId,
         value,
-        revShareTarget.isActive
+        revShareTarget.isActive,
+        revShareModel
       )
 
       if (!response.status) {
@@ -4200,6 +4204,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                                     onClick={() => {
                                       setRevShareTarget(affiliate)
                                       setRevShareValue(affiliate.commissionValue.toString())
+                                      setRevShareModel(affiliate.revShareModel)
                                     }}
                                     title="Adjust revenue share"
                                     className="p-2 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
@@ -4311,6 +4316,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                             onClick={() => {
                               setRevShareTarget(affiliate)
                               setRevShareValue(affiliate.commissionValue.toString())
+                              setRevShareModel(affiliate.revShareModel)
                             }}
                             className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-secondary text-xs font-semibold hover:bg-secondary/80 transition-colors cursor-pointer"
                           >
@@ -4536,8 +4542,24 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
               <div className="space-y-4">
                 <div>
+                  <label className="text-sm font-medium mb-2 block">Rev Share Model</label>
+                  <select
+                    value={revShareModel}
+                    onChange={(e) => setRevShareModel(e.target.value as "PERCENTAGE" | "FIXED_AMOUNT")}
+                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all cursor-pointer"
+                  >
+                    <option value="PERCENTAGE">Percentage</option>
+                    <option value="FIXED_AMOUNT">Fixed amount</option>
+                  </select>
+                  {revShareModel !== revShareTarget.revShareModel && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Applies to future sales only. Commission already earned is not recalculated.
+                    </p>
+                  )}
+                </div>
+                <div>
                   <label className="text-sm font-medium mb-2 block">
-                    {revShareTarget.revShareModel === "PERCENTAGE"
+                    {revShareModel === "PERCENTAGE"
                       ? "Percentage (%)"
                       : `Fixed amount (${eventData.currency || currency})`}
                   </label>

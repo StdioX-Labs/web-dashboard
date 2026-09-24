@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { proxyToSoldOut, requireParams } from '@/lib/soldout-proxy'
 
-// GET /api/affiliates/adjust/revshare?affiliateId=&revShare=&isActive=
+// GET /api/affiliates/adjust/revshare?affiliateId=&revShare=&isActive=&revShareModel=
 // Sets the commission value AND the active flag in one call, so isActive must
 // always be sent deliberately — omitting it would deactivate the affiliate.
+// revShareModel is optional: send it only to switch an affiliate between
+// PERCENTAGE and FIXED_AMOUNT; omitted, the existing model is kept.
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
 
@@ -27,6 +29,9 @@ export async function GET(request: NextRequest) {
 
   if (affiliateId) query.set('affiliateId', affiliateId)
   if (affiliateCode) query.set('affiliateCode', affiliateCode)
+
+  const revShareModel = searchParams.get('revShareModel')
+  if (revShareModel) query.set('revShareModel', revShareModel)
 
   return proxyToSoldOut(request, `/affiliates/adjust/revshare?${query}`)
 }

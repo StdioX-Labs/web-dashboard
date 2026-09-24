@@ -951,11 +951,19 @@ export const api = {
     },
     // Sets the commission value and the active flag together — always pass
     // isActive deliberately, `false` deactivates the affiliate.
-    adjustRevShare: async (affiliateId: number, revShare: number, isActive: boolean) => {
+    // revShareModel is optional: pass it only to switch the affiliate between
+    // PERCENTAGE and FIXED_AMOUNT. Omitted, the existing model is kept.
+    adjustRevShare: async (
+      affiliateId: number,
+      revShare: number,
+      isActive: boolean,
+      revShareModel?: 'PERCENTAGE' | 'FIXED_AMOUNT',
+    ) => {
+      const model = revShareModel ? `&revShareModel=${revShareModel}` : ''
       return apiRequest<{
         status: boolean
         message: string
-      }>(`/affiliates/adjust/revshare?affiliateId=${affiliateId}&revShare=${revShare}&isActive=${isActive}`, {
+      }>(`/affiliates/adjust/revshare?affiliateId=${affiliateId}&revShare=${revShare}&isActive=${isActive}${model}`, {
         method: 'GET',
       }, true)
     },
