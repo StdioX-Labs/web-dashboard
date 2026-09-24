@@ -312,10 +312,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               : foundEvent.tickets?.reduce((sum, ticket) =>
                   sum + ((ticket as any).totalTicketSaleBalance ?? 0), 0) ?? 0
 
+            // Same rule as revenue: fall back to the platform's per-tier counts,
+            // never to soldQuantity, which is a column nothing increments.
             const ticketsSold = foundEvent.totalTicketsSold !== undefined
               ? foundEvent.totalTicketsSold
               : foundEvent.tickets?.reduce((sum, ticket) =>
-                  sum + (ticket.soldQuantity || 0), 0) || 0
+                  sum + ((ticket as any).paidTicketsSold ?? 0), 0) ?? 0
 
             console.log("Using Revenue:", revenue)
             console.log("Using Tickets Sold:", ticketsSold)
@@ -823,11 +825,20 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     id: ticket.id,
     name: ticket.ticketName,
     price: ticket.ticketPrice,
-    totalAvailable: ticket.originalTicketCount || (ticket.soldQuantity + ticket.quantityAvailable),
-    sold: ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0,
+    // Allocation can never be less than what is still on sale plus what has
+    // sold, so that sum is the floor when the stored figure lags behind a stock
+    // change. soldQuantity is not usable here: the platform never increments it.
+    totalAvailable: Math.max(
+      ticket.originalTicketCount ?? 0,
+      (ticket.ticketCount ?? ticket.quantityAvailable ?? 0) + (ticket.paidTicketsSold ?? 0)
+    ),
+    sold: ticket.uniqueTicketCount ?? ticket.paidTicketsSold ?? 0,
     paidSold: ticket.paidSold ?? ticket.paidTicketsSold ?? 0,
     complementarySold: ticket.complementarySold ?? ticket.complementaryTicketsSold ?? 0,
-    revenue: ticket.totalTicketSaleBalance ?? (ticket.ticketPrice * (ticket.uniqueTicketCount ?? ticket.soldQuantity ?? 0)),
+    // Revenue comes from the ledger or not at all. price x count is wrong twice
+    // over: it bills complimentary issues, and it bills every ticket in a group
+    // sale instead of the single sale that was paid for.
+    revenue: ticket.totalTicketSaleBalance ?? 0,
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
     quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
     ticketStatus: ticket.ticketStatus || (ticket.isActive ? 'ACTIVE' : 'INACTIVE'),

@@ -360,6 +360,8 @@ export const api = {
               ticketCount?: number
               paidTicketsSold?: number
               complementaryTicketsSold?: number
+              /** Tickets issued per sale — 5 for a "group of 5", 1 otherwise. */
+              ticketsToIssue?: number
             }>
             detailedEvent?: {
               id: number
@@ -420,14 +422,44 @@ export const api = {
       if (response.data && response.data.data) {
         const normalizedEvents = response.data.data.map(event => {
           // Use detailed event data if available, otherwise use summary data
-          const tickets = event.detailedEvent?.tickets || event.ticketSummaries?.map(ticket => ({
+          // Summaries carry the trustworthy figures; the detailed payload carries
+          // configuration. Where both exist, take each from the side that knows
+          // it rather than letting one overwrite the other — detailedEvent alone
+          // has no revenue at all and a soldQuantity the platform never
+          // increments, so preferring it wholesale loses every real count.
+          const summaryById = new Map(
+            (event.ticketSummaries ?? []).map(s => [s.ticketId, s])
+          )
+          const tickets = event.detailedEvent?.tickets
+            ? event.detailedEvent.tickets.map(detailed => {
+                const summary = summaryById.get(detailed.id)
+                const paid = summary?.paidTicketsSold ?? 0
+                return {
+                  ...detailed,
+                  // "Sold" means tickets people paid for. uniqueTicketCount
+                  // includes complimentary issues, which earn nothing.
+                  soldQuantity: paid,
+                  quantityAvailable: summary?.ticketCount ?? detailed.quantityAvailable,
+                  totalTicketSaleBalance: summary?.totalTicketSaleBalance ?? 0,
+                  uniqueTicketCount: summary?.uniqueTicketCount ?? paid,
+                  originalTicketCount: summary?.originalTicketCount,
+                  ticketCount: summary?.ticketCount,
+                  paidTicketsSold: paid,
+                  complementaryTicketsSold: summary?.complementaryTicketsSold ?? 0,
+                }
+              })
+            : event.ticketSummaries?.map(ticket => ({
             id: ticket.ticketId,
             ticketName: ticket.ticketName,
             ticketPrice: ticket.ticketPrice,
-            quantityAvailable: ticket.ticketCount ?? ticket.uniqueTicketCount ?? 0, // Remaining tickets
-            soldQuantity: ticket.uniqueTicketCount || 0, // Tickets sold
+            // Remaining stock. Never fall back to the sold count: that reported
+            // everything sold as though it were still on sale.
+            quantityAvailable: ticket.ticketCount ?? 0,
+            // Paid tickets only. uniqueTicketCount is paid plus complimentary.
+            soldQuantity: ticket.paidTicketsSold
+              ?? Math.max(0, (ticket.uniqueTicketCount ?? 0) - (ticket.complementaryTicketsSold ?? 0)),
             isActive: ticket.ticketStatus === 'ACTIVE',
-            ticketsToIssue: 1,
+            ticketsToIssue: ticket.ticketsToIssue ?? 1,
             isSoldOut: ticket.ticketStatus === 'SOLDOUT',
             ticketLimitPerPerson: 0,
             numberOfComplementary: 0,

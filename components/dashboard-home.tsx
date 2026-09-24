@@ -38,6 +38,10 @@ interface CompanyEvent {
     ticketPrice: number
     soldQuantity: number
   }>
+  /** Reported by the platform; the authority for what this event took. */
+  totalRevenue?: number
+  /** Reported by the platform. Paid tickets, not admissions. */
+  totalTicketsSold?: number
   companyId: number
   currency: string
 }
@@ -615,16 +619,13 @@ export default function DashboardHome() {
             <div className="py-8 text-center text-muted-foreground">No upcoming events</div>
           ) : (
             upcomingEvents.map((event) => {
-              // Calculate total revenue for this event
-              const eventRevenue = event.tickets.reduce(
-                (sum, ticket) => sum + (ticket.ticketPrice * ticket.soldQuantity),
-                0
-              )
-              // Calculate total tickets sold
-              const totalTickets = event.tickets.reduce(
-                (sum, ticket) => sum + ticket.soldQuantity,
-                0
-              )
+              // The platform reports both of these per event, and the totals
+              // above already use them. Deriving them again from price x count
+              // gave a different answer on the same screen: it multiplies by
+              // complimentary issues, which earn nothing, and by every ticket in
+              // a group sale rather than the sale itself.
+              const eventRevenue = event.totalRevenue ?? 0
+              const totalTickets = event.totalTicketsSold ?? 0
 
               return (
                 <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl bg-secondary/30 p-3 transition-colors hover:bg-secondary/50 sm:p-4">

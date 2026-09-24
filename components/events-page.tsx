@@ -29,6 +29,16 @@ interface Event {
     soldQuantity: number
     quantityAvailable: number
     totalTicketSaleBalance?: number
+    /** Paid plus complimentary. */
+    uniqueTicketCount?: number
+    /** Paid only — the figure that reconciles with revenue. */
+    paidTicketsSold?: number
+    complementaryTicketsSold?: number
+    /** Remaining stock as the platform reports it. */
+    ticketCount?: number
+    originalTicketCount?: number
+    /** Tickets issued per sale; 5 for a "group of 5". */
+    ticketsToIssue?: number
   }>
   totalTicketsSold?: number
   totalRevenue?: number
@@ -123,29 +133,32 @@ export default function EventsPage() {
     // Sum up originalTicketCount from all tickets to get total capacity
     const totalTickets = event.tickets.reduce((sum, ticket) => {
       // Check if ticket has originalTicketCount (from ticketSummaries)
-      const originalCount = (ticket as any).originalTicketCount
+      const originalCount = ticket.originalTicketCount
       if (originalCount) {
         return sum + originalCount
       }
-      // Fallback to soldQuantity + quantityAvailable
-      return sum + ticket.soldQuantity + ticket.quantityAvailable
+      // Capacity is what remains plus what has been paid for. soldQuantity is
+      // not part of it: the platform never increments that column.
+      return sum + (ticket.ticketCount ?? ticket.quantityAvailable ?? 0)
+        + (ticket.paidTicketsSold ?? 0)
     }, 0)
 
-    // Sum up uniqueTicketCount (or soldQuantity) from all tickets to get total sold
+    // Tickets issued, paid and complimentary together — uniqueTicketCount is
+    // exactly that, and falls back to the paid count rather than soldQuantity.
     const ticketsSold = event.tickets.reduce((sum, ticket) => {
-      const uniqueCount = (ticket as any).uniqueTicketCount
-      return sum + (uniqueCount !== undefined ? uniqueCount : ticket.soldQuantity)
+      const uniqueCount = ticket.uniqueTicketCount
+      return sum + (uniqueCount !== undefined ? uniqueCount : (ticket.paidTicketsSold ?? 0))
     }, 0)
 
-    // Use event-level revenue if available, otherwise calculate
+    // Revenue comes from the ledger or not at all. price x count bills
+    // complimentary issues, which earn nothing, and bills every ticket in a
+    // group sale rather than the one sale that was paid for.
     const revenue = event.totalRevenue !== undefined
       ? event.totalRevenue
-      : event.tickets.reduce((sum, ticket) => {
-          const sold = (ticket as any).uniqueTicketCount !== undefined
-            ? (ticket as any).uniqueTicketCount
-            : ticket.soldQuantity
-          return sum + (ticket.ticketPrice * sold)
-        }, 0)
+      : event.tickets.reduce(
+          (sum, ticket) => sum + (ticket.totalTicketSaleBalance ?? 0),
+          0
+        )
 
     return {
       totalTickets: totalTickets || ticketsSold,
