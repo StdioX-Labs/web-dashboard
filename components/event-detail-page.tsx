@@ -760,11 +760,18 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               const summary = summaryMap.get(detailed.id) || {}
               return {
                 ...detailed,
-                // Preserve accurate financial data from summaries
+                // Preserve the accurate counts from the summaries. getById
+                // reports none of them: its soldQuantity is a column nothing
+                // increments and it carries no revenue at all. Dropping the
+                // paid/complimentary split here is what emptied the breakdown
+                // on this tab — and with it the group purchase figures, which
+                // divide the paid count by ticketsToIssue.
                 totalTicketSaleBalance: summary.totalTicketSaleBalance,
-                uniqueTicketCount: summary.uniqueTicketCount ?? detailed.soldQuantity,
+                uniqueTicketCount: summary.uniqueTicketCount ?? summary.paidTicketsSold ?? 0,
                 originalTicketCount: summary.originalTicketCount,
                 ticketCount: summary.ticketCount,
+                paidTicketsSold: summary.paidTicketsSold,
+                complementaryTicketsSold: summary.complementaryTicketsSold,
               }
             })
             return { ...prev, tickets: mergedTickets }
@@ -3247,9 +3254,29 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-secondary/50">
                     <p className="text-sm text-muted-foreground mb-1">Tickets Sold</p>
-                    <p className="text-2xl font-bold">
-                      {eventData.totalTicketsSold || ticketTypes.reduce((sum: number, t: any) => sum + t.sold, 0)} / {ticketTypes.reduce((sum: number, t: any) => sum + t.totalAvailable, 0)}
-                    </p>
+                    {(() => {
+                      // The platform's totalTicketsSold counts paid tickets:
+                      // complimentary issues have no ledger entry behind them.
+                      // The fallback used to sum t.sold, which is paid plus
+                      // comps, so the headline changed meaning depending on
+                      // which branch ran. Both count paid now, and the comps
+                      // are stated beside it so this reconciles with the
+                      // Tickets tab instead of contradicting it.
+                      const paid = eventData.totalTicketsSold
+                        ?? ticketTypes.reduce((sum: number, t) => sum + (t.paidSold ?? 0), 0)
+                      const comps = ticketTypes.reduce((sum: number, t) => sum + (t.complementarySold ?? 0), 0)
+                      const capacity = ticketTypes.reduce((sum: number, t) => sum + t.totalAvailable, 0)
+                      return (
+                        <>
+                          <p className="text-2xl font-bold">{paid} / {capacity}</p>
+                          {comps > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              + {comps} complimentary · {paid + comps} issued
+                            </p>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="p-4 rounded-xl bg-secondary/50">
                     <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
