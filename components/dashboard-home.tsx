@@ -8,7 +8,7 @@ import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
-import { getEventRevenue } from "@/lib/event-revenue"
+import { getEventRevenue, getEventTicketsIssued } from "@/lib/event-stats"
 
 /**
  * FEATURE FLAGS: Quick Actions
@@ -40,6 +40,9 @@ interface CompanyEvent {
     ticketPrice: number
     soldQuantity: number
     totalTicketSaleBalance?: number
+    /** Paid plus complimentary. */
+    uniqueTicketCount?: number
+    paidTicketsSold?: number
   }>
   /** Reported by the platform; the authority for what this event took. */
   totalRevenue?: number
@@ -625,13 +628,10 @@ export default function DashboardHome() {
             <div className="py-8 text-center text-muted-foreground">No upcoming events</div>
           ) : (
             upcomingEvents.map((event) => {
-              // The platform reports both of these per event, and the totals
-              // above already use them. Deriving them again from price x count
-              // gave a different answer on the same screen: it multiplies by
-              // complimentary issues, which earn nothing, and by every ticket in
-              // a group sale rather than the sale itself.
+              // Shared with the events page so one event reads the same on both:
+              // ledger revenue, and every ticket issued including comps.
               const eventRevenue = getEventRevenue(event)
-              const totalTickets = event.totalTicketsSold ?? 0
+              const totalTickets = getEventTicketsIssued(event)
 
               return (
                 <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl bg-secondary/30 p-3 transition-colors hover:bg-secondary/50 sm:p-4">

@@ -8,7 +8,7 @@ import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
-import { getEventRevenue } from "@/lib/event-revenue"
+import { getEventRevenue, getEventTicketsIssued } from "@/lib/event-stats"
 
 interface Event {
   id: number
@@ -144,12 +144,8 @@ export default function EventsPage() {
         + (ticket.paidTicketsSold ?? 0)
     }, 0)
 
-    // Tickets issued, paid and complimentary together — uniqueTicketCount is
-    // exactly that, and falls back to the paid count rather than soldQuantity.
-    const ticketsSold = event.tickets.reduce((sum, ticket) => {
-      const uniqueCount = ticket.uniqueTicketCount
-      return sum + (uniqueCount !== undefined ? uniqueCount : (ticket.paidTicketsSold ?? 0))
-    }, 0)
+    // Tickets issued, paid and complimentary together.
+    const ticketsSold = getEventTicketsIssued(event)
 
     const revenue = getEventRevenue(event)
 

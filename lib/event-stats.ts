@@ -18,3 +18,16 @@ export function getEventRevenue(event: {
     0
   )
 }
+
+/**
+ * Every ticket issued for an event, paid and complimentary together.
+ * uniqueTicketCount is exactly that; without it, fall back to the paid count.
+ */
+export function getEventTicketsIssued(event: {
+  tickets?: Array<{ uniqueTicketCount?: number; paidTicketsSold?: number }>
+}): number {
+  return (event.tickets ?? []).reduce(
+    (sum, ticket) => sum + (ticket.uniqueTicketCount ?? ticket.paidTicketsSold ?? 0),
+    0
+  )
+}
