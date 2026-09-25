@@ -243,6 +243,7 @@ export default function DashboardHome() {
   const [eventsLoading, setEventsLoading] = useState(true)
   const [calculatedRevenue, setCalculatedRevenue] = useState(0)
   const [calculatedFees, setCalculatedFees] = useState(0)
+  const [calculatedTickets, setCalculatedTickets] = useState(0)
   const [isPreparingRequest, setIsPreparingRequest] = useState(false)
 
   useEffect(() => {
@@ -281,16 +282,19 @@ export default function DashboardHome() {
           // Calculate total revenue and fees from all company events
           let totalRev = 0
           let totalFee = 0
+          let totalIssued = 0
 
           eventsResponse.events.forEach(event => {
             if (event.companyId === user.company_id) {
               totalRev += getEventRevenue(event)
               totalFee += event.totalPlatformFee || 0
+              totalIssued += getEventTicketsIssued(event)
             }
           })
 
           setCalculatedRevenue(totalRev)
           setCalculatedFees(totalFee)
+          setCalculatedTickets(totalIssued)
 
           // Filter events for the current user's company
           const companyEvents = eventsResponse.events.filter(
@@ -321,6 +325,9 @@ export default function DashboardHome() {
   // Use calculated values from events API (accurate), fallback to summary API
   const totalRevenue = calculatedRevenue || summary?.totalRevenue || 0
   const commissionAndFees = calculatedFees || summary?.totalFees || 0
+  // Paid and complimentary together, summed from the same per-event counts
+  // the events list shows. The summary's figure is paid tickets only.
+  const ticketsSold = calculatedTickets || summary?.totalTicketsSold || 0
   const availableBalance = totalRevenue - commissionAndFees
 
   // Helper function to format large numbers for mobile
@@ -407,7 +414,7 @@ export default function DashboardHome() {
     },
     {
       label: "Tickets Sold",
-      value: isLoading ? "—" : (summary?.totalTicketsSold || 0).toLocaleString(),
+      value: isLoading ? "—" : ticketsSold.toLocaleString(),
       hint: "All time",
       icon: Ticket,
       tint: "bg-zinc-500/10 text-zinc-300",
