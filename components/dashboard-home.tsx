@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
+import { eventCache } from "@/lib/event-cache"
+import { getEventRevenue } from "@/lib/event-revenue"
 
 /**
  * FEATURE FLAGS: Quick Actions
@@ -37,6 +39,7 @@ interface CompanyEvent {
   tickets: Array<{
     ticketPrice: number
     soldQuantity: number
+    totalTicketSaleBalance?: number
   }>
   /** Reported by the platform; the authority for what this event took. */
   totalRevenue?: number
@@ -268,6 +271,9 @@ export default function DashboardHome() {
     const fetchUpcomingEvents = async () => {
       try {
         const eventsResponse = await api.company.getAllEvents(user.company_id, 0, 300)
+        // Same request, same key as the events page: hand it this fresher copy
+        // so it doesn't go on showing a cached one with older figures.
+        eventCache.set('all-events-300', user.company_id, eventsResponse)
         if (eventsResponse.events) {
           // Calculate total revenue and fees from all company events
           let totalRev = 0
@@ -275,7 +281,7 @@ export default function DashboardHome() {
 
           eventsResponse.events.forEach(event => {
             if (event.companyId === user.company_id) {
-              totalRev += event.totalRevenue || 0
+              totalRev += getEventRevenue(event)
               totalFee += event.totalPlatformFee || 0
             }
           })
@@ -624,7 +630,7 @@ export default function DashboardHome() {
               // gave a different answer on the same screen: it multiplies by
               // complimentary issues, which earn nothing, and by every ticket in
               // a group sale rather than the sale itself.
-              const eventRevenue = event.totalRevenue ?? 0
+              const eventRevenue = getEventRevenue(event)
               const totalTickets = event.totalTicketsSold ?? 0
 
               return (

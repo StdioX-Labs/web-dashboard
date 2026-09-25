@@ -130,6 +130,12 @@ class EventCacheManager {
     return request
   }
 
+  /** Store data fetched elsewhere, so a fresher fetch replaces an older copy. */
+  set<T>(key: string, companyId: number, data: T) {
+    const encrypted = this.encrypt(JSON.stringify(data), this.getEncryptionKey(companyId))
+    this.cache.set(key, { data: encrypted, timestamp: Date.now(), loading: false })
+  }
+
   clearCache(key?: string) {
     if (key) {
       this.cache.delete(key)

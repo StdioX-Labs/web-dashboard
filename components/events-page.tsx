@@ -8,6 +8,7 @@ import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
+import { getEventRevenue } from "@/lib/event-revenue"
 
 interface Event {
   id: number
@@ -150,15 +151,7 @@ export default function EventsPage() {
       return sum + (uniqueCount !== undefined ? uniqueCount : (ticket.paidTicketsSold ?? 0))
     }, 0)
 
-    // Revenue comes from the ledger or not at all. price x count bills
-    // complimentary issues, which earn nothing, and bills every ticket in a
-    // group sale rather than the one sale that was paid for.
-    const revenue = event.totalRevenue !== undefined
-      ? event.totalRevenue
-      : event.tickets.reduce(
-          (sum, ticket) => sum + (ticket.totalTicketSaleBalance ?? 0),
-          0
-        )
+    const revenue = getEventRevenue(event)
 
     return {
       totalTickets: totalTickets || ticketsSold,
