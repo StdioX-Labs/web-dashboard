@@ -19,11 +19,41 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DateTimePicker, DatePicker, TimePicker } from "@/components/ui/date-time-picker"
-import { api } from "@/lib/api-client"
+import { api, apiErrorField } from "@/lib/api-client"
+import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { EVENT_CATEGORIES } from "@/lib/event-categories"
 import { TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 import { sessionManager } from "@/lib/session-manager"
 import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
+
+/** Event fields the API can name in an error; anything else is shown above the form. */
+const EVENT_FIELD_LABELS: Record<string, true> = {
+  eventName: true, slug: true, eventCategory: true, eventStartDate: true, eventEndDate: true,
+  eventLocation: true, eventDescription: true, ticketSaleStartDate: true, ticketSaleEndDate: true,
+  eventPosterUrl: true,
+}
+
+/** Ticket fields the API can name in an error, as the request spells them. */
+const TICKET_FIELDS: Record<string, true> = {
+  ticketName: true, ticketPrice: true, quantityAvailable: true, numberOfComplementary: true,
+  ticketsToIssue: true, ticketLimitPerPerson: true, ticketSaleStartDate: true, ticketSaleEndDate: true,
+}
+
+/** The request field each ticket input feeds, so editing it clears the right error. */
+const TICKET_FORM_TO_API: Partial<Record<keyof TicketType, string>> = {
+  name: "ticketName", price: "ticketPrice", quantity: "quantityAvailable", complementary: "numberOfComplementary",
+  ticketsToIssue: "ticketsToIssue", limitPerPerson: "ticketLimitPerPerson",
+  saleStartDate: "ticketSaleStartDate", saleEndDate: "ticketSaleEndDate",
+}
+
+/** Drops one field's error, and the form-level one, once the organiser edits. */
+const withoutError = (prev: FieldErrors, key: string): FieldErrors => {
+  if (!prev[key] && !prev.form) return prev
+  const next = { ...prev }
+  delete next[key]
+  delete next.form
+  return next
+}
 
 interface TicketType {
   id: string
@@ -64,6 +94,8 @@ export default function CreateEventPage() {
   const [currency, setCurrency] = useState("KES")
   const [saleStartDateTime, setSaleStartDateTime] = useState<Date | undefined>(undefined)
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
+  const [eventErrors, setEventErrors] = useState<FieldErrors>({})
+  const [ticketErrors, setTicketErrors] = useState<Record<string, FieldErrors>>({})
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
     { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
   ])
@@ -96,6 +128,7 @@ export default function CreateEventPage() {
       }
 
       setUploadedImageFile(file)
+      clearEventError("eventPosterUrl")
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
@@ -144,6 +177,7 @@ export default function CreateEventPage() {
    * each other.
    */
   const updateTicketType = (id: string, field: keyof TicketType, value: string | Date | undefined | boolean) => {
+    clearTicketError(id, TICKET_FORM_TO_API[field])
     setTicketTypes((prev) =>
       prev.map((ticket) =>
         ticket.id === id ? { ...ticket, [field]: value } : ticket
@@ -151,8 +185,20 @@ export default function CreateEventPage() {
     )
   }
 
+  const clearTicketError = (id: string, apiField: string | undefined) => {
+    if (!apiField) return
+    setTicketErrors((prev) => {
+      if (!prev[id]) return prev
+      const next = withoutError(prev[id], apiField)
+      return next === prev[id] ? prev : { ...prev, [id]: next }
+    })
+  }
+
+  const clearEventError = (key: string) => setEventErrors((prev) => withoutError(prev, key))
+
   /** Patch several fields at once, for toggles that also seed a companion value. */
   const patchTicketType = (id: string, patch: Partial<TicketType>) => {
+    for (const key of Object.keys(patch) as (keyof TicketType)[]) clearTicketError(id, TICKET_FORM_TO_API[key])
     setTicketTypes((prev) =>
       prev.map((ticket) => (ticket.id === id ? { ...ticket, ...patch } : ticket))
     )
@@ -168,87 +214,66 @@ export default function CreateEventPage() {
     }
   }
 
+  // Brings the first rejected input into view; a reason below the fold
+  // otherwise reads as the button doing nothing.
+  const scrollToFirstError = () => {
+    requestAnimationFrame(() => {
+      document.querySelector("[data-field-error]")?.scrollIntoView({ behavior: "smooth", block: "center" })
+    })
+  }
+
   const handleCreateEvent = async () => {
+    // Get user session
+    const user = sessionManager.getUser()
+    if (!user) {
+      toast.error("Please log in to create an event")
+      router.push("/")
+      return
+    }
+
+    // Keyed by the API's own field names, so client checks and the reasons
+    // the API sends back land in the same place.
+    const errors: FieldErrors = {}
+    if (!eventName.trim()) errors.eventName = "Enter the event name"
+    else if (eventName.trim().length < 2 || eventName.trim().length > 50) errors.eventName = "Event name must be between 2 and 50 characters"
+    if (!slug) errors.slug = "Enter a URL for your event"
+    else if (!/^[a-z0-9-]+$/.test(slug)) errors.slug = "Use only lowercase letters, numbers and hyphens"
+    if (!category) errors.eventCategory = "Choose a category"
+    if (!eventStartDate) errors.eventStartDate = "Set when the event starts"
+    if (!eventEndDate) errors.eventEndDate = "Set when the event ends"
+    else if (eventStartDate && eventEndDate <= eventStartDate) errors.eventEndDate = "The event must end after it starts"
+    else if (eventEndDate.getTime() < Date.now()) errors.eventEndDate = "This date has already passed. Check the date and year."
+    if (!venue.trim()) errors.eventLocation = "Enter the venue"
+    if (!description.trim()) errors.eventDescription = "Describe the event"
+    if (!saleStartDateTime) errors.ticketSaleStartDate = "Set when ticket sales open"
+    if (!saleEndDateTime) errors.ticketSaleEndDate = "Set when ticket sales close"
+    else if (saleStartDateTime && saleEndDateTime <= saleStartDateTime) errors.ticketSaleEndDate = "Ticket sales must close after they open"
+    else if (eventEndDate && saleEndDateTime > eventEndDate) errors.ticketSaleEndDate = "Ticket sales must close by the time the event ends"
+    if (!errors.ticketSaleStartDate && saleStartDateTime && eventEndDate && saleStartDateTime >= eventEndDate) {
+      errors.ticketSaleStartDate = "Ticket sales must open before the event ends"
+    }
+    if (!uploadedImageFile) errors.eventPosterUrl = "Upload an event poster"
+
+    setEventErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fix the highlighted fields")
+      scrollToFirstError()
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      // Get user session
-      const user = sessionManager.getUser()
-      if (!user) {
-        toast.error("Please log in to create an event")
-        router.push("/")
-        return
-      }
-
-      // Validation
-      if (!eventName || !venue || !description) {
-        toast.error("Please fill in all required fields")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Both the day and the time are required on each date field
-      if (!eventStartDate) {
-        toast.error("Please set the event start date and time")
-        setIsSubmitting(false)
-        return
-      }
-
-      if (!eventEndDate) {
-        toast.error("Please set the event end date and time")
-        setIsSubmitting(false)
-        return
-      }
-
-      if (eventEndDate <= eventStartDate) {
-        toast.error("Event end must be after the event start")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate slug
-      if (!slug) {
-        toast.error("Please provide a URL slug for your event")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate slug format
-      if (!/^[a-z0-9-]+$/.test(slug)) {
-        toast.error("Slug can only contain lowercase letters, numbers, and hyphens")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate sale period — each field needs a date and a time
-      if (!saleStartDateTime || !saleEndDateTime) {
-        toast.error("Please set the ticket sales start and end date and time")
-        setIsSubmitting(false)
-        return
-      }
-
-      if (saleEndDateTime <= saleStartDateTime) {
-        toast.error("Ticket sales must end after they start")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate image
-      if (!uploadedImageFile) {
-        toast.error("Please upload an event poster image")
-        setIsSubmitting(false)
-        return
-      }
-
-
       // Step 1: Upload image to Contabo
       setIsUploading(true)
       toast.info("Uploading event poster...")
-      const uploadResult = await uploadToContabo(uploadedImageFile)
+      const uploadResult = await uploadToContabo(uploadedImageFile!)
       setIsUploading(false)
 
       if (!uploadResult.success || !uploadResult.url) {
+        setEventErrors({ eventPosterUrl: uploadResult.error || "The poster couldn't be uploaded. Please try again." })
         toast.error(uploadResult.error || "Failed to upload image")
+        scrollToFirstError()
         setIsSubmitting(false)
         return
       }
@@ -256,15 +281,15 @@ export default function CreateEventPage() {
       // Step 2: Create the event
       toast.info("Creating event...")
       const eventResponse = await api.company.createEvent({
-        eventName,
+        eventName: eventName.trim(),
         eventDescription: description,
         eventPosterUrl: uploadResult.url,
         eventCategory: { id: parseInt(category) },
-        ticketSaleStartDate: saleStartDateTime.toISOString(),
-        ticketSaleEndDate: saleEndDateTime.toISOString(),
+        ticketSaleStartDate: saleStartDateTime!.toISOString(),
+        ticketSaleEndDate: saleEndDateTime!.toISOString(),
         eventLocation: venue,
-        eventStartDate: eventStartDate.toISOString(),
-        eventEndDate: eventEndDate.toISOString(),
+        eventStartDate: eventStartDate!.toISOString(),
+        eventEndDate: eventEndDate!.toISOString(),
         percentageComission: parseFloat(commission),
         users: { id: user.user_id },
         company: { id: user.company_id },
@@ -294,71 +319,112 @@ export default function CreateEventPage() {
       setIsSubmitting(false)
     } catch (error) {
       console.error("Error creating event:", error)
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create event. Please try again."
-      )
+      const message = error instanceof Error ? error.message : "Failed to create event. Please try again."
+      const field = apiErrorField(error)
+      setEventErrors(field && field in EVENT_FIELD_LABELS ? { [field]: message } : { form: message })
+      toast.error("Couldn't create the event", { description: message })
+      scrollToFirstError()
+      setIsUploading(false)
       setIsSubmitting(false)
     }
   }
 
   const handleAddTickets = async () => {
+    if (!createdEventId) {
+      toast.error("Event ID is missing")
+      return
+    }
+
+    // A row with nothing typed in it is ignored; a half-filled one is an
+    // error, not something to drop without saying.
+    const isBlank = (t: TicketType) => !t.name.trim() && !t.price && !t.quantity
+    const toCreate = ticketTypes.filter((t) => !isBlank(t))
+
+    const errors: Record<string, FieldErrors> = {}
+    for (const ticket of toCreate) {
+      const e: FieldErrors = {}
+      const price = Number(ticket.price)
+      const quantity = Number(ticket.quantity)
+      const groupSize = parseInt(ticket.ticketsToIssue || "1")
+      if (ticket.name.trim().length < 3) e.ticketName = "Ticket name must be at least 3 characters"
+      if (ticket.price === "") e.ticketPrice = "Enter a price (0 for a free ticket)"
+      else if (!Number.isFinite(price) || price < 0) e.ticketPrice = "Ticket price can't be negative"
+      if (ticket.quantity === "") e.quantityAvailable = "Enter how many tickets are available"
+      else if (!Number.isInteger(quantity) || quantity < 1) e.quantityAvailable = "Quantity must be a whole number of at least 1"
+      if (Number(ticket.complementary || "0") < 0) e.numberOfComplementary = "Complimentary tickets can't be negative"
+      if (ticket.isGroupTicket && (!groupSize || groupSize < 2)) e.ticketsToIssue = "A group must be at least 2 people"
+      else if (!e.quantityAvailable && groupSize > quantity) e.ticketsToIssue = `Group size can't be more than the ${quantity} tickets available`
+      if (ticket.restrictLimitPerPerson && !(parseInt(ticket.limitPerPerson) >= 1)) e.ticketLimitPerPerson = "Allow at least 1 ticket per person"
+      const saleStart = ticket.saleStartDate || saleStartDateTime
+      const saleEnd = ticket.saleEndDate || saleEndDateTime
+      if (saleStart && saleEnd && saleEnd <= saleStart) e.ticketSaleEndDate = "Ticket sales must close after they open"
+      else if (saleEnd && eventEndDate && saleEnd > eventEndDate) e.ticketSaleEndDate = "Ticket sales must close by the time the event ends"
+      if (Object.keys(e).length > 0) errors[ticket.id] = e
+    }
+
+    if (toCreate.length === 0) {
+      setTicketErrors({ [ticketTypes[0].id]: { ticketName: "Add at least one ticket, or choose Skip & Finish" } })
+      toast.error("Please add at least one ticket type")
+      scrollToFirstError()
+      return
+    }
+
+    setTicketErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fix the highlighted ticket fields")
+      scrollToFirstError()
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      if (!createdEventId) {
-        toast.error("Event ID is missing")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Validate at least one ticket type
-      const validTickets = ticketTypes.filter(
-        (ticket) => ticket.name && ticket.price && ticket.quantity
-      )
-
-      if (validTickets.length === 0) {
-        toast.error("Please add at least one valid ticket type")
-        setIsSubmitting(false)
-        return
-      }
-
       // Create tickets one by one
-      toast.info(`Creating ${validTickets.length} ticket type(s)...`)
-      let ticketsCreated = 0
+      toast.info(`Creating ${toCreate.length} ticket type(s)...`)
+      const created = new Set<string>()
+      const failed: Record<string, FieldErrors> = {}
 
-      for (let i = 0; i < validTickets.length; i++) {
-        const ticket = validTickets[i]
+      for (const ticket of toCreate) {
         try {
-          toast.info(`Creating ticket ${i + 1}/${validTickets.length}: ${ticket.name}`)
-
+          const price = parseFloat(ticket.price)
           await api.company.createTicket({
             event: { id: createdEventId },
-            ticketName: ticket.name,
-            ticketPrice: parseFloat(ticket.price),
+            ticketName: ticket.name.trim(),
+            ticketPrice: price,
             quantityAvailable: parseInt(ticket.quantity),
             ticketsToIssue: parseInt(ticket.ticketsToIssue || "1"),
             ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
             numberOfComplementary: parseInt(ticket.complementary || "0"),
             ticketSaleStartDate: (ticket.saleStartDate || saleStartDateTime!).toISOString(),
             ticketSaleEndDate: (ticket.saleEndDate || saleEndDateTime!).toISOString(),
-            isFree: parseFloat(ticket.price) === 0,
+            isFree: price === 0,
           })
 
-          ticketsCreated++
+          created.add(ticket.id)
           toast.success(`✓ Ticket created: ${ticket.name}`)
         } catch (ticketError) {
           console.error(`Error creating ticket "${ticket.name}":`, ticketError)
-          toast.error(`Failed to create ticket: ${ticket.name}`)
+          const message = ticketError instanceof Error ? ticketError.message : "Couldn't create this ticket"
+          const field = apiErrorField(ticketError)
+          failed[ticket.id] = field && field in TICKET_FIELDS ? { [field]: message } : { form: message }
+          toast.error(`Couldn't create ${ticket.name}`, { description: message })
         }
       }
 
-      if (ticketsCreated === 0) {
-        toast.warning("No tickets were added. You can add tickets later from the event page.")
-      } else if (ticketsCreated < validTickets.length) {
-        toast.warning(`${ticketsCreated}/${validTickets.length} ticket type(s) created. Some tickets failed.`)
-      } else {
-        toast.success(`🎉 All done! ${ticketsCreated} ticket type(s) created successfully!`)
+      if (Object.keys(failed).length > 0) {
+        // Keep only the tickets that still need attention, so trying again
+        // can't create the successful ones a second time.
+        setTicketTypes((prev) => prev.filter((t) => !created.has(t.id) && !isBlank(t)))
+        setTicketErrors(failed)
+        if (created.size > 0) {
+          toast.warning(`${created.size} of ${toCreate.length} ticket types created. Fix the rest and try again, or Skip & Finish.`)
+        }
+        scrollToFirstError()
+        setIsSubmitting(false)
+        return
       }
+
+      toast.success(`🎉 All done! ${created.size} ticket type(s) created successfully!`)
 
       // Move to complete step
       setCurrentStep('complete')
@@ -448,11 +514,12 @@ export default function CreateEventPage() {
               <input
                 type="text"
                 value={eventName}
-                onChange={(e) => handleEventNameChange(e.target.value)}
+                onChange={(e) => { handleEventNameChange(e.target.value); clearEventError("eventName"); clearEventError("slug") }}
                 placeholder="e.g., Summer Music Festival 2026"
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", eventErrors.eventName && errorInputClass)}
                 required
               />
+              <FieldError message={eventErrors.eventName} />
             </div>
 
             {/* Event Slug */}
@@ -463,11 +530,12 @@ export default function CreateEventPage() {
               <input
                 type="text"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')); clearEventError("slug") }}
                 placeholder="e.g., summer-music-festival-2026"
-                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all font-mono"
+                className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all font-mono", eventErrors.slug && errorInputClass)}
                 required
               />
+              <FieldError message={eventErrors.slug} />
               <div className="mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
                 <p className="text-xs text-blue-800 dark:text-blue-300">
                   <span className="font-semibold">Your event will be accessible at:</span><br />
@@ -488,7 +556,7 @@ export default function CreateEventPage() {
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => { setCategory(e.target.value); clearEventError("eventCategory") }}
                 className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3cpath%20fill%3D%22%23666%22%20d%3D%22M10.293%203.293L6%207.586%201.707%203.293A1%201%200%2000.293%204.707l5%205a1%201%200%20001.414%200l5-5a1%201%200%2010-1.414-1.414z%22%2F%3E%3c%2Fsvg%3E')] bg-[length:1rem] bg-[center_right_1rem] bg-no-repeat pr-12"
                 required
               >
@@ -499,6 +567,7 @@ export default function CreateEventPage() {
                   </option>
                 ))}
               </select>
+              <FieldError message={eventErrors.eventCategory} />
             </div>
 
             {/* Event Start Date & Time */}
@@ -508,9 +577,11 @@ export default function CreateEventPage() {
               </label>
               <DateTimePicker
                 selected={eventStartDate}
-                onChange={(date) => setEventStartDate(date)}
+                onChange={(date) => { setEventStartDate(date); clearEventError("eventStartDate"); clearEventError("eventEndDate") }}
                 placeholderText="Select event start date and time"
+                className={cn(eventErrors.eventStartDate && errorInputClass)}
               />
+              <FieldError message={eventErrors.eventStartDate} />
             </div>
 
             {/* Event End Date & Time */}
@@ -520,9 +591,11 @@ export default function CreateEventPage() {
               </label>
               <DateTimePicker
                 selected={eventEndDate}
-                onChange={(date) => setEventEndDate(date)}
+                onChange={(date) => { setEventEndDate(date); clearEventError("eventEndDate"); clearEventError("ticketSaleEndDate"); clearEventError("ticketSaleStartDate") }}
                 placeholderText="Select event end date and time"
+                className={cn(eventErrors.eventEndDate && errorInputClass)}
               />
+              <FieldError message={eventErrors.eventEndDate} />
             </div>
 
             {/* Currency */}
@@ -551,12 +624,13 @@ export default function CreateEventPage() {
                 <input
                   type="text"
                   value={venue}
-                  onChange={(e) => setVenue(e.target.value)}
+                  onChange={(e) => { setVenue(e.target.value); clearEventError("eventLocation") }}
                   placeholder="e.g., Uhuru Gardens, Nairobi"
-                  className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                  className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", eventErrors.eventLocation && errorInputClass)}
                   required
                 />
               </div>
+              <FieldError message={eventErrors.eventLocation} />
             </div>
 
             {/* Description */}
@@ -566,12 +640,13 @@ export default function CreateEventPage() {
               </label>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => { setDescription(e.target.value); clearEventError("eventDescription") }}
                 placeholder="Describe your event in detail..."
                 rows={5}
-                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none"
+                className={cn("w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all resize-none", eventErrors.eventDescription && errorInputClass)}
                 required
               />
+              <FieldError message={eventErrors.eventDescription} />
               <p className="text-xs text-muted-foreground mt-2">
                 {description.length} / 1000 characters
               </p>
@@ -588,17 +663,21 @@ export default function CreateEventPage() {
                   <label className="text-xs font-medium mb-2 block">Sales Start Date & Time <span className="text-red-500">*</span></label>
                   <DateTimePicker
                     selected={saleStartDateTime}
-                    onChange={(date) => setSaleStartDateTime(date)}
+                    onChange={(date) => { setSaleStartDateTime(date); clearEventError("ticketSaleStartDate"); clearEventError("ticketSaleEndDate") }}
                     placeholderText="Select start date & time"
+                    className={cn(eventErrors.ticketSaleStartDate && errorInputClass)}
                   />
+                  <FieldError message={eventErrors.ticketSaleStartDate} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-2 block">Sales End Date & Time <span className="text-red-500">*</span></label>
                   <DateTimePicker
                     selected={saleEndDateTime}
-                    onChange={(date) => setSaleEndDateTime(date)}
+                    onChange={(date) => { setSaleEndDateTime(date); clearEventError("ticketSaleEndDate") }}
                     placeholderText="Select end date & time"
+                    className={cn(eventErrors.ticketSaleEndDate && errorInputClass)}
                   />
+                  <FieldError message={eventErrors.ticketSaleEndDate} />
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -665,9 +744,12 @@ export default function CreateEventPage() {
                   </label>
                 )}
               </div>
+              <FieldError message={eventErrors.eventPosterUrl} />
             </div>
           </div>
         </motion.div>
+
+        <FormError message={eventErrors.form} />
 
         {/* Form Actions for Event Step */}
         <motion.div
@@ -763,8 +845,9 @@ export default function CreateEventPage() {
                           updateTicketType(ticket.id, "name", e.target.value)
                         }
                         placeholder="e.g., VIP Pass"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                        className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.ticketName && errorInputClass)}
                       />
+                      <FieldError message={ticketErrors[ticket.id]?.ticketName} />
                     </div>
                     <div>
                       <label className="text-xs font-medium mb-1.5 block">
@@ -779,8 +862,9 @@ export default function CreateEventPage() {
                         placeholder="e.g., 2500"
                         min="0"
                         step="0.01"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                        className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.ticketPrice && errorInputClass)}
                       />
+                      <FieldError message={ticketErrors[ticket.id]?.ticketPrice} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -796,8 +880,9 @@ export default function CreateEventPage() {
                         }
                         placeholder="e.g., 100"
                         min="1"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                        className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.quantityAvailable && errorInputClass)}
                       />
+                      <FieldError message={ticketErrors[ticket.id]?.quantityAvailable} />
                     </div>
                     <div>
                       <label className="text-xs font-medium mb-1.5 block">
@@ -811,8 +896,9 @@ export default function CreateEventPage() {
                         }
                         placeholder="e.g., 10"
                         min="0"
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                        className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.numberOfComplementary && errorInputClass)}
                       />
+                      <FieldError message={ticketErrors[ticket.id]?.numberOfComplementary} />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -847,8 +933,9 @@ export default function CreateEventPage() {
                               updateTicketType(ticket.id, "ticketsToIssue", e.target.value)
                             }
                             min="2"
-                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                            className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.ticketsToIssue && errorInputClass)}
                           />
+                          <FieldError message={ticketErrors[ticket.id]?.ticketsToIssue} />
                           <p className="text-xs text-muted-foreground mt-1">
                             {TICKET_FIELD_HELP.groupOn}
                           </p>
@@ -887,8 +974,9 @@ export default function CreateEventPage() {
                               updateTicketType(ticket.id, "limitPerPerson", e.target.value)
                             }
                             min="1"
-                            className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
+                            className={cn("w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all", ticketErrors[ticket.id]?.ticketLimitPerPerson && errorInputClass)}
                           />
+                          <FieldError message={ticketErrors[ticket.id]?.ticketLimitPerPerson} />
                           <p className="text-xs text-muted-foreground mt-1">
                             {TICKET_FIELD_HELP.limitOn}
                           </p>
@@ -923,8 +1011,9 @@ export default function CreateEventPage() {
                           selected={ticket.saleStartDate}
                           onChange={(date) => updateTicketType(ticket.id, "saleStartDate", date)}
                           placeholderText="Select start date & time"
-                          className="h-9 text-xs"
+                          className={cn("h-9 text-xs", ticketErrors[ticket.id]?.ticketSaleStartDate && errorInputClass)}
                         />
+                        <FieldError message={ticketErrors[ticket.id]?.ticketSaleStartDate} />
                       </div>
                       <div>
                         <label className="text-xs mb-1.5 block opacity-75">Sale End Date & Time</label>
@@ -932,11 +1021,13 @@ export default function CreateEventPage() {
                           selected={ticket.saleEndDate}
                           onChange={(date) => updateTicketType(ticket.id, "saleEndDate", date)}
                           placeholderText="Select end date & time"
-                          className="h-9 text-xs"
+                          className={cn("h-9 text-xs", ticketErrors[ticket.id]?.ticketSaleEndDate && errorInputClass)}
                         />
+                        <FieldError message={ticketErrors[ticket.id]?.ticketSaleEndDate} />
                       </div>
                     </div>
                   </div>
+                  <FormError message={ticketErrors[ticket.id]?.form} />
                 </div>
               </motion.div>
             ))}

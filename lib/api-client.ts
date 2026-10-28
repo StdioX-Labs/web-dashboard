@@ -15,6 +15,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The request field a failed call was about, when the API names one, so a form
+ * can show the reason beside that input rather than only in a toast.
+ */
+export function apiErrorField(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined
+  const field = (error.response as { field?: unknown } | null | undefined)?.field
+  return typeof field === 'string' ? field : undefined
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -65,16 +75,18 @@ export async function apiRequest<T>(
 
     // Check if response is ok before parsing
     if (!response.ok) {
-      let errorMessage = 'An error occurred'
+      let errorMessage = response.status >= 500
+        ? 'SoldOut is having trouble right now. Please try again in a few minutes.'
+        : 'Something about this request was rejected. Please check the details and try again.'
       let errorData = null
 
       try {
         errorData = await response.json()
         console.log('API Error Data:', errorData)
-        errorMessage = errorData.message || errorMessage
+        // Some routes put the reason in `error` and leave `message` empty.
+        errorMessage = errorData.message || (typeof errorData.error === 'string' ? errorData.error : '') || errorMessage
       } catch (_) {
-        // If response is not JSON, use status text
-        errorMessage = response.statusText || errorMessage
+        // Not JSON: keep the status-based message rather than a bare "Bad Gateway"
       }
 
       throw new ApiError(
@@ -237,7 +249,7 @@ export const api = {
       isExternal: boolean
       company: { id: number }
       roles: string
-    }) => {
+    }, requesterUserId?: number) => {
       return apiRequest<{
         message: string
         status: boolean
@@ -252,7 +264,7 @@ export const api = {
           company_name: string
           email: string
         }
-      }>(`/user/create`, {
+      }>(`/user/create${requesterUserId ? `?requesterUserId=${requesterUserId}` : ''}`, {
         method: 'POST',
         body: JSON.stringify({ ...userData, emailAddress: normalizeEmail(userData.emailAddress) }),
       }, true) // Use proxy route

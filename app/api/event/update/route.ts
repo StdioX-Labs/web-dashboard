@@ -1,107 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
-const SOLDOUT_API_USERNAME = process.env.SOLDOUT_API_USERNAME
-const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
+import { NextRequest } from 'next/server'
+import { proxyToSoldOut, requireParams } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const eventId = searchParams.get('eventId')
+  const searchParams = request.nextUrl.searchParams
+  const missing = requireParams(searchParams, ['eventId'])
+  if (missing) return missing
 
-    if (!eventId) {
-      return NextResponse.json(
-        {
-          status: false,
-          message: 'Event ID is required'
-        },
-        { status: 400 }
-      )
-    }
-
-    const body = await request.json()
-    console.log('Updating event with ID:', eventId, 'Data:', body)
-
-    // Get auth token from headers
-    const authHeader = request.headers.get('Authorization')
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add basic auth if credentials are available
-    if (SOLDOUT_API_USERNAME && SOLDOUT_API_PASSWORD) {
-      const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
-      headers['Authorization'] = `Basic ${credentials}`
-    } else if (authHeader) {
-      headers['Authorization'] = authHeader
-    }
-
-    const response = await fetch(`${BASE_URL}/event/update?eventId=${eventId}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    })
-
-    console.log('API Response status:', response.status, response.statusText)
-
-    const contentType = response.headers.get('content-type')
-    const text = await response.text()
-
-    if (!contentType || !contentType.includes('application/json')) {
-      console.error('Non-JSON response:', text)
-      return NextResponse.json(
-        {
-          status: false,
-          message: `API returned non-JSON response (${response.status})`,
-          details: text,
-        },
-        { status: response.status || 500 }
-      )
-    }
-
-    let data
-    try {
-      data = JSON.parse(text)
-    } catch (parseError) {
-      console.error('Failed to parse JSON:', parseError)
-      return NextResponse.json(
-        {
-          status: false,
-          message: 'Failed to parse API response',
-          details: text,
-        },
-        { status: 500 }
-      )
-    }
-
-    console.log('API Response data:', data)
-
-    // Upstream reports failures as `{ status: false, error: "..." }` while the
-    // api-client and its callers read `message`, so without mirroring it the
-    // real reason is dropped and the toast falls back to a generic failure.
-    // Same fix as `/api/company/create` and `lib/soldout-proxy.ts`.
-    if (!response.ok || data?.status === false) {
-      const message = data?.error || data?.message || `Request failed (${response.status})`
-      console.warn('Event update - error response:', response.status, message)
-
-      return NextResponse.json(
-        { ...data, status: false, message },
-        { status: response.status }
-      )
-    }
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('Error updating event:', error)
-    return NextResponse.json(
-      {
-        status: false,
-        message: error instanceof Error ? error.message : 'Failed to update event',
-        error: error instanceof Error ? error.stack : String(error)
-      },
-      { status: 500 }
-    )
-  }
+  const body = await request.json()
+  const eventId = encodeURIComponent(searchParams.get('eventId')!)
+  return proxyToSoldOut(request, `/event/update?eventId=${eventId}`, { method: 'POST', body })
 }
-

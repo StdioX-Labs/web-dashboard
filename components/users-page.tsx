@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Search, Plus, Edit, Ban, Shield, User, Users as UsersIcon, CheckCircle, XCircle, X, Mail, Phone, TrendingUp, Copy, Link as LinkIcon, DollarSign, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { api } from "@/lib/api-client"
+import { api, apiErrorField } from "@/lib/api-client"
+import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { sessionManager } from "@/lib/session-manager"
 
 /**
@@ -138,6 +139,9 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectedAffiliate, setSelectedAffiliate] = useState<Affiliate | null>(null)
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", role: "STAFF" as UserRole, idNumber: "" })
+  // Keyed by the API's field names (fullName, emailAddress, mobileNumber, ...)
+  const [userErrors, setUserErrors] = useState<FieldErrors>({})
+  const [isSavingUser, setIsSavingUser] = useState(false)
   const [affiliateFormData, setAffiliateFormData] = useState({ name: "", email: "", phone: "", events: [] as string[], eventId: "" })
   const [otpInput, setOtpInput] = useState("")
   const [showOtpInput, setShowOtpInput] = useState(false)
@@ -171,21 +175,49 @@ export default function UsersPage() {
   const totalAffiliateRevenue = affiliates.reduce((sum, a) => sum + a.totalRevenue, 0)
   const totalCommissionPaid = affiliates.reduce((sum, a) => sum + a.commission, 0)
 
+  const validateUserForm = (): boolean => {
+    const errors: FieldErrors = {}
+    if (!formData.name.trim()) errors.fullName = "Enter the user's full name"
+    if (!formData.email.trim()) errors.emailAddress = "Enter an email address"
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email.trim())) errors.emailAddress = "Enter a valid email address"
+    if (!formData.phone) errors.mobileNumber = "Enter a phone number"
+    else if (!/^254\d{9}$/.test(formatPhoneNumber(formData.phone))) errors.mobileNumber = "Phone number must be 254 followed by 9 digits"
+    if (formData.idNumber && (formData.idNumber.length < 6 || formData.idNumber.length > 12)) errors.idNumber = "ID number must be 6 to 12 characters"
+    setUserErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  /** Puts the API's reason under the input it names, or above the buttons. */
+  const showUserError = (error: unknown, fallback: string) => {
+    const message = error instanceof Error ? error.message : fallback
+    const field = apiErrorField(error)
+    const known = ["fullName", "emailAddress", "mobileNumber", "idNumber", "roles"]
+    setUserErrors(field && known.includes(field) ? { [field]: message } : { form: message })
+  }
+
+  const clearUserError = (key: string) =>
+    setUserErrors((prev) => {
+      if (!prev[key] && !prev.form) return prev
+      const next = { ...prev }
+      delete next[key]
+      delete next.form
+      return next
+    })
+
   const handleAddUser = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.role) {
-      return toast.error("Please fill all required fields")
+    if (isSavingUser || !validateUserForm()) return
+
+    const currentUser = sessionManager.getUser()
+    if (!currentUser) {
+      setUserErrors({ form: "Your session has expired. Please sign in again." })
+      return
     }
 
+    setIsSavingUser(true)
     try {
-      const currentUser = sessionManager.getUser()
-      if (!currentUser) {
-        toast.error("Unable to identify current user")
-        return
-      }
-
       // Call the create user API
       const response = await api.user.create({
-        fullName: formData.name,
+        fullName: formData.name.trim(),
         idNumber: formData.idNumber || "00000000",
         mobileNumber: formatPhoneNumber(formData.phone),
         password: "s0ascAnn3r@56YearsLater!", // Default password
@@ -193,43 +225,41 @@ export default function UsersPage() {
         isExternal: false,
         company: { id: currentUser.company_id },
         roles: formData.role,
-      })
+      }, currentUser.user_id)
 
-      if (response.status) {
-        toast.success(response.message || "User added successfully!")
-        setShowAddModal(false)
-        setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
-        // Refresh the users list
-        fetchUsers()
-      } else {
-        toast.error(response.message || "Failed to create user")
-      }
+      if (!response.status) throw new Error(response.message || "Failed to create user")
+
+      toast.success(response.message || "User added successfully!")
+      setShowAddModal(false)
+      setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
+      setUserErrors({})
+      // Refresh the users list
+      fetchUsers()
     } catch (error) {
       console.error('Error creating user:', error)
-      toast.error("An error occurred while creating user")
+      showUserError(error, "Couldn't add this user. Please try again.")
+    } finally {
+      setIsSavingUser(false)
     }
   }
 
   const handleEditUser = async () => {
-    if (!selectedUser) return
+    if (!selectedUser || isSavingUser || !validateUserForm()) return
 
-    if (!formData.name || !formData.email || !formData.phone || !formData.role) {
-      return toast.error("Please fill all required fields")
+    const currentUser = sessionManager.getUser()
+    if (!currentUser) {
+      setUserErrors({ form: "Your session has expired. Please sign in again." })
+      return
     }
 
+    setIsSavingUser(true)
     try {
-      const currentUser = sessionManager.getUser()
-      if (!currentUser) {
-        toast.error("Unable to identify current user")
-        return
-      }
-
       // Call the edit user API
       const response = await api.user.edit(
         selectedUser.id,
         currentUser.user_id,
         {
-          fullName: formData.name,
+          fullName: formData.name.trim(),
           emailAddress: formData.email.toLowerCase().trim(),
           mobileNumber: formatPhoneNumber(formData.phone),
           idNumber: formData.idNumber || selectedUser.idNumber,
@@ -238,19 +268,20 @@ export default function UsersPage() {
         }
       )
 
-      if (response.status) {
-        toast.success(response.message || "User updated successfully!")
-        setShowEditModal(false)
-        setSelectedUser(null)
-        setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
-        // Refresh the users list
-        fetchUsers()
-      } else {
-        toast.error(response.message || "Failed to update user")
-      }
+      if (!response.status) throw new Error(response.message || "Failed to update user")
+
+      toast.success(response.message || "User updated successfully!")
+      setShowEditModal(false)
+      setSelectedUser(null)
+      setFormData({ name: "", email: "", phone: "", role: "STAFF", idNumber: "" })
+      setUserErrors({})
+      // Refresh the users list
+      fetchUsers()
     } catch (error) {
       console.error('Error updating user:', error)
-      toast.error("An error occurred while updating user")
+      showUserError(error, "Couldn't save the changes. Please try again.")
+    } finally {
+      setIsSavingUser(false)
     }
   }
 
@@ -325,6 +356,7 @@ export default function UsersPage() {
       role: user.roles,
       idNumber: user.idNumber
     })
+    setUserErrors({})
     setShowEditModal(true)
   }
   const openSuspendModal = (user: User) => {
@@ -409,7 +441,7 @@ export default function UsersPage() {
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{activeTab === "users" ? "Users" : "Affiliates"}</h1>
-          <button onClick={() => setShowAddModal(true)} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer">
+          <button onClick={() => { setUserErrors({}); setShowAddModal(true) }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{activeTab === "users" ? "Add User" : "Add Affiliate"}</span>
           </button>
@@ -623,11 +655,11 @@ export default function UsersPage() {
               <h3 className="text-xl font-bold mb-6">{activeTab === "users" ? "Add New User" : "Add New Affiliate"}</h3>
               {activeTab === "users" ? (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@example.com" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} placeholder="254712345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); clearUserError("fullName") }} placeholder="John Doe" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.fullName && errorInputClass)} /><FieldError message={userErrors.fullName} /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearUserError("emailAddress") }} placeholder="john@example.com" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.emailAddress && errorInputClass)} /><FieldError message={userErrors.emailAddress} /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} placeholder="254712345678" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
                   <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Add User</button></div>
+                  <FieldError message={userErrors.roles} /><FormError message={userErrors.form} /><div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} disabled={isSavingUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">{isSavingUser ? "Adding..." : "Add User"}</button></div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -664,12 +696,12 @@ export default function UsersPage() {
               <h3 className="text-xl font-bold mb-6">{activeTab === "users" ? "Edit User" : "Edit Affiliate"}</h3>
               {activeTab === "users" ? (
                 <div className="space-y-4">
-                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })} className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
-                  <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} placeholder="12345678" className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all" /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); clearUserError("fullName") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.fullName && errorInputClass)} /><FieldError message={userErrors.fullName} /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearUserError("emailAddress") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.emailAddress && errorInputClass)} /><FieldError message={userErrors.emailAddress} /></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => { setFormData({ ...formData, idNumber: e.target.value }); clearUserError("idNumber") }} placeholder="12345678" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.idNumber && errorInputClass)} /><FieldError message={userErrors.idNumber} /></div>
                   <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
-                  <div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all">Save Changes</button></div>
+                  <FieldError message={userErrors.roles} /><FormError message={userErrors.form} /><div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} disabled={isSavingUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">{isSavingUser ? "Saving..." : "Save Changes"}</button></div>
                 </div>
               ) : (
                 <div className="space-y-4">

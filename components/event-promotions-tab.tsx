@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api, DiscountType, FlashSale, PromoCode } from "@/lib/api-client"
+import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { sessionManager } from "@/lib/session-manager"
 
 interface PromotionTicket {
@@ -122,24 +123,6 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
 
 const inputClass =
   "w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
-const errorInputClass = "border-red-500 focus:border-red-500 focus:ring-red-500/25"
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="text-xs text-red-500 mt-1.5">{message}</p>
-}
-
-function FormError({ message }: { message?: string }) {
-  if (!message) return null
-  return (
-    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex items-start gap-2">
-      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-      <p className="text-xs text-red-800 dark:text-red-300">{message}</p>
-    </div>
-  )
-}
-
-type FieldErrors = Record<string, string>
 
 const primaryButtonClass =
   "inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"

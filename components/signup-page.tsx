@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from "framer-motion"
 import { User, Mail, Phone, Lock, Building, Loader2, ArrowRight, CheckCircle, Eye, EyeOff, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { api, ApiError } from "@/lib/api-client"
+import { api, ApiError, apiErrorField } from "@/lib/api-client"
+import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
+import { cn } from "@/lib/utils"
 import { sessionManager } from "@/lib/session-manager"
 import { normalizeEmail } from "@/lib/email"
 import { formatPhoneNumber } from "@/lib/phone"
@@ -51,6 +53,23 @@ export default function SignupPage() {
   const [physicalAddress, setPhysicalAddress] = useState("")
   const [postalAddress, setPostalAddress] = useState("")
   const [currency, setCurrency] = useState("KES")
+
+  // Reasons the API gave, keyed by field. Company fields are prefixed so the
+  // company's email can't be confused with the owner's.
+  const [serverErrors, setServerErrors] = useState<FieldErrors>({})
+  // Set once the company exists. If creating the owner then fails, trying
+  // again must reuse it: a second create is refused as a duplicate, which used
+  // to strand people on a company name they had just registered themselves.
+  const [createdCompanyId, setCreatedCompanyId] = useState<number | null>(null)
+
+  const clearServerError = (key: string) =>
+    setServerErrors((prev) => {
+      if (!prev[key] && !prev.form) return prev
+      const next = { ...prev }
+      delete next[key]
+      delete next.form
+      return next
+    })
 
   // Email verification
   const [isCheckingAccount, setIsCheckingAccount] = useState(false)
@@ -116,6 +135,11 @@ export default function SignupPage() {
       return false
     }
 
+    if (idNumber.trim() && (idNumber.trim().length < 6 || idNumber.trim().length > 12)) {
+      toast.error("ID number must be 6 to 12 characters")
+      return false
+    }
+
     if (!password) {
       toast.error("Please enter a password")
       return false
@@ -164,10 +188,6 @@ export default function SignupPage() {
     return true
   }
 
-  const retryAfterMinutes = (error: ApiError): number => {
-    const retryAfter = (error.response as { retryAfter?: number } | null)?.retryAfter
-    return retryAfter ? Math.ceil(retryAfter / 60) : 15
-  }
 
   /**
    * Step 1 -> step 2, but only once we know this email does not already have an
@@ -219,9 +239,9 @@ export default function SignupPage() {
         // with an email that is already taken only fails later, once a company
         // has been created for it.
         if (error.statusCode === 429) {
-          const minutes = retryAfterMinutes(error)
+          // The server says exactly how long to wait
           toast.error("Too many requests", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            description: error.message,
             duration: 10000,
           })
           return
@@ -277,9 +297,9 @@ export default function SignupPage() {
       setIsSendingCode(false)
 
       if (error instanceof ApiError && error.statusCode === 429) {
-        const minutes = retryAfterMinutes(error)
+        // The server says exactly how long to wait
         toast.error("Too many requests", {
-          description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before asking for another code.`,
+          description: error.message,
           duration: 10000,
         })
         return
@@ -363,9 +383,9 @@ export default function SignupPage() {
       console.error('Error verifying the code:', error)
 
       if (error instanceof ApiError && error.statusCode === 429) {
-        const minutes = retryAfterMinutes(error)
+        // The server says exactly how long to wait
         toast.error("Too many attempts", {
-          description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+          description: error.message,
           duration: 10000,
         })
       } else {
@@ -390,47 +410,65 @@ export default function SignupPage() {
     setCodeSendFailed(false)
   }
 
+  const USER_FIELDS = ["fullName", "idNumber", "mobileNumber", "emailAddress"]
+  const COMPANY_FIELDS = ["companyName", "phoneNumber", "emailAddress", "physicalAddress", "postalAddress"]
+
   const handleCompanyFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateCompanyForm()) return
 
     setIsSubmitting(true)
+    setServerErrors({})
 
-    try {
-      // Step 1: Create company first
-      const companyData = {
-        companyName: companyName,
-        physicalAddress: physicalAddress || "PENDING",
-        postalAddress: postalAddress || "PENDING",
-        phoneNumber: formatPhoneNumber(companyPhone),
-        emailAddress: normalizeEmail(companyEmail),
-        currency: currency,
-        profileType: "EVENT_ORGANIZER",
-        billingAccountType: "MPESA",
-        bio: "Company description here",
-        profilePhoto: "https://example.com/photo.jpg",
-        legalDocuments: "https://example.com/docs.pdf"
-      }
+    // Step 1: Create the company, unless a previous attempt already did
+    let companyId = createdCompanyId
+    if (!companyId) {
+      try {
+        const companyData = {
+          companyName: companyName.trim(),
+          physicalAddress: physicalAddress || "PENDING",
+          postalAddress: postalAddress || "PENDING",
+          phoneNumber: formatPhoneNumber(companyPhone),
+          emailAddress: normalizeEmail(companyEmail),
+          currency: currency,
+          profileType: "EVENT_ORGANIZER",
+          billingAccountType: "MPESA",
+          bio: "Company description here",
+          profilePhoto: "https://example.com/photo.jpg",
+          legalDocuments: "https://example.com/docs.pdf"
+        }
 
-      console.log("Step 1: Creating company with data:", companyData)
+        console.log("Step 1: Creating company with data:", companyData)
+        const companyResponse = await api.company.create(companyData)
+        console.log("Company creation response:", companyResponse)
 
-      const companyResponse = await api.company.create(companyData)
+        if (!companyResponse.status || !companyResponse.company) {
+          // The route keeps upstream's 200 for a refused create, so the
+          // reason arrives here rather than as a thrown ApiError.
+          const field = (companyResponse as { field?: string }).field
+          throw new ApiError(companyResponse.message || "We couldn't create your company", 400, { field })
+        }
 
-      console.log("Company creation response:", companyResponse)
-
-      if (!companyResponse.status || !companyResponse.company) {
-        toast.error(companyResponse.message || "Failed to create company")
+        companyId = companyResponse.company.id
+        setCreatedCompanyId(companyId)
+      } catch (error) {
+        console.error("Company creation error:", error)
+        const message = error instanceof Error ? error.message : "We couldn't create your company. Please try again."
+        const field = apiErrorField(error)
+        setServerErrors(field && COMPANY_FIELDS.includes(field) ? { [`company.${field}`]: message } : { form: message })
+        toast.error("Couldn't create your company", { description: message })
         setIsSubmitting(false)
         return
       }
+    }
 
-      toast.success("Company created successfully!")
-      const companyId = companyResponse.company.id
-
-      // Step 2: Create user with the company ID from step 1
+    // Step 2: Create the owner with the company ID from step 1
+    try {
       const userData = {
-        fullName,
-        idNumber,
+        fullName: fullName.trim(),
+        // The API requires one; the field is optional here, so stand in the
+        // same placeholder the Users page uses until it is given for payouts.
+        idNumber: idNumber.trim() || "00000000",
         mobileNumber: formatPhoneNumber(mobileNumber),
         password,
         emailAddress: normalizeEmail(emailAddress),
@@ -439,43 +477,53 @@ export default function SignupPage() {
         roles: "COMPANY_OWNER",
       }
 
-      console.log("Step 2: Creating user with data:", userData)
+      console.log("Step 2: Creating user with data:", { ...userData, password: "[redacted]" })
 
       const userResponse = await api.user.create(userData)
 
       console.log("User creation response:", userResponse)
 
-      if (userResponse.status && userResponse.user) {
-        toast.success("User account created successfully!")
-
-        window.gtag?.("event", "conversion", { send_to: GADS_SIGNUP_CONVERSION })
-
-        // The second step of the funnel: Lead fires on the landing page,
-        // CompleteRegistration when they actually finish creating an account.
-        // Browser-only on purpose — this is post-form, low volume, and not
-        // what campaigns optimise on.
-        window.fbq?.("track", "CompleteRegistration")
-
-        // The account exists now, but nothing has yet proved this person can
-        // read the inbox they signed up with. The OTP-login endpoint issues a
-        // code for an account that exists - which this one now does - so the
-        // code that signs them in is also what verifies the address. No session
-        // is minted here; that happens once the code checks out.
-        setVerifyReason("signup")
-        setStep("verify")
-        setIsSubmitting(false)
-
-        await sendVerificationCode(normalizeEmail(emailAddress))
-      } else {
-        toast.error(userResponse.message || "Failed to create user account")
-        setIsSubmitting(false)
+      if (!userResponse.status || !userResponse.user) {
+        throw new Error(userResponse.message || "We couldn't create your account")
       }
+
+      toast.success("Account created successfully!")
+
+      window.gtag?.("event", "conversion", { send_to: GADS_SIGNUP_CONVERSION })
+
+      // The second step of the funnel: Lead fires on the landing page,
+      // CompleteRegistration when they actually finish creating an account.
+      // Browser-only on purpose — this is post-form, low volume, and not
+      // what campaigns optimise on.
+      window.fbq?.("track", "CompleteRegistration")
+
+      // The account exists now, but nothing has yet proved this person can
+      // read the inbox they signed up with. The OTP-login endpoint issues a
+      // code for an account that exists - which this one now does - so the
+      // code that signs them in is also what verifies the address. No session
+      // is minted here; that happens once the code checks out.
+      setVerifyReason("signup")
+      setStep("verify")
+      setIsSubmitting(false)
+
+      await sendVerificationCode(normalizeEmail(emailAddress))
     } catch (error) {
       console.error("Signup error:", error)
-      toast.error("An error occurred during signup")
+      const message = error instanceof Error ? error.message : "We couldn't create your account. Please try again."
+      const field = apiErrorField(error)
+      if (field && USER_FIELDS.includes(field)) {
+        // About the owner's details: take them back to that step, with the
+        // reason beside the input. Their company is kept for the retry.
+        setServerErrors({ [field]: message })
+        setStep("user")
+      } else {
+        setServerErrors({ form: message })
+      }
+      toast.error("Couldn't create your account", { description: message })
       setIsSubmitting(false)
     }
   }
+
 
 
   return (
@@ -539,11 +587,12 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => { setFullName(e.target.value); clearServerError("fullName") }}
                     placeholder="John Doe"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["fullName"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["fullName"]} />
               </div>
 
               <div>
@@ -553,11 +602,12 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
+                    onChange={(e) => { setIdNumber(e.target.value); clearServerError("idNumber") }}
                     placeholder="12345678 — needed later for payouts"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["idNumber"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["idNumber"]} />
               </div>
 
               <div>
@@ -570,11 +620,13 @@ export default function SignupPage() {
                     onChange={(e) => {
                       const formatted = formatPhoneNumber(e.target.value)
                       setMobileNumber(formatted)
+                      clearServerError("mobileNumber")
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["mobileNumber"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["mobileNumber"]} />
                 <p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX (auto-corrects from 0712345678)</p>
               </div>
 
@@ -585,11 +637,12 @@ export default function SignupPage() {
                   <input
                     type="email"
                     value={emailAddress}
-                    onChange={(e) => setEmailAddress(normalizeEmail(e.target.value))}
+                    onChange={(e) => { setEmailAddress(normalizeEmail(e.target.value)); clearServerError("emailAddress") }}
                     placeholder="john@example.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["emailAddress"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["emailAddress"]} />
               </div>
 
               <div>
@@ -686,11 +739,12 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    onChange={(e) => { setCompanyName(e.target.value); clearServerError("company.companyName") }}
                     placeholder="Acme Events"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["company.companyName"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["company.companyName"]} />
               </div>
 
               <div>
@@ -703,11 +757,13 @@ export default function SignupPage() {
                     onChange={(e) => {
                       const formatted = formatPhoneNumber(e.target.value)
                       setCompanyPhone(formatted)
+                      clearServerError("company.phoneNumber")
                     }}
                     placeholder="254712345678"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["company.phoneNumber"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["company.phoneNumber"]} />
               </div>
 
               <div>
@@ -717,11 +773,12 @@ export default function SignupPage() {
                   <input
                     type="email"
                     value={companyEmail}
-                    onChange={(e) => setCompanyEmail(normalizeEmail(e.target.value))}
+                    onChange={(e) => { setCompanyEmail(normalizeEmail(e.target.value)); clearServerError("company.emailAddress") }}
                     placeholder="info@acmeevents.com"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["company.emailAddress"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["company.emailAddress"]} />
               </div>
 
               <div>
@@ -731,11 +788,12 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={physicalAddress}
-                    onChange={(e) => setPhysicalAddress(e.target.value)}
+                    onChange={(e) => { setPhysicalAddress(e.target.value); clearServerError("company.physicalAddress") }}
                     placeholder="123 Main St, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["company.physicalAddress"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["company.physicalAddress"]} />
               </div>
 
               <div>
@@ -745,11 +803,12 @@ export default function SignupPage() {
                   <input
                     type="text"
                     value={postalAddress}
-                    onChange={(e) => setPostalAddress(e.target.value)}
+                    onChange={(e) => { setPostalAddress(e.target.value); clearServerError("company.postalAddress") }}
                     placeholder="P.O. Box 123, Nairobi"
-                    className="w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 pl-11 pr-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", serverErrors["company.postalAddress"] && errorInputClass)}
                   />
                 </div>
+                <FieldError message={serverErrors["company.postalAddress"]} />
               </div>
 
               <div>
@@ -765,6 +824,8 @@ export default function SignupPage() {
                   <option value="GBP">GBP - British Pound</option>
                 </select>
               </div>
+
+              <FormError message={serverErrors.form} />
 
               <button
                 type="submit"

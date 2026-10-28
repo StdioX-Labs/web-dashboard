@@ -39,6 +39,7 @@ export async function proxyToSoldOut(
     const response = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
+      signal: AbortSignal.timeout(30000),
       ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
     })
 
@@ -52,7 +53,10 @@ export async function proxyToSoldOut(
       return NextResponse.json(
         {
           status: false,
-          message: `Unexpected response from the API (${response.status})`,
+          // A gateway's HTML error page, usually: the API is down or restarting.
+          message: response.status >= 500
+            ? 'SoldOut is temporarily unavailable. Please try again in a few minutes.'
+            : `Unexpected response from the API (${response.status})`,
           details: text,
         },
         { status: response.status || 500 }
@@ -70,13 +74,18 @@ export async function proxyToSoldOut(
 
     return NextResponse.json(data)
   } catch (error) {
+    // Never the raw fetch error ("fetch failed", "ECONNREFUSED"): it means
+    // nothing to an organiser, and the cause is the same either way.
     console.error('SoldOut proxy - request failed:', error)
+    const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
     return NextResponse.json(
       {
         status: false,
-        message: error instanceof Error ? error.message : 'Failed to reach the API',
+        message: timedOut
+          ? 'SoldOut took too long to respond. Please try again.'
+          : "Couldn't reach SoldOut right now. Please check your connection and try again.",
       },
-      { status: 500 }
+      { status: timedOut ? 504 : 502 }
     )
   }
 }

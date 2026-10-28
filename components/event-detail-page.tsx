@@ -39,7 +39,8 @@ import {
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { api, AffiliateSummary } from "@/lib/api-client"
+import { api, apiErrorField, AffiliateSummary } from "@/lib/api-client"
+import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
 import { EventPromotionsTab } from "@/components/event-promotions-tab"
@@ -161,6 +162,16 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [addTicketComplementary, setAddTicketComplementary] = useState("0")
   const [addTicketToIssue, setAddTicketToIssue] = useState("1")
   const [addTicketIsFree, setAddTicketIsFree] = useState(false)
+  // Keyed by the API's field names, so the reason it gives lands under its input
+  const [addTicketErrors, setAddTicketErrors] = useState<FieldErrors>({})
+  const clearAddTicketError = (key: string) =>
+    setAddTicketErrors((prev) => {
+      if (!prev[key] && !prev.form) return prev
+      const next = { ...prev }
+      delete next[key]
+      delete next.form
+      return next
+    })
 
   // Share state
   const [showShareModal, setShowShareModal] = useState(false)
@@ -1237,28 +1248,40 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   }
 
   const handleSaveNewTicket = async () => {
-    if (!addTicketName || !addTicketPrice || !addTicketQuantity) {
-      toast.error("Please fill in all required fields")
-      return
-    }
-
-    if (!addTicketSaleStart || !addTicketSaleEnd) {
-      toast.error("Please set the ticket sale period")
-      return
-    }
+    const price = Number(addTicketPrice)
+    const quantity = Number(addTicketQuantity)
+    const groupSize = parseInt(addTicketToIssue || "1")
+    const eventEnd = eventData?.eventEndDate ? new Date(eventData.eventEndDate) : undefined
+    const errors: FieldErrors = {}
+    if (addTicketName.trim().length < 3) errors.ticketName = "Ticket name must be at least 3 characters"
+    if (addTicketPrice === "" && !addTicketIsFree) errors.ticketPrice = "Enter a price (0 for a free ticket)"
+    else if (!Number.isFinite(price) || price < 0) errors.ticketPrice = "Ticket price can't be negative"
+    else if (addTicketIsFree && price > 0) errors.ticketPrice = "A free ticket must have a price of 0"
+    if (addTicketQuantity === "") errors.quantityAvailable = "Enter how many tickets are available"
+    else if (!Number.isInteger(quantity) || quantity < 1) errors.quantityAvailable = "Quantity must be a whole number of at least 1"
+    if (Number(addTicketLimitPerPerson || "0") < 0) errors.ticketLimitPerPerson = "Limit per person can't be negative"
+    if (Number(addTicketComplementary || "0") < 0) errors.numberOfComplementary = "Complimentary tickets can't be negative"
+    if (!groupSize || groupSize < 1) errors.ticketsToIssue = "Issue at least 1 ticket per purchase"
+    else if (!errors.quantityAvailable && groupSize > quantity) errors.ticketsToIssue = `Can't be more than the ${quantity} tickets available`
+    if (!addTicketSaleStart) errors.ticketSaleStartDate = "Set when sales open"
+    else if (eventEnd && addTicketSaleStart >= eventEnd) errors.ticketSaleStartDate = "Sales must open before the event ends"
+    if (!addTicketSaleEnd) errors.ticketSaleEndDate = "Set when sales close"
+    else if (addTicketSaleStart && addTicketSaleEnd <= addTicketSaleStart) errors.ticketSaleEndDate = "Sales must close after they open"
+    else if (eventEnd && addTicketSaleEnd > eventEnd) errors.ticketSaleEndDate = "Sales must close by the time the event ends"
+    setAddTicketErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
     try {
-      const price = parseFloat(addTicketPrice)
       const response = await api.company.createTicket({
         event: { id: eventId },
-        ticketName: addTicketName,
+        ticketName: addTicketName.trim(),
         ticketPrice: price,
         quantityAvailable: parseInt(addTicketQuantity),
         ticketsToIssue: parseInt(addTicketToIssue || "1"),
         ticketLimitPerPerson: parseInt(addTicketLimitPerPerson || "0"),
         numberOfComplementary: parseInt(addTicketComplementary || "0"),
-        ticketSaleStartDate: addTicketSaleStart.toISOString(),
-        ticketSaleEndDate: addTicketSaleEnd.toISOString(),
+        ticketSaleStartDate: addTicketSaleStart!.toISOString(),
+        ticketSaleEndDate: addTicketSaleEnd!.toISOString(),
         isFree: addTicketIsFree || price === 0,
       })
 
@@ -1286,12 +1309,17 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       setTimeout(() => window.location.reload(), 500)
     } catch (error) {
       console.error("Error creating ticket:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to create ticket")
+      const message = error instanceof Error ? error.message : "Failed to create ticket"
+      const field = apiErrorField(error)
+      const ticketFields = ["ticketName", "ticketPrice", "quantityAvailable", "numberOfComplementary",
+        "ticketsToIssue", "ticketLimitPerPerson", "ticketSaleStartDate", "ticketSaleEndDate"]
+      setAddTicketErrors(field && ticketFields.includes(field) ? { [field]: message } : { form: message })
     }
   }
 
   const handleCloseAddTicketModal = () => {
     setShowAddTicketModal(false)
+    setAddTicketErrors({})
     setAddTicketName("")
     setAddTicketPrice("")
     setAddTicketQuantity("")
@@ -5311,10 +5339,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <input
                     type="text"
                     value={addTicketName}
-                    onChange={(e) => setAddTicketName(e.target.value)}
+                    onChange={(e) => { setAddTicketName(e.target.value); clearAddTicketError("ticketName") }}
                     placeholder="e.g., VIP Pass"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.ticketName && errorInputClass)}
                   />
+                  <FieldError message={addTicketErrors.ticketName} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -5324,11 +5353,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <input
                       type="number"
                       value={addTicketPrice}
-                      onChange={(e) => setAddTicketPrice(e.target.value)}
+                      onChange={(e) => { setAddTicketPrice(e.target.value); clearAddTicketError("ticketPrice") }}
                       placeholder="e.g., 2500"
                       min="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                      className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.ticketPrice && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.ticketPrice} />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">
@@ -5337,11 +5367,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <input
                       type="number"
                       value={addTicketQuantity}
-                      onChange={(e) => setAddTicketQuantity(e.target.value)}
+                      onChange={(e) => { setAddTicketQuantity(e.target.value); clearAddTicketError("quantityAvailable") }}
                       placeholder="e.g., 100"
                       min="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                      className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.quantityAvailable && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.quantityAvailable} />
                   </div>
                 </div>
                 <div>
@@ -5366,11 +5397,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <input
                       type="number"
                       value={addTicketLimitPerPerson}
-                      onChange={(e) => setAddTicketLimitPerPerson(e.target.value)}
+                      onChange={(e) => { setAddTicketLimitPerPerson(e.target.value); clearAddTicketError("ticketLimitPerPerson") }}
                       min="0"
                       placeholder="0 = no limit"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                      className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.ticketLimitPerPerson && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.ticketLimitPerPerson} />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">
@@ -5379,11 +5411,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <input
                       type="number"
                       value={addTicketComplementary}
-                      onChange={(e) => setAddTicketComplementary(e.target.value)}
+                      onChange={(e) => { setAddTicketComplementary(e.target.value); clearAddTicketError("numberOfComplementary") }}
                       min="0"
                       placeholder="0"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                      className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.numberOfComplementary && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.numberOfComplementary} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -5394,18 +5427,19 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <input
                       type="number"
                       value={addTicketToIssue}
-                      onChange={(e) => setAddTicketToIssue(e.target.value)}
+                      onChange={(e) => { setAddTicketToIssue(e.target.value); clearAddTicketError("ticketsToIssue") }}
                       min="1"
                       placeholder="1"
-                      className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                      className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", addTicketErrors.ticketsToIssue && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.ticketsToIssue} />
                   </div>
                   <div className="flex items-center gap-3 pt-6">
                     <input
                       type="checkbox"
                       id="addTicketIsFree"
                       checked={addTicketIsFree}
-                      onChange={(e) => setAddTicketIsFree(e.target.checked)}
+                      onChange={(e) => { setAddTicketIsFree(e.target.checked); clearAddTicketError("ticketPrice") }}
                       className="w-5 h-5 rounded cursor-pointer accent-zinc-300"
                     />
                     <label htmlFor="addTicketIsFree" className="text-sm font-medium cursor-pointer">
@@ -5423,18 +5457,22 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     <label className="text-xs font-medium mb-2 block text-muted-foreground">Sale Start Date & Time <span className="text-red-500">*</span></label>
                     <DateTimePicker
                       selected={addTicketSaleStart}
-                      onChange={(date) => setAddTicketSaleStart(date)}
+                      onChange={(date) => { setAddTicketSaleStart(date); clearAddTicketError("ticketSaleStartDate") }}
                       placeholderText="Select start date & time"
+                      className={cn(addTicketErrors.ticketSaleStartDate && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.ticketSaleStartDate} />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-2 block text-muted-foreground">Sale End Date & Time <span className="text-red-500">*</span></label>
                     <DateTimePicker
                       selected={addTicketSaleEnd}
-                      onChange={(date) => setAddTicketSaleEnd(date)}
+                      onChange={(date) => { setAddTicketSaleEnd(date); clearAddTicketError("ticketSaleEndDate") }}
                       placeholderText="Select end date & time"
                       minDate={addTicketSaleStart}
+                      className={cn(addTicketErrors.ticketSaleEndDate && errorInputClass)}
                     />
+                    <FieldError message={addTicketErrors.ticketSaleEndDate} />
                   </div>
                 </div>
 
@@ -5446,6 +5484,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </p>
                   </div>
                 </div>
+
+                <FormError message={addTicketErrors.form} />
 
                 <div className="flex gap-3 pt-2">
                   <button

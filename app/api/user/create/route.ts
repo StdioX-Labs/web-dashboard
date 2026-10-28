@@ -1,106 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { normalizeEmail } from '@/lib/email'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
+import { proxyToSoldOut } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
+  const body = await request.json()
 
-    // Same guarantee as the login proxy: this route is reachable directly,
-    // so the API client's normalisation is a convenience and this is the
-    // backstop. Signing up must not be able to create an account whose
-    // address differs from the one sign-in will later look up.
-    if (typeof body?.emailAddress === 'string') {
-      body.emailAddress = normalizeEmail(body.emailAddress)
-    }
-
-    console.log('=== User Create API Proxy ===')
-    console.log('Request body:', JSON.stringify(body, null, 2))
-
-    // Build headers with Basic Authentication
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add Basic Auth credentials from environment variables
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-
-    if (username && password) {
-      const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-      headers['Authorization'] = `Basic ${basicAuth}`
-      console.log('Using Basic Auth credentials')
-    } else {
-      console.error('Missing API credentials in environment variables')
-      return NextResponse.json(
-        {
-          status: false,
-          message: 'API credentials not configured'
-        },
-        { status: 500 }
-      )
-    }
-
-    console.log('Calling backend API:', `${BASE_URL}/user/create`)
-
-    const response = await fetch(`${BASE_URL}/user/create`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    })
-
-    console.log('Backend response status:', response.status)
-    console.log('Backend response ok:', response.ok)
-
-    // Get the response text first to handle non-JSON responses
-    const responseText = await response.text()
-    console.log('Backend response text:', responseText)
-
-    // Try to parse as JSON
-    let data
-    try {
-      data = responseText ? JSON.parse(responseText) : {}
-      console.log('Backend response data (parsed):', JSON.stringify(data, null, 2))
-    } catch (parseError) {
-      console.error('Failed to parse response as JSON:', parseError)
-      console.error('Response was:', responseText)
-
-      // If it's a 401, return auth error
-      if (response.status === 401) {
-        return NextResponse.json(
-          {
-            error: 'Authentication failed',
-            status: false,
-            message: 'Invalid API credentials'
-          },
-          { status: 401 }
-        )
-      }
-
-      return NextResponse.json(
-        {
-          error: 'Invalid response from backend',
-          status: false,
-          message: `Backend returned non-JSON response: ${responseText.substring(0, 200)}`,
-          backendStatus: response.status
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(data, { status: response.status })
-  } catch (error) {
-    console.error('User create error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const errorStack = error instanceof Error ? error.stack : undefined
-    console.error('Error details:', errorMessage)
-    console.error('Error stack:', errorStack)
-
-    return NextResponse.json(
-      { error: 'Failed to create user', status: false, message: errorMessage },
-      { status: 500 }
-    )
+  // Same guarantee as the login proxy: this route is reachable directly,
+  // so the API client's normalisation is a convenience and this is the
+  // backstop. Signing up must not be able to create an account whose
+  // address differs from the one sign-in will later look up.
+  if (typeof body?.emailAddress === 'string') {
+    body.emailAddress = normalizeEmail(body.emailAddress)
   }
-}
 
+  // Present when a teammate is added from the dashboard, so the API can check
+  // the requester may add users to that company. Signup has no requester.
+  const requesterUserId = request.nextUrl.searchParams.get('requesterUserId')
+  const path = requesterUserId
+    ? `/user/create?requesterUserId=${encodeURIComponent(requesterUserId)}`
+    : '/user/create'
+
+  return proxyToSoldOut(request, path, { method: 'POST', body })
+}
