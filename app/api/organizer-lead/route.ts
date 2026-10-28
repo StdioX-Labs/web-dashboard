@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
-import { checkRateLimit, getClientIp } from "@/lib/rate-limiter"
+import { checkAttempt, getClientIp, tooManyAttemptsResponse, type BackoffConfig } from "@/lib/rate-limiter"
 import { formatPhoneNumber } from "@/lib/phone"
 import { isQualified } from "@/lib/lead-qualification"
 import { META_PIXEL_ID } from "@/lib/meta-pixel"
@@ -89,25 +89,25 @@ async function sendMetaLead(
   }
 }
 
-// Deliberately looser than the auth routes' 3-per-5-minutes. Safaricom and
-// Airtel put large numbers of subscribers behind the same NAT address, so a
-// tight per-IP cap here would reject real organisers, not just spam. The bar
-// only needs to stop a script: every qualified lead SMSes the admin pool.
-const LEAD_RATE_LIMIT = {
-  maxRequests: 10,
-  windowMs: 10 * 60 * 1000,
-  blockDurationMs: 10 * 60 * 1000,
+// Keyed on IP, unlike the auth routes: what this guards against is a script
+// cycling through made-up leads, and every qualified lead SMSes the admin
+// pool. Safaricom and Airtel put large numbers of subscribers behind the same
+// NAT address, so nobody is ever blocked outright — past the free attempts
+// each one just waits longer than the last, and is told how long.
+const LEAD_BACKOFF: BackoffConfig = {
+  freeAttempts: 10,
+  baseDelayMs: 30 * 1000,
+  maxDelayMs: 10 * 60 * 1000,
+  resetAfterMs: 60 * 60 * 1000,
 }
 
 export async function POST(request: NextRequest) {
   try {
     const clientIp = getClientIp(request)
-    if (!checkRateLimit(clientIp, LEAD_RATE_LIMIT).allowed) {
-      console.warn("Organizer lead - rate limit exceeded for IP:", clientIp)
-      return NextResponse.json(
-        { status: false, message: "Too many attempts. Please try again shortly." },
-        { status: 429 },
-      )
+    const attempt = checkAttempt(`lead:${clientIp}`, LEAD_BACKOFF)
+    if (!attempt.allowed) {
+      console.warn("Organizer lead - backing off IP:", clientIp, attempt.retryAfter)
+      return tooManyAttemptsResponse(attempt)
     }
 
     const body = await request.json()

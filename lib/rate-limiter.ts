@@ -1,72 +1,135 @@
 /**
- * IP-based Rate Limiter
+ * Attempt limiter with incremental backoff.
  *
- * This implements a token bucket algorithm for rate limiting API requests
- * based on IP address. It works across different tabs and browsers because
- * it tracks the IP address server-side.
+ * The first `freeAttempts` attempts on a key are never limited. After that,
+ * each further attempt must wait longer since the previous one — the delay
+ * doubles each time, up to a cap — and the response says exactly how long.
+ * Nobody is shut out for a fixed block: the worst case is one wait of
+ * `maxDelayMs`, and a quiet spell of `resetAfterMs` forgets the key entirely.
+ *
+ * Keys should name the person as well as the network (e.g. login id + IP).
+ * Keying on IP alone let one person's retries lock out everyone behind the
+ * same address, which on Kenyan mobile networks — where large numbers of
+ * subscribers share a NAT address — is a lot of people.
+ *
+ * State is in memory, per server instance (in production, use Redis or
+ * similar if the app runs on more than one).
  */
 
-interface RateLimitEntry {
-  count: number
-  firstRequestTime: number
-  lastRequestTime: number
-  blockedUntil?: number
-  violationCount: number // Track how many times user has been blocked
-  lastViolationTime?: number // Track when last violation occurred
+import { NextResponse } from 'next/server'
+
+interface AttemptEntry {
+  attempts: number
+  lastAttemptTime: number
+  resetAfterMs: number
 }
 
-// In-memory store for rate limiting (in production, use Redis or similar)
-const rateLimitStore = new Map<string, RateLimitEntry>()
+const attemptStore = new Map<string, AttemptEntry>()
 
-// Cleanup old entries every 10 minutes
+// Forget keys that have been quiet long enough to have reset anyway
 setInterval(() => {
   const now = Date.now()
-  const tenMinutesAgo = now - 10 * 60 * 1000
-
-  for (const [ip, entry] of rateLimitStore.entries()) {
-    if (entry.lastRequestTime < tenMinutesAgo) {
-      rateLimitStore.delete(ip)
+  for (const [key, entry] of attemptStore.entries()) {
+    if (now - entry.lastAttemptTime > entry.resetAfterMs) {
+      attemptStore.delete(key)
     }
   }
 }, 10 * 60 * 1000)
 
-export interface RateLimitConfig {
-  maxRequests: number // Max requests per window
-  windowMs: number // Time window in milliseconds
-  blockDurationMs: number // Base block duration (not used with progressive blocking)
-  useProgressiveBlocking?: boolean // Enable progressive blocking
+export interface BackoffConfig {
+  freeAttempts: number // Attempts allowed before any waiting is required
+  baseDelayMs: number // Wait required before the first attempt past the free ones
+  maxDelayMs: number // The wait stops doubling here
+  resetAfterMs: number // Quiet time after which the count starts again
+}
+
+export interface AttemptResult {
+  allowed: boolean
+  attempts: number
+  retryAfter?: number // Seconds until the next attempt is allowed
+}
+
+const envInt = (name: string, fallback: number) => {
+  const value = parseInt(process.env[name] || '', 10)
+  return Number.isFinite(value) && value >= 0 ? value : fallback
+}
+
+/** Login, signup and OTP limits, overridable through the environment. */
+export function getBackoffConfig(): BackoffConfig {
+  return {
+    freeAttempts: envInt('AUTH_FREE_ATTEMPTS', 50),
+    baseDelayMs: envInt('AUTH_BACKOFF_BASE_MS', 5 * 1000),
+    maxDelayMs: envInt('AUTH_BACKOFF_MAX_MS', 15 * 60 * 1000),
+    resetAfterMs: envInt('AUTH_BACKOFF_RESET_MS', 60 * 60 * 1000),
+  }
+}
+
+/** Wait required before attempt number `attempts + 1`. */
+function requiredDelay(attempts: number, config: BackoffConfig): number {
+  const extra = attempts - config.freeAttempts
+  if (extra < 0) return 0
+  // Capped exponent so a long run can't overflow to Infinity
+  return Math.min(config.maxDelayMs, config.baseDelayMs * 2 ** Math.min(extra, 30))
 }
 
 /**
- * Calculate progressive block duration based on violation count
- * 1st violation: 1 minute
- * 2nd violation: 15 minutes
- * 3rd violation: 30 minutes
- * 4th+ violation: 60 minutes
- *
- * This escalation, not the per-window allowance, is what actually deters abuse:
- * a generous burst allowance keeps normal use (a signup spends two requests, a
- * resend a third) clear of the limit, while anyone hammering the endpoint hits
- * rapidly lengthening blocks. The count resets after an hour of good behaviour.
+ * Records an attempt on `key` if it is allowed now. A refused attempt is not
+ * counted, so retrying early doesn't make the wait any longer.
  */
-function getProgressiveBlockDuration(violationCount: number): number {
-  const durations = [
-    1 * 60 * 1000,      // 1 minute
-    15 * 60 * 1000,     // 15 minutes
-    30 * 60 * 1000,     // 30 minutes
-    60 * 60 * 1000,     // 60 minutes (1 hour)
-  ]
+export function checkAttempt(key: string, config: BackoffConfig): AttemptResult {
+  const now = Date.now()
+  let entry = attemptStore.get(key)
 
-  // Use the last duration for all subsequent violations
-  const index = Math.min(violationCount - 1, durations.length - 1)
-  return durations[index]
+  if (entry && now - entry.lastAttemptTime > config.resetAfterMs) {
+    attemptStore.delete(key)
+    entry = undefined
+  }
+
+  if (!entry) {
+    attemptStore.set(key, { attempts: 1, lastAttemptTime: now, resetAfterMs: config.resetAfterMs })
+    return { allowed: true, attempts: 1 }
+  }
+
+  const waitUntil = entry.lastAttemptTime + requiredDelay(entry.attempts, config)
+  if (now < waitUntil) {
+    return {
+      allowed: false,
+      attempts: entry.attempts,
+      retryAfter: Math.max(1, Math.ceil((waitUntil - now) / 1000)),
+    }
+  }
+
+  entry.attempts += 1
+  entry.lastAttemptTime = now
+  return { allowed: true, attempts: entry.attempts }
 }
 
-export interface RateLimitResult {
-  allowed: boolean
-  remaining: number
-  resetTime: number
-  retryAfter?: number // Seconds until the user can try again
+/** Forget a key, e.g. once the person behind it has signed in. */
+export function resetAttempts(key: string): void {
+  attemptStore.delete(key)
+}
+
+/** "45 seconds", "1 minute", "2 minutes 30 seconds". */
+export function formatWait(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds))
+  const minutes = Math.floor(s / 60)
+  const rest = s % 60
+  const part = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'}`
+  if (minutes === 0) return part(rest, 'second')
+  return rest === 0 ? part(minutes, 'minute') : `${part(minutes, 'minute')} ${part(rest, 'second')}`
+}
+
+/** The 429 for a refused attempt, telling the person how long to wait. */
+export function tooManyAttemptsResponse(result: AttemptResult): NextResponse {
+  const retryAfter = result.retryAfter ?? 1
+  return NextResponse.json(
+    {
+      status: false,
+      message: `Too many attempts. Please wait ${formatWait(retryAfter)} and try again.`,
+      retryAfter,
+    },
+    { status: 429, headers: { 'Retry-After': retryAfter.toString() } }
+  )
 }
 
 /**
@@ -94,119 +157,3 @@ export function getClientIp(request: Request): string {
   // Fallback to a default (should not happen in production)
   return 'unknown'
 }
-
-/**
- * Check if a request should be rate limited
- */
-export function checkRateLimit(
-  ip: string,
-  config: RateLimitConfig
-): RateLimitResult {
-  const now = Date.now()
-  const entry = rateLimitStore.get(ip)
-
-  // If IP is currently blocked, check if block period has expired
-  if (entry?.blockedUntil && now < entry.blockedUntil) {
-    const retryAfter = Math.ceil((entry.blockedUntil - now) / 1000)
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: entry.blockedUntil,
-      retryAfter
-    }
-  }
-
-  // If block period has expired, reset violation count after 1 hour of good behavior
-  if (entry?.blockedUntil && now >= entry.blockedUntil) {
-    const oneHourAgo = now - 60 * 60 * 1000
-    if (entry.lastViolationTime && entry.lastViolationTime < oneHourAgo) {
-      // Reset violation count after 1 hour of no violations
-      entry.violationCount = 0
-    }
-    // Clear the block
-    entry.blockedUntil = undefined
-  }
-
-  // If no entry or window has expired, create new entry
-  if (!entry || (now - entry.firstRequestTime) > config.windowMs) {
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      firstRequestTime: now,
-      lastRequestTime: now,
-      violationCount: entry?.violationCount || 0, // Preserve violation count
-      lastViolationTime: entry?.lastViolationTime
-    }
-    rateLimitStore.set(ip, newEntry)
-
-    return {
-      allowed: true,
-      remaining: config.maxRequests - 1,
-      resetTime: now + config.windowMs
-    }
-  }
-
-  // Increment count
-  entry.count++
-  entry.lastRequestTime = now
-
-  // Check if limit exceeded
-  if (entry.count > config.maxRequests) {
-    // Increment violation count
-    entry.violationCount++
-    entry.lastViolationTime = now
-
-    // Calculate block duration based on progressive blocking setting
-    let blockDuration: number
-    if (config.useProgressiveBlocking !== false) {
-      blockDuration = getProgressiveBlockDuration(entry.violationCount)
-    } else {
-      blockDuration = config.blockDurationMs
-    }
-
-    entry.blockedUntil = now + blockDuration
-    rateLimitStore.set(ip, entry)
-
-    const retryAfter = Math.ceil(blockDuration / 1000)
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: entry.blockedUntil,
-      retryAfter
-    }
-  }
-
-  rateLimitStore.set(ip, entry)
-
-  return {
-    allowed: true,
-    remaining: config.maxRequests - entry.count,
-    resetTime: entry.firstRequestTime + config.windowMs
-  }
-}
-
-/**
- * Get rate limit configuration from environment variables
- */
-export function getRateLimitConfig(): RateLimitConfig {
-  return {
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10),
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute default
-    blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS || '900000', 10), // 15 minutes default (fallback for non-progressive)
-    useProgressiveBlocking: process.env.USE_PROGRESSIVE_BLOCKING !== 'false', // Enabled by default
-  }
-}
-
-/**
- * Clear rate limit for an IP (useful for testing)
- */
-export function clearRateLimit(ip: string): void {
-  rateLimitStore.delete(ip)
-}
-
-/**
- * Get current rate limit stats for an IP (useful for debugging)
- */
-export function getRateLimitStats(ip: string): RateLimitEntry | null {
-  return rateLimitStore.get(ip) || null
-}
-

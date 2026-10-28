@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimit, getClientIp, getRateLimitConfig } from '@/lib/rate-limiter'
+import { checkAttempt, getBackoffConfig, getClientIp, tooManyAttemptsResponse } from '@/lib/rate-limiter'
 import { storePendingLogin } from '@/lib/pending-login-store'
 import { normalizeLoginId } from '@/lib/email'
 
@@ -10,54 +10,26 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Login API Route with IP-based Rate Limiting
+ * Login API Route with per-person attempt limiting
  *
  * Security Features:
- * - IP-based rate limiting (works across tabs and browsers)
+ * - Attempts limited per login id + IP, so one person can't lock out others
  * - OTP and user data stored server-side only, never exposed to client
  * - Client receives an opaque loginToken to reference the pending session
  * - Request logging for security auditing
  *
- * Rate Limiting:
- * - Configurable via environment variables
- * - Default: 10 requests per minute
- * - Exceeding it blocks progressively: 1, 15, 30 then 60 minutes
+ * Rate Limiting (see lib/rate-limiter):
+ * - The first 50 requests are never limited
+ * - After that each request waits longer than the last, doubling to a cap,
+ *   and the response says how long
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP for rate limiting
     const clientIp = getClientIp(request)
-    console.log('Login proxy - Client IP:', clientIp)
-
-    // Check rate limit
-    const rateLimitConfig = getRateLimitConfig()
-    const rateLimitResult = checkRateLimit(clientIp, rateLimitConfig)
-
-    // If rate limit exceeded, return 429 response
-    if (!rateLimitResult.allowed) {
-      console.warn(`Login proxy - Rate limit exceeded for IP: ${clientIp}`)
-      return NextResponse.json(
-        {
-          status: false,
-          message: 'Too many requests. Please try again later.',
-          retryAfter: rateLimitResult.retryAfter
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
-            'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
-          }
-        }
-      )
-    }
-
     const body = await request.json()
     const { method } = body
 
-    console.log('Login proxy - Received request:', { id: body.id, method, ip: clientIp, remaining: rateLimitResult.remaining })
+    console.log('Login proxy - Received request:', { id: body.id, method, ip: clientIp })
 
     if (!body.id || !method) {
       return NextResponse.json(
@@ -74,6 +46,12 @@ export async function POST(request: NextRequest) {
     // guarantee. Without it, Foo@x.com and foo@x.com are two different
     // accounts to the upstream service.
     const id = normalizeLoginId(body.id, method)
+
+    const attempt = checkAttempt(`login:${id}:${clientIp}`, getBackoffConfig())
+    if (!attempt.allowed) {
+      console.warn(`Login proxy - Backing off ${id} from ${clientIp} for ${attempt.retryAfter}s`)
+      return tooManyAttemptsResponse(attempt)
+    }
 
     const apiUrl = `${API_BASE_URL}/user/otp/login`
     console.log('Login proxy - Calling external API:', apiUrl)
@@ -140,18 +118,12 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Add rate limit headers to response
-      const responseHeaders = {
-        'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-        'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
-      }
-
-      // If the backend returned an error, forward the message only (no sensitive data)
+      // If the backend returned an error, forward the message only (no sensitive data).
+      // Not `error`: it says whether the account exists ("User not found for email: …").
       if (!data.status) {
         return NextResponse.json(
           { status: false, message: data.message || 'Login failed' },
-          { status: response.status, headers: responseHeaders }
+          { status: response.status }
         )
       }
 
@@ -167,7 +139,7 @@ export async function POST(request: NextRequest) {
             message: data.message || 'OTP sent successfully',
             loginToken, // Opaque token for the client to use during OTP verification
           },
-          { status: 200, headers: responseHeaders }
+          { status: 200 }
         )
       }
 
@@ -177,7 +149,7 @@ export async function POST(request: NextRequest) {
           status: data.status,
           message: data.message || 'OTP sent successfully',
         },
-        { status: response.status, headers: responseHeaders }
+        { status: response.status }
       )
     } catch (fetchError) {
       clearTimeout(timeoutId)

@@ -167,11 +167,9 @@ export default function LoginPage() {
       if (error instanceof ApiError) {
         // Handle rate limiting specifically
         if (error.statusCode === 429) {
-          const retryAfter = (error.response as any)?.retryAfter
-          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
-
+          // The server says exactly how long to wait
           toast.error("Too many requests", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            description: error.message,
             duration: 10000,
           })
         } else {
@@ -234,11 +232,9 @@ export default function LoginPage() {
         // someone to signup with an email that is already taken only fails
         // later, after a company has been created for them.
         if (error.statusCode === 429) {
-          const retryAfter = (error.response as { retryAfter?: number } | null)?.retryAfter
-          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
-
+          // The server says exactly how long to wait
           toast.error("Too many requests", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            description: error.message,
             duration: 10000,
           })
           setIsSubmitting(false)
@@ -323,10 +319,9 @@ export default function LoginPage() {
 
       if (error instanceof ApiError) {
         if (error.statusCode === 429) {
-          const retryAfter = (error.response as any)?.retryAfter
-          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
+          // The server says exactly how long to wait
           toast.error("Too many attempts", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before trying again.`,
+            description: error.message,
             duration: 10000,
           })
         } else {
@@ -393,11 +388,9 @@ export default function LoginPage() {
       if (error instanceof ApiError) {
         // Handle rate limiting specifically
         if (error.statusCode === 429) {
-          const retryAfter = (error.response as any)?.retryAfter
-          const minutes = retryAfter ? Math.ceil(retryAfter / 60) : 15
-
+          // The server says exactly how long to wait
           toast.error("Too many requests", {
-            description: `Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before requesting another code.`,
+            description: error.message,
             duration: 10000,
           })
         } else {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkRateLimit, getClientIp } from '@/lib/rate-limiter'
+import { checkAttempt, getBackoffConfig, getClientIp, resetAttempts, tooManyAttemptsResponse } from '@/lib/rate-limiter'
+import { normalizeLoginId } from '@/lib/email'
 import { verifyPendingLogin } from '@/lib/pending-login-store'
 
 
@@ -8,64 +9,25 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * OTP Verification API Route with IP-based Rate Limiting
+ * OTP Verification API Route with per-login attempt limiting
  *
  * Security Features:
- * - IP-based rate limiting (works across tabs and browsers)
+ * - Attempts limited per login token + IP, so one person can't lock out others
  * - Validates OTP against backend service
  * - Request logging for security auditing
  *
- * Rate Limiting:
- * - Configurable via environment variables
- * - Default: 5 attempts per 5 minutes
- * - Block duration: 15 minutes after exceeding limit
+ * Rate Limiting (see lib/rate-limiter):
+ * - The first 50 requests are never limited, then each waits longer than the last
+ * - Guessing is bounded separately: a code is void after 5 wrong tries
+ *   (lib/pending-login-store), so a fresh code has to be requested anyway
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP for rate limiting
     const clientIp = getClientIp(request)
-    console.log('Verify OTP proxy - Client IP:', clientIp)
-
-    // Check rate limit (use stricter limits for OTP verification).
-    //
-    // This window is deliberately its own setting rather than the shared
-    // RATE_LIMIT_WINDOW_MS. Guessing a 4-digit code is a brute-force problem —
-    // 10,000 combinations — so what matters here is attempts per unit time, and
-    // a shorter window means the allowance refills sooner. Inheriting the
-    // request-side window would quietly relax that every time it is shortened.
-    const rateLimitConfig = {
-      maxRequests: parseInt(process.env.OTP_VERIFY_RATE_LIMIT_MAX_REQUESTS || '5', 10),
-      windowMs: parseInt(process.env.OTP_VERIFY_RATE_LIMIT_WINDOW_MS || '300000', 10), // 5 minutes default
-      blockDurationMs: parseInt(process.env.RATE_LIMIT_BLOCK_DURATION_MS || '900000', 10) // 15 minutes default
-    }
-
-    const rateLimitResult = checkRateLimit(`${clientIp}:verify`, rateLimitConfig)
-
-    // If rate limit exceeded, return 429 response
-    if (!rateLimitResult.allowed) {
-      console.warn(`Verify OTP proxy - Rate limit exceeded for IP: ${clientIp}`)
-      return NextResponse.json(
-        {
-          status: false,
-          message: 'Too many verification attempts. Please request a new code.',
-          retryAfter: rateLimitResult.retryAfter
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '900',
-            'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
-          }
-        }
-      )
-    }
-
     const body = await request.json()
     const { loginToken, otp } = body
 
-    console.log('Verify OTP proxy - Received request:', { ip: clientIp, remaining: rateLimitResult.remaining })
+    console.log('Verify OTP proxy - Received request:', { ip: clientIp })
 
     if (!loginToken || !otp) {
       return NextResponse.json(
@@ -75,6 +37,13 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    const attemptKey = `verify:${loginToken}:${clientIp}`
+    const attempt = checkAttempt(attemptKey, getBackoffConfig())
+    if (!attempt.allowed) {
+      console.warn(`Verify OTP proxy - Backing off ${clientIp} for ${attempt.retryAfter}s`)
+      return tooManyAttemptsResponse(attempt)
     }
 
     // Validate OTP format
@@ -91,13 +60,6 @@ export async function POST(request: NextRequest) {
     // Verify OTP against server-side stored data
     const result = verifyPendingLogin(loginToken, otp)
 
-    // Add rate limit headers to response
-    const responseHeaders = {
-      'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-      'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-      'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
-    }
-
     if (!result.success) {
       console.log('Verify OTP proxy - Verification failed:', result.error)
       return NextResponse.json(
@@ -105,7 +67,7 @@ export async function POST(request: NextRequest) {
           status: false,
           message: result.error || 'Invalid verification code',
         },
-        { status: 401, headers: responseHeaders }
+        { status: 401 }
       )
     }
 
@@ -119,11 +81,16 @@ export async function POST(request: NextRequest) {
           status: false,
           message: 'This account has been deactivated. Please contact your administrator.',
         },
-        { status: 403, headers: responseHeaders }
+        { status: 403 }
       )
     }
 
     console.log('Verify OTP proxy - Verification successful for user:', result.user?.email)
+
+    // Signed in: start them afresh, whichever id they asked for the code with
+    resetAttempts(attemptKey)
+    if (result.user?.email) resetAttempts(`login:${normalizeLoginId(result.user.email, 'email')}:${clientIp}`)
+    if (result.user?.phoneNumber) resetAttempts(`login:${normalizeLoginId(result.user.phoneNumber, 'phone')}:${clientIp}`)
 
     return NextResponse.json(
       {
@@ -131,7 +98,7 @@ export async function POST(request: NextRequest) {
         message: 'OTP verified successfully',
         user: result.user,
       },
-      { status: 200, headers: responseHeaders }
+      { status: 200 }
     )
   } catch (error) {
     console.error('Verify OTP Proxy Error - Full details:', error)
