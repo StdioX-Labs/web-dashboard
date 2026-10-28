@@ -679,6 +679,12 @@ export const api = {
           transactionId: string
           scanned: boolean
           complementary: boolean
+          /** What discounted the ticket at checkout; null at full price or before this was recorded. */
+          promotionType?: 'PROMO_CODE' | 'FLASH_SALE' | 'DISCOUNT_LINK' | null
+          /** Promo code, discount link code or flash sale name. */
+          promotionCode?: string | null
+          /** Price paid per purchased ticket. */
+          paidPrice?: number | null
         }>
         message: string
         status: boolean

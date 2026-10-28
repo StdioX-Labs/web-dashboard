@@ -19,6 +19,8 @@ import {
   Edit,
   Percent,
   Clock,
+  Download,
+  AlertTriangle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
@@ -95,11 +97,11 @@ const STATUS_STYLES: Record<PromotionStatus, { label: string; className: string 
   paused: { label: "Inactive", className: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400" },
 }
 
-function StatusBadge({ status }: { status: PromotionStatus }) {
+function StatusBadge({ status, pausedLabel }: { status: PromotionStatus; pausedLabel?: string }) {
   const style = STATUS_STYLES[status]
   return (
     <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", style.className)}>
-      {style.label}
+      {status === "paused" && pausedLabel ? pausedLabel : style.label}
     </span>
   )
 }
@@ -120,6 +122,25 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
 
 const inputClass =
   "w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+const errorInputClass = "border-red-500 focus:border-red-500 focus:ring-red-500/25"
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return <p className="text-xs text-red-500 mt-1.5">{message}</p>
+}
+
+function FormError({ message }: { message?: string }) {
+  if (!message) return null
+  return (
+    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 flex items-start gap-2">
+      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+      <p className="text-xs text-red-800 dark:text-red-300">{message}</p>
+    </div>
+  )
+}
+
+type FieldErrors = Record<string, string>
+
 const primaryButtonClass =
   "inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
 
@@ -131,6 +152,14 @@ function Modal({ title, subtitle, onClose, children, footer }: {
   /** Stays below the scrolling body so the actions are always in reach. */
   footer?: React.ReactNode
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
   // Portalled: the tab content animates with a transform, which would make
   // these fixed layers position against it instead of the viewport.
   return createPortal(
@@ -250,6 +279,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
   // Promo codes
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([])
   const [codesLoading, setCodesLoading] = useState(true)
+  const [codesLoadError, setCodesLoadError] = useState<string | null>(null)
   const [codeSearch, setCodeSearch] = useState("")
   const [showCodeModal, setShowCodeModal] = useState(false)
   const [codeMode, setCodeMode] = useState<"single" | "batch">("single")
@@ -266,10 +296,12 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
   const [createdCodes, setCreatedCodes] = useState<string[] | null>(null)
   const [togglingCodeId, setTogglingCodeId] = useState<number | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const [codeErrors, setCodeErrors] = useState<FieldErrors>({})
 
   // Flash sales
   const [flashSales, setFlashSales] = useState<FlashSale[]>([])
   const [flashLoading, setFlashLoading] = useState(true)
+  const [flashLoadError, setFlashLoadError] = useState<string | null>(null)
   const [showFlashModal, setShowFlashModal] = useState(false)
   const [editingFlash, setEditingFlash] = useState<FlashSale | null>(null)
   const [flashName, setFlashName] = useState("")
@@ -280,13 +312,27 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
   const [flashEnd, setFlashEnd] = useState<Date | undefined>(undefined)
   const [isSavingFlash, setIsSavingFlash] = useState(false)
   const [togglingFlashId, setTogglingFlashId] = useState<number | null>(null)
+  const [flashErrors, setFlashErrors] = useState<FieldErrors>({})
 
   const ticketName = (id: number | null | undefined) => tickets.find((t) => t.id === id)?.name
+  const paidTickets = tickets.filter((t) => t.price > 0)
+
+  // Editing a field clears its error and any error from the last submit.
+  const withoutError = (prev: FieldErrors, key: string) => {
+    if (!prev[key] && !prev.form) return prev
+    const next = { ...prev }
+    delete next[key]
+    delete next.form
+    return next
+  }
+  const clearCodeError = (key: string) => setCodeErrors((prev) => withoutError(prev, key))
+  const clearFlashError = (key: string) => setFlashErrors((prev) => withoutError(prev, key))
 
   const loadPromoCodes = async () => {
     const user = sessionManager.getUser()
     if (!user) return
     setCodesLoading(true)
+    setCodesLoadError(null)
     try {
       const response = await api.promoCodes.list(user.user_id, user.company_id)
       // The API lists by company; keep this event's codes and the company-wide ones.
@@ -295,9 +341,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       )
     } catch (error) {
       console.error("Failed to fetch promo codes:", error)
-      toast.error("Failed to load promo codes", {
-        description: error instanceof Error ? error.message : "Please try again",
-      })
+      setCodesLoadError(error instanceof Error ? error.message : "Please try again")
       setPromoCodes([])
     } finally {
       setCodesLoading(false)
@@ -308,6 +352,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
     const user = sessionManager.getUser()
     if (!user) return
     setFlashLoading(true)
+    setFlashLoadError(null)
     try {
       const response = await api.flashSales.list(user.user_id, user.company_id)
       // Older API builds have no eventId on flash sales — fall back to the name.
@@ -318,9 +363,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       )
     } catch (error) {
       console.error("Failed to fetch flash sales:", error)
-      toast.error("Failed to load flash sales", {
-        description: error instanceof Error ? error.message : "Please try again",
-      })
+      setFlashLoadError(error instanceof Error ? error.message : "Please try again")
       setFlashSales([])
     } finally {
       setFlashLoading(false)
@@ -356,13 +399,14 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
     setCodeValue("")
     setCodeCount("10")
     setCodeScope("EVENT")
-    setCodeTicketId(tickets[0] ? String(tickets[0].id) : "")
+    setCodeTicketId(paidTickets[0] ? String(paidTickets[0].id) : "")
     setCodeDiscountType("PERCENTAGE")
     setCodeDiscountValue("10")
     setCodeMaxUses("100")
     setCodeValidFrom(new Date())
     setCodeValidUntil(defaultEnd())
     setCreatedCodes(null)
+    setCodeErrors({})
     setShowCodeModal(true)
   }
 
@@ -378,38 +422,35 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
     const maxUses = parseInt(codeMaxUses, 10)
     const count = parseInt(codeCount, 10)
 
+    const errors: FieldErrors = {}
     if (codeMode === "single" && code && !/^[A-Z0-9_-]{3,30}$/.test(code)) {
-      toast.error("Codes are 3–30 letters, numbers, - or _")
-      return
+      errors.code = "Use 3–30 letters, numbers, - or _"
+    } else if (codeMode === "single" && code && promoCodes.some((c) => c.code.toUpperCase() === code)) {
+      errors.code = `${code} already exists for this event`
     }
     if (codeMode === "batch" && (!count || count < 1 || count > 250)) {
-      toast.error("Generate between 1 and 250 codes at a time")
-      return
+      errors.count = "Generate between 1 and 250 codes at a time"
     }
     if (!discountValue || discountValue <= 0) {
-      toast.error("Enter a discount greater than zero")
-      return
-    }
-    if (codeDiscountType === "PERCENTAGE" && discountValue > 100) {
-      toast.error("A percentage discount cannot exceed 100%")
-      return
+      errors.discount = "Enter a discount greater than zero"
+    } else if (codeDiscountType === "PERCENTAGE" && discountValue > 100) {
+      errors.discount = "A percentage discount can't exceed 100%"
     }
     if (!maxUses || maxUses < 1) {
-      toast.error("Max uses must be at least 1")
-      return
+      errors.maxUses = "Allow at least 1 use"
     }
     if (codeScope === "TICKET" && !codeTicketId) {
-      toast.error("Pick the ticket this code applies to")
-      return
+      errors.ticket = "Pick the ticket this code applies to"
     }
-    if (!codeValidFrom || !codeValidUntil) {
-      toast.error("Set when the code starts and ends")
-      return
+    if (!codeValidFrom) errors.start = "Pick a start date and time"
+    if (!codeValidUntil) errors.end = "Pick an end date and time"
+    else if (codeValidFrom && codeValidUntil.getTime() <= codeValidFrom.getTime()) {
+      errors.end = "The end must be after the start"
+    } else if (codeValidUntil.getTime() <= Date.now()) {
+      errors.end = "This end time has already passed"
     }
-    if (codeValidUntil.getTime() <= codeValidFrom.getTime()) {
-      toast.error("The end must be after the start")
-      return
-    }
+    setCodeErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
     setIsCreatingCode(true)
     try {
@@ -421,8 +462,8 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
         ...(codeScope === "TICKET" ? { ticketId: Number(codeTicketId) } : {}),
         discountType: codeDiscountType,
         discountValue,
-        validFrom: toNairobiLocal(codeValidFrom),
-        validUntil: toNairobiLocal(codeValidUntil),
+        validFrom: toNairobiLocal(codeValidFrom!),
+        validUntil: toNairobiLocal(codeValidUntil!),
         maxUses,
         ...(codeMode === "single" && code ? { promoCode: code } : { numberOfPromoCodes: codeMode === "batch" ? count : 1 }),
       })
@@ -445,9 +486,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       }
     } catch (error) {
       console.error("Error creating promo code:", error)
-      toast.error("Failed to create promo code", {
-        description: error instanceof Error ? error.message : "Please try again",
-      })
+      setCodeErrors({ form: error instanceof Error ? error.message : "Couldn't create the code. Please try again." })
     } finally {
       setIsCreatingCode(false)
     }
@@ -503,12 +542,13 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
     } else {
       setEditingFlash(null)
       setFlashName("")
-      setFlashTicketId(tickets.find((t) => t.price > 0) ? String(tickets.find((t) => t.price > 0)!.id) : "")
+      setFlashTicketId(paidTickets[0] ? String(paidTickets[0].id) : "")
       setFlashPrice("")
       setFlashQuantity("50")
       setFlashStart(new Date())
       setFlashEnd(new Date(Date.now() + 24 * 60 * 60 * 1000))
     }
+    setFlashErrors({})
     setShowFlashModal(true)
   }
 
@@ -529,38 +569,28 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
     const salePrice = Number(flashPrice)
     const maxQuantity = parseInt(flashQuantity, 10)
 
-    if (!flashName.trim()) {
-      toast.error("Give the flash sale a name")
-      return
-    }
-    if (!editingFlash && !flashTicket) {
-      toast.error("Pick the ticket to put on sale")
-      return
-    }
+    const errors: FieldErrors = {}
+    if (!flashName.trim()) errors.name = "Give the flash sale a name"
+    if (!editingFlash && !flashTicket) errors.ticket = "Pick the ticket to put on sale"
     if (!salePrice || salePrice <= 0) {
-      toast.error("Enter a sale price greater than zero")
-      return
-    }
-    if (flashOriginalPrice !== undefined && salePrice >= flashOriginalPrice) {
-      toast.error(`The sale price must be below the ticket price (${currency} ${flashOriginalPrice.toLocaleString()})`)
-      return
+      errors.price = "Enter a sale price greater than zero"
+    } else if (flashOriginalPrice !== undefined && salePrice >= flashOriginalPrice) {
+      errors.price = `Must be below the usual ${currency} ${flashOriginalPrice.toLocaleString()}`
     }
     if (!maxQuantity || maxQuantity < 1) {
-      toast.error("Tickets on sale must be at least 1")
-      return
+      errors.quantity = "At least 1 ticket"
+    } else if (editingFlash && maxQuantity < editingFlash.soldQuantity) {
+      errors.quantity = `${editingFlash.soldQuantity} already sold — can't go lower`
     }
-    if (editingFlash && maxQuantity < editingFlash.soldQuantity) {
-      toast.error(`${editingFlash.soldQuantity} have already sold at this price — the limit can't go below that`)
-      return
+    if (!flashStart) errors.start = "Pick a start date and time"
+    if (!flashEnd) errors.end = "Pick an end date and time"
+    else if (flashStart && flashEnd.getTime() <= flashStart.getTime()) {
+      errors.end = "The end must be after the start"
+    } else if (flashEnd.getTime() <= Date.now()) {
+      errors.end = "This end time has already passed"
     }
-    if (!flashStart || !flashEnd) {
-      toast.error("Set when the sale starts and ends")
-      return
-    }
-    if (flashEnd.getTime() <= flashStart.getTime()) {
-      toast.error("The end must be after the start")
-      return
-    }
+    setFlashErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
     setIsSavingFlash(true)
     try {
@@ -568,8 +598,8 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
         userId: user.user_id,
         flashSaleName: flashName.trim(),
         salePrice,
-        startTime: toNairobiLocal(flashStart),
-        endTime: toNairobiLocal(flashEnd),
+        startTime: toNairobiLocal(flashStart!),
+        endTime: toNairobiLocal(flashEnd!),
         maxQuantity,
       }
       const response = editingFlash
@@ -587,9 +617,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       await loadFlashSales()
     } catch (error) {
       console.error("Error saving flash sale:", error)
-      toast.error("Failed to save flash sale", {
-        description: error instanceof Error ? error.message : "Please try again",
-      })
+      setFlashErrors({ form: error instanceof Error ? error.message : "Couldn't save the flash sale. Please try again." })
     } finally {
       setIsSavingFlash(false)
     }
@@ -620,6 +648,52 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
   const flashSold = flashSales.reduce((sum, s) => sum + s.soldQuantity, 0)
   const flashDiscountGiven = flashSales.reduce((sum, s) => sum + s.soldQuantity * (s.originalPrice - s.salePrice), 0)
 
+  // What a buyer would pay with the code being created, on one example ticket.
+  const codePreviewTicket =
+    codeScope === "TICKET"
+      ? paidTickets.find((t) => String(t.id) === codeTicketId)
+      : codeScope === "EVENT"
+        ? [...paidTickets].sort((a, b) => a.price - b.price)[0]
+        : undefined
+  const codePreviewPrice = (() => {
+    const value = Number(codeDiscountValue)
+    if (!codePreviewTicket || !value || value <= 0) return null
+    const price =
+      codeDiscountType === "PERCENTAGE"
+        ? codePreviewTicket.price * (1 - Math.min(value, 100) / 100)
+        : codePreviewTicket.price - value
+    return Math.max(0, Math.round(price * 100) / 100)
+  })()
+
+  // Checkout uses the cheapest live flash sale on a ticket, so overlapping
+  // sales on the same ticket quietly shadow each other.
+  const overlappingSales =
+    flashStart && flashEnd && flashTicketId
+      ? flashSales.filter((sale) => {
+          if (editingFlash && sale.id === editingFlash.id) return false
+          const sameTicket =
+            sale.ticketId != null ? String(sale.ticketId) === flashTicketId : sale.ticketName === flashTicket?.name
+          if (!sameTicket || !sale.isActive) return false
+          return (
+            fromNairobiLocal(sale.startTime).getTime() < flashEnd.getTime() &&
+            fromNairobiLocal(sale.validUntil).getTime() > flashStart.getTime()
+          )
+        })
+      : []
+
+  const downloadCodes = (codes: string[]) => {
+    const discount = formatDiscount(codeDiscountType, Number(codeDiscountValue))
+    const until = codeValidUntil ? formatWindowDate(toNairobiLocal(codeValidUntil)) : ""
+    const rows = [["code", "discount", "valid_until"], ...codes.map((c) => [c, discount, until])]
+    const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n")
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }))
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${eventName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-promo-codes.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // ---------------------------------------------------------------- render
 
   const toggleButton = (isActive: boolean, busy: boolean, onClick: () => void, labels: [string, string]) => (
@@ -648,8 +722,8 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       {/* Section switch */}
       <div className="inline-flex p-1 rounded-xl bg-secondary/60 border border-border">
         {[
-          { id: "codes" as const, label: "Promo Codes", icon: Tag },
-          { id: "flash" as const, label: "Flash Sales", icon: Zap },
+          { id: "codes" as const, label: "Promo Codes", icon: Tag, count: codesLoading ? null : promoCodes.length },
+          { id: "flash" as const, label: "Flash Sales", icon: Zap, count: flashLoading ? null : flashSales.length },
         ].map((item) => {
           const Icon = item.icon
           return (
@@ -663,6 +737,9 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
             >
               <Icon className="w-4 h-4" />
               {item.label}
+              {item.count ? (
+                <span className="min-w-5 h-5 px-1.5 rounded-full bg-secondary text-xs flex items-center justify-center">{item.count}</span>
+              ) : null}
             </button>
           )
         })}
@@ -670,14 +747,14 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
 
       {section === "codes" ? (
         <>
-          <StatCards
+          {promoCodes.length > 0 && <StatCards
             stats={[
               { label: "Codes", value: promoCodes.length.toLocaleString(), icon: Tag, bg: "bg-zinc-800 dark:bg-zinc-800/50", color: "text-zinc-300" },
               { label: "Live now", value: liveCodes.toLocaleString(), icon: CheckCircle, bg: "bg-green-50 dark:bg-green-950/30", color: "text-green-600 dark:text-green-400" },
               { label: "Times used", value: totalUses.toLocaleString(), icon: Percent, bg: "bg-blue-50 dark:bg-blue-950/30", color: "text-blue-600 dark:text-blue-400" },
               { label: "Uses left", value: Math.max(0, totalCapacity - totalUses).toLocaleString(), icon: Clock, bg: "bg-orange-50 dark:bg-orange-950/30", color: "text-orange-600 dark:text-orange-400" },
             ]}
-          />
+          />}
 
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -698,6 +775,17 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
 
           {codesLoading ? (
             <Loading label="Loading promo codes..." />
+          ) : codesLoadError ? (
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load promo codes"
+              body={codesLoadError}
+              action={
+                <button onClick={loadPromoCodes} className={primaryButtonClass}>
+                  Try again
+                </button>
+              }
+            />
           ) : filteredCodes.length === 0 ? (
             <EmptyState
               icon={Tag}
@@ -802,20 +890,20 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
         </>
       ) : (
         <>
-          <StatCards
+          {flashSales.length > 0 && <StatCards
             stats={[
               { label: "Flash sales", value: flashSales.length.toLocaleString(), icon: Zap, bg: "bg-zinc-800 dark:bg-zinc-800/50", color: "text-zinc-300" },
               { label: "Live now", value: liveSales.toLocaleString(), icon: CheckCircle, bg: "bg-green-50 dark:bg-green-950/30", color: "text-green-600 dark:text-green-400" },
               { label: "Sold at sale price", value: flashSold.toLocaleString(), icon: Tag, bg: "bg-blue-50 dark:bg-blue-950/30", color: "text-blue-600 dark:text-blue-400" },
               { label: "Discount given", value: `${currency} ${flashDiscountGiven.toLocaleString()}`, icon: Percent, bg: "bg-orange-50 dark:bg-orange-950/30", color: "text-orange-600 dark:text-orange-400" },
             ]}
-          />
+          />}
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Drop a ticket&apos;s price for a limited time and quantity. A promo code at checkout takes the place of the flash price.
             </p>
-            <button onClick={() => openFlashModal()} className={primaryButtonClass} disabled={tickets.length === 0}>
+            <button onClick={() => openFlashModal()} className={primaryButtonClass} disabled={paidTickets.length === 0}>
               <Plus className="w-4 h-4" />
               Create Flash Sale
             </button>
@@ -823,13 +911,28 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
 
           {flashLoading ? (
             <Loading label="Loading flash sales..." />
+          ) : flashLoadError ? (
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load flash sales"
+              body={flashLoadError}
+              action={
+                <button onClick={loadFlashSales} className={primaryButtonClass}>
+                  Try again
+                </button>
+              }
+            />
           ) : flashSales.length === 0 ? (
             <EmptyState
               icon={Zap}
               title="No Flash Sales Yet"
-              body="Run a time-boxed price drop on one ticket type, capped at a number of tickets. It switches on and off by itself."
+              body={
+                paidTickets.length > 0
+                  ? "Run a time-boxed price drop on one ticket type, capped at a number of tickets. It switches on and off by itself."
+                  : "Flash sales lower a ticket's price, so they need at least one paid ticket type on this event."
+              }
               action={
-                tickets.length > 0 && (
+                paidTickets.length > 0 && (
                   <button onClick={() => openFlashModal()} className={primaryButtonClass}>
                     <Plus className="w-4 h-4" />
                     Create Flash Sale
@@ -849,7 +952,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                         <p className="font-semibold truncate">{sale.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{sale.ticketName || ticketName(sale.ticketId) || "Ticket"}</p>
                       </div>
-                      <StatusBadge status={status} />
+                      <StatusBadge status={status} pausedLabel="Paused" />
                     </div>
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-2xl font-bold">{currency} {sale.salePrice.toLocaleString()}</span>
@@ -928,6 +1031,15 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     {copiedCode === "__all__" ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     Copy {createdCodes.length === 1 ? "code" : "all"}
                   </button>
+                  {createdCodes.length > 1 && (
+                    <button
+                      onClick={() => downloadCodes(createdCodes)}
+                      className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer inline-flex items-center justify-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      CSV
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowCodeModal(false)}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm cursor-pointer"
@@ -938,6 +1050,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
               </div>
             ) : (
               <div className="space-y-4">
+                <FormError message={codeErrors.form} />
                 <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-secondary/60">
                   {[
                     { id: "single" as const, label: "One code" },
@@ -962,12 +1075,20 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     <input
                       type="text"
                       value={codeValue}
-                      onChange={(e) => setCodeValue(e.target.value.toUpperCase().replace(/\s/g, ""))}
+                      onChange={(e) => {
+                        setCodeValue(e.target.value.toUpperCase().replace(/\s/g, ""))
+                        clearCodeError("code")
+                      }}
                       placeholder="e.g., EARLYBIRD"
                       maxLength={30}
-                      className={cn(inputClass, codeValue && "font-mono tracking-wide")}
+                      autoFocus
+                      className={cn(inputClass, codeValue && "font-mono tracking-wide", codeErrors.code && errorInputClass)}
                     />
-                    <p className="text-xs text-muted-foreground mt-1.5">Leave blank and we&apos;ll generate one.</p>
+                    {codeErrors.code ? (
+                      <FieldError message={codeErrors.code} />
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1.5">Leave blank and we&apos;ll generate one.</p>
+                    )}
                   </div>
                 ) : (
                   <div>
@@ -975,12 +1096,19 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     <input
                       type="number"
                       value={codeCount}
-                      onChange={(e) => setCodeCount(e.target.value)}
+                      onChange={(e) => {
+                        setCodeCount(e.target.value)
+                        clearCodeError("count")
+                      }}
                       min="1"
                       max="250"
-                      className={inputClass}
+                      className={cn(inputClass, codeErrors.count && errorInputClass)}
                     />
-                    <p className="text-xs text-muted-foreground mt-1.5">Up to 250. Each gets its own random code and its own use limit.</p>
+                    {codeErrors.count ? (
+                      <FieldError message={codeErrors.count} />
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1.5">Up to 250. Each gets its own random code and its own use limit.</p>
+                    )}
                   </div>
                 )}
 
@@ -989,7 +1117,10 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     <label className="text-sm font-medium mb-2 block">Discount</label>
                     <select
                       value={codeDiscountType}
-                      onChange={(e) => setCodeDiscountType(e.target.value as DiscountType)}
+                      onChange={(e) => {
+                        setCodeDiscountType(e.target.value as DiscountType)
+                        clearCodeError("discount")
+                      }}
                       className={cn(inputClass, "cursor-pointer")}
                     >
                       <option value="PERCENTAGE">Percentage</option>
@@ -1003,23 +1134,30 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     <input
                       type="number"
                       value={codeDiscountValue}
-                      onChange={(e) => setCodeDiscountValue(e.target.value)}
+                      onChange={(e) => {
+                        setCodeDiscountValue(e.target.value)
+                        clearCodeError("discount")
+                      }}
                       min="0"
                       step="0.01"
-                      className={inputClass}
+                      className={cn(inputClass, codeErrors.discount && errorInputClass)}
                     />
                   </div>
                 </div>
+                <FieldError message={codeErrors.discount} />
 
                 <div>
                   <label className="text-sm font-medium mb-2 block">Applies to</label>
                   <select
                     value={codeScope}
-                    onChange={(e) => setCodeScope(e.target.value as "EVENT" | "TICKET" | "COMPANY")}
+                    onChange={(e) => {
+                      setCodeScope(e.target.value as "EVENT" | "TICKET" | "COMPANY")
+                      clearCodeError("ticket")
+                    }}
                     className={cn(inputClass, "cursor-pointer")}
                   >
                     <option value="EVENT">Every ticket for this event</option>
-                    <option value="TICKET" disabled={tickets.length === 0}>One ticket type</option>
+                    <option value="TICKET" disabled={paidTickets.length === 0}>One ticket type</option>
                     <option value="COMPANY">All your events</option>
                   </select>
                 </div>
@@ -1029,15 +1167,41 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     <label className="text-sm font-medium mb-2 block">Ticket</label>
                     <select
                       value={codeTicketId}
-                      onChange={(e) => setCodeTicketId(e.target.value)}
-                      className={cn(inputClass, "cursor-pointer")}
+                      onChange={(e) => {
+                        setCodeTicketId(e.target.value)
+                        clearCodeError("ticket")
+                      }}
+                      className={cn(inputClass, "cursor-pointer", codeErrors.ticket && errorInputClass)}
                     >
-                      {tickets.map((t) => (
+                      {paidTickets.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.name} — {currency} {t.price.toLocaleString()}
                         </option>
                       ))}
                     </select>
+                    <FieldError message={codeErrors.ticket} />
+                  </div>
+                )}
+
+                {codePreviewTicket && codePreviewPrice !== null && (
+                  <div
+                    className={cn(
+                      "px-3 py-2.5 rounded-lg border text-xs",
+                      codePreviewPrice === 0
+                        ? "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/30 text-orange-800 dark:text-orange-300"
+                        : "bg-secondary/40 border-border text-muted-foreground"
+                    )}
+                  >
+                    {codePreviewPrice === 0 ? (
+                      <>This makes <span className="font-semibold">{codePreviewTicket.name}</span> free.</>
+                    ) : (
+                      <>
+                        {codeScope === "EVENT" && paidTickets.length > 1 ? "e.g. " : ""}
+                        <span className="text-foreground font-medium">{codePreviewTicket.name}</span>: buyers pay{" "}
+                        <span className="text-foreground font-semibold">{currency} {codePreviewPrice.toLocaleString()}</span>{" "}
+                        instead of <span className="line-through">{currency} {codePreviewTicket.price.toLocaleString()}</span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1046,20 +1210,39 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   <input
                     type="number"
                     value={codeMaxUses}
-                    onChange={(e) => setCodeMaxUses(e.target.value)}
+                    onChange={(e) => {
+                      setCodeMaxUses(e.target.value)
+                      clearCodeError("maxUses")
+                    }}
                     min="1"
-                    className={inputClass}
+                    className={cn(inputClass, codeErrors.maxUses && errorInputClass)}
                   />
+                  <FieldError message={codeErrors.maxUses} />
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Starts</label>
-                    <DateTimePicker selected={codeValidFrom} onChange={setCodeValidFrom} />
+                    <DateTimePicker
+                      selected={codeValidFrom}
+                      onChange={(d) => {
+                        setCodeValidFrom(d)
+                        clearCodeError("start")
+                      }}
+                    />
+                    <FieldError message={codeErrors.start} />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Ends</label>
-                    <DateTimePicker selected={codeValidUntil} onChange={setCodeValidUntil} minDate={codeValidFrom} />
+                    <DateTimePicker
+                      selected={codeValidUntil}
+                      onChange={(d) => {
+                        setCodeValidUntil(d)
+                        clearCodeError("end")
+                      }}
+                      minDate={codeValidFrom}
+                    />
+                    <FieldError message={codeErrors.end} />
                   </div>
                 </div>
 
@@ -1091,11 +1274,12 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                 onSubmit={handleSaveFlash}
                 busy={isSavingFlash}
                 busyLabel="Saving..."
-                label={editingFlash ? "Save Changes" : "Create Flash Sale"}
+                label={editingFlash ? "Save Changes" : "Create Sale"}
               />
             }
           >
             <div className="space-y-4">
+              <FormError message={flashErrors.form} />
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Name <span className="text-red-500">*</span>
@@ -1103,19 +1287,27 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                 <input
                   type="text"
                   value={flashName}
-                  onChange={(e) => setFlashName(e.target.value)}
-                  placeholder="e.g., Early Bird Friday"
-                  className={inputClass}
+                  onChange={(e) => {
+                    setFlashName(e.target.value)
+                    clearFlashError("name")
+                  }}
+                  placeholder={`e.g., ${eventName} Early Bird`}
+                  autoFocus
+                  className={cn(inputClass, flashErrors.name && errorInputClass)}
                 />
+                <FieldError message={flashErrors.name} />
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Ticket</label>
                 <select
                   value={flashTicketId}
-                  onChange={(e) => setFlashTicketId(e.target.value)}
+                  onChange={(e) => {
+                    setFlashTicketId(e.target.value)
+                    clearFlashError("ticket")
+                  }}
                   disabled={!!editingFlash}
-                  className={cn(inputClass, "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed")}
+                  className={cn(inputClass, "cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed", flashErrors.ticket && errorInputClass)}
                 >
                   {!editingFlash && <option value="">Select a ticket</option>}
                   {tickets.map((t) => (
@@ -1124,6 +1316,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     </option>
                   ))}
                 </select>
+                <FieldError message={flashErrors.ticket} />
                 {editingFlash && <p className="text-xs text-muted-foreground mt-1.5">The ticket can&apos;t be changed after creation.</p>}
               </div>
 
@@ -1133,12 +1326,17 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   <input
                     type="number"
                     value={flashPrice}
-                    onChange={(e) => setFlashPrice(e.target.value)}
+                    onChange={(e) => {
+                      setFlashPrice(e.target.value)
+                      clearFlashError("price")
+                    }}
                     min="0"
                     step="0.01"
-                    className={inputClass}
+                    className={cn(inputClass, flashErrors.price && errorInputClass)}
                   />
-                  {flashOriginalPrice !== undefined && (
+                  {flashErrors.price ? (
+                    <FieldError message={flashErrors.price} />
+                  ) : flashOriginalPrice !== undefined && (
                     <p className="text-xs text-muted-foreground mt-1.5">
                       Usually {currency} {flashOriginalPrice.toLocaleString()}
                       {flashPercentOff !== null && <span className="text-orange-600 dark:text-orange-400"> · {flashPercentOff}% off</span>}
@@ -1150,23 +1348,52 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   <input
                     type="number"
                     value={flashQuantity}
-                    onChange={(e) => setFlashQuantity(e.target.value)}
+                    onChange={(e) => {
+                      setFlashQuantity(e.target.value)
+                      clearFlashError("quantity")
+                    }}
                     min="1"
-                    className={inputClass}
+                    className={cn(inputClass, flashErrors.quantity && errorInputClass)}
                   />
+                  <FieldError message={flashErrors.quantity} />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Starts</label>
-                  <DateTimePicker selected={flashStart} onChange={setFlashStart} />
+                  <DateTimePicker
+                    selected={flashStart}
+                    onChange={(d) => {
+                      setFlashStart(d)
+                      clearFlashError("start")
+                    }}
+                  />
+                  <FieldError message={flashErrors.start} />
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">Ends</label>
-                  <DateTimePicker selected={flashEnd} onChange={setFlashEnd} minDate={flashStart} />
+                  <DateTimePicker
+                    selected={flashEnd}
+                    onChange={(d) => {
+                      setFlashEnd(d)
+                      clearFlashError("end")
+                    }}
+                    minDate={flashStart}
+                  />
+                  <FieldError message={flashErrors.end} />
                 </div>
               </div>
+
+              {overlappingSales.length > 0 && (
+                <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-orange-800 dark:text-orange-300">
+                    Overlaps {overlappingSales.map((sale) => sale.name).join(", ")} on this ticket. While both run,
+                    buyers get whichever price is lower.
+                  </p>
+                </div>
+              )}
 
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30">
                 <div className="flex items-start gap-2">

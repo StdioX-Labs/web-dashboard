@@ -8,6 +8,7 @@ import {
   Calendar,
   MapPin,
   Edit,
+  Tag,
   Download,
   Eye,
   EyeOff,
@@ -226,8 +227,12 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     scanned: boolean
     complementary: boolean
     transactionId: string
+    promotionType?: "PROMO_CODE" | "FLASH_SALE" | "DISCOUNT_LINK" | null
+    promotionCode?: string | null
+    paidPrice?: number | null
   }>>([])
   const [attendeesLoading, setAttendeesLoading] = useState(false)
+  const [attendeePromoFilter, setAttendeePromoFilter] = useState<"all" | "promotion" | "full">("all")
 
   // Transactions state
   const [transactions, setTransactions] = useState<Array<{
@@ -1447,9 +1452,38 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   // Paginated data
   // Transactions are paginated from API, use state directly
   const paginatedTransactions = transactions
-  const paginatedAttendees = getPaginatedData(attendees, attendeesPage)
+  const promotionLabel = (a: { promotionType?: string | null; promotionCode?: string | null }) =>
+    a.promotionType === "PROMO_CODE"
+      ? `Promo ${a.promotionCode ?? ""}`.trim()
+      : a.promotionType === "FLASH_SALE"
+        ? `Flash sale${a.promotionCode ? `: ${a.promotionCode}` : ""}`
+        : a.promotionType === "DISCOUNT_LINK"
+          ? "Discount link"
+          : ""
+
+  const attendeeSearch = searchQuery.trim().toLowerCase()
+  const promotionAttendeeCount = attendees.filter((a) => a.promotionType).length
+  const visibleAttendees = attendees.filter((a) => {
+    if (attendeePromoFilter === "promotion" && !a.promotionType) return false
+    if (attendeePromoFilter === "full" && (a.promotionType || a.complementary)) return false
+    if (!attendeeSearch) return true
+    return [a.firstName, a.lastName, a.email, a.mobileNumber, a.ticketName, a.ticketId, promotionLabel(a)]
+      .some((v) => v && String(v).toLowerCase().includes(attendeeSearch))
+  })
+  const paginatedAttendees = getPaginatedData(visibleAttendees, attendeesPage)
   // Use API-provided total pages for transactions
-  const attendeesTotalPages = getTotalPages(attendees.length)
+  const attendeesTotalPages = getTotalPages(visibleAttendees.length)
+
+  const renderPromotionBadge = (a: (typeof attendees)[number]) =>
+    a.promotionType ? (
+      <span
+        className="inline-flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400 px-2 py-0.5 rounded max-w-[14rem] truncate"
+        title={a.paidPrice != null ? `Paid ${eventData?.currency || currency} ${Number(a.paidPrice).toLocaleString()}` : undefined}
+      >
+        <Tag className="w-3 h-3 flex-shrink-0" />
+        <span className="truncate">{promotionLabel(a)}</span>
+      </span>
+    ) : null
 
   // Helper function to check if event is past or inactive
   const isEventPastOrInactive = () => {
@@ -2798,7 +2832,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
 
   const exportAttendeesToCSV = () => {
     if (!attendees.length) { toast.error("No attendees to export"); return }
-    const header = ["First Name", "Last Name", "Email", "Phone", "Ticket Type", "Ticket #", "Purchase Date", "Checked In", "Complementary"]
+    const header = ["First Name", "Last Name", "Email", "Phone", "Ticket Type", "Ticket #", "Purchase Date", "Checked In", "Complementary", "Promotion", "Price Paid"]
     const data = attendees.map(a => [
       a.firstName,
       a.lastName,
@@ -2809,6 +2843,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       a.purchaseTime,
       a.scanned ? "Yes" : "No",
       a.complementary ? "Yes" : "No",
+      promotionLabel(a),
+      a.paidPrice != null ? String(a.paidPrice) : "",
     ])
     const eventName = (eventData?.name ?? "event").replace(/[^a-z0-9]/gi, "_")
     downloadCSV(`attendees_${eventName}.csv`, [header, ...data])
@@ -3816,7 +3852,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       type="text"
                       placeholder="Search attendees..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value)
+                        setAttendeesPage(1)
+                      }}
                       className="w-full h-11 pl-10 pr-20 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                     />
                     <button className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-zinc-700 text-white rounded-md text-xs font-semibold hover:bg-zinc-600 transition-colors cursor-pointer">
@@ -3840,6 +3879,33 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </button>
                   </div>
                 </div>
+
+                {promotionAttendeeCount > 0 && (
+                  <div className="flex flex-wrap gap-2 -mt-2 mb-4">
+                    {[
+                      { id: "all" as const, label: "All", count: attendees.length },
+                      { id: "promotion" as const, label: "Used a promotion", count: promotionAttendeeCount },
+                      { id: "full" as const, label: "Full price", count: attendees.filter((a) => !a.promotionType && !a.complementary).length },
+                    ].map((chip) => (
+                      <button
+                        key={chip.id}
+                        onClick={() => {
+                          setAttendeePromoFilter(chip.id)
+                          setAttendeesPage(1)
+                        }}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer",
+                          attendeePromoFilter === chip.id
+                            ? "bg-foreground text-background border-foreground"
+                            : "border-border text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {chip.label}
+                        <span className="opacity-70">{chip.count.toLocaleString()}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Desktop Table */}
                 <div className="hidden lg:block rounded-2xl border border-border bg-card overflow-hidden">
@@ -3890,6 +3956,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                                     Comp
                                   </span>
                                 )}
+                                {attendee.promotionType && <div className="mt-1">{renderPromotionBadge(attendee)}</div>}
                               </td>
                               <td className="p-4 text-sm font-mono">{attendee.ticketId}</td>
                               <td className="p-4 text-sm text-muted-foreground">
@@ -3962,6 +4029,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                               </span>
                             )}
                           </p>
+                          {attendee.promotionType && <div className="mt-1">{renderPromotionBadge(attendee)}</div>}
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Ticket Number</p>
@@ -3983,10 +4051,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 </div>
 
                 {/* Pagination - Bottom Only */}
-                {attendees.length > itemsPerPage && (
+                {visibleAttendees.length > itemsPerPage && (
                   <div className="pagination-container">
                     <p className="pagination-info">
-                      Showing <span className="font-semibold text-foreground">{((attendeesPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-foreground">{Math.min(attendeesPage * itemsPerPage, attendees.length)}</span> of <span className="font-semibold text-foreground">{attendees.length}</span> attendees
+                      Showing <span className="font-semibold text-foreground">{((attendeesPage - 1) * itemsPerPage) + 1}</span> to <span className="font-semibold text-foreground">{Math.min(attendeesPage * itemsPerPage, visibleAttendees.length)}</span> of <span className="font-semibold text-foreground">{visibleAttendees.length}</span> attendees
                     </p>
                     <div className="pagination-controls">
                       <button
