@@ -123,11 +123,13 @@ const inputClass =
 const primaryButtonClass =
   "inline-flex items-center justify-center gap-2 h-11 px-4 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-lg text-sm font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
 
-function Modal({ title, subtitle, onClose, children }: {
+function Modal({ title, subtitle, onClose, children, footer }: {
   title: string
   subtitle: string
   onClose: () => void
   children: React.ReactNode
+  /** Stays below the scrolling body so the actions are always in reach. */
+  footer?: React.ReactNode
 }) {
   // Portalled: the tab content animates with a transform, which would make
   // these fixed layers position against it instead of the viewport.
@@ -144,9 +146,9 @@ function Modal({ title, subtitle, onClose, children }: {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto bg-card border border-border rounded-2xl shadow-2xl p-6"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg max-h-[90vh] flex flex-col bg-card border border-border rounded-2xl shadow-2xl"
       >
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-border">
           <div>
             <h3 className="text-xl font-bold">{title}</h3>
             <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
@@ -155,7 +157,8 @@ function Modal({ title, subtitle, onClose, children }: {
             <X className="w-5 h-5" />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
+        {footer && <div className="px-6 py-4 border-t border-border">{footer}</div>}
       </motion.div>
     </>,
     document.body
@@ -170,7 +173,7 @@ function ModalActions({ onCancel, onSubmit, busy, busyLabel, label }: {
   label: string
 }) {
   return (
-    <div className="flex gap-3 pt-2">
+    <div className="flex gap-3">
       <button
         onClick={onCancel}
         className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold text-sm hover:bg-secondary/80 transition-all cursor-pointer"
@@ -898,6 +901,17 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
             title={createdCodes ? "Codes ready" : "Create Promo Code"}
             subtitle={createdCodes ? "Share these with your buyers." : "Buyers enter it at checkout for a discount."}
             onClose={() => setShowCodeModal(false)}
+            footer={
+              !createdCodes && (
+                <ModalActions
+                  onCancel={() => setShowCodeModal(false)}
+                  onSubmit={handleCreateCode}
+                  busy={isCreatingCode}
+                  busyLabel="Creating..."
+                  label={codeMode === "batch" ? `Generate ${parseInt(codeCount, 10) || 0} codes` : "Create Code"}
+                />
+              )
+            }
           >
             {createdCodes ? (
               <div className="space-y-4">
@@ -949,10 +963,11 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                       type="text"
                       value={codeValue}
                       onChange={(e) => setCodeValue(e.target.value.toUpperCase().replace(/\s/g, ""))}
-                      placeholder="e.g., EARLYBIRD (leave blank to generate)"
+                      placeholder="e.g., EARLYBIRD"
                       maxLength={30}
-                      className={cn(inputClass, "font-mono")}
+                      className={cn(inputClass, codeValue && "font-mono tracking-wide")}
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">Leave blank and we&apos;ll generate one.</p>
                   </div>
                 ) : (
                   <div>
@@ -1037,7 +1052,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Starts</label>
                     <DateTimePicker selected={codeValidFrom} onChange={setCodeValidFrom} />
@@ -1057,14 +1072,6 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                     </p>
                   </div>
                 </div>
-
-                <ModalActions
-                  onCancel={() => setShowCodeModal(false)}
-                  onSubmit={handleCreateCode}
-                  busy={isCreatingCode}
-                  busyLabel="Creating..."
-                  label={codeMode === "batch" ? `Generate ${parseInt(codeCount, 10) || 0} codes` : "Create Code"}
-                />
               </div>
             )}
           </Modal>
@@ -1078,6 +1085,15 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
             title={editingFlash ? "Edit Flash Sale" : "Create Flash Sale"}
             subtitle="A lower price on one ticket type, for a limited time and quantity."
             onClose={() => setShowFlashModal(false)}
+            footer={
+              <ModalActions
+                onCancel={() => setShowFlashModal(false)}
+                onSubmit={handleSaveFlash}
+                busy={isSavingFlash}
+                busyLabel="Saving..."
+                label={editingFlash ? "Save Changes" : "Create Flash Sale"}
+              />
+            }
           >
             <div className="space-y-4">
               <div>
@@ -1141,7 +1157,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Starts</label>
                   <DateTimePicker selected={flashStart} onChange={setFlashStart} />
@@ -1160,14 +1176,6 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   </p>
                 </div>
               </div>
-
-              <ModalActions
-                onCancel={() => setShowFlashModal(false)}
-                onSubmit={handleSaveFlash}
-                busy={isSavingFlash}
-                busyLabel="Saving..."
-                label={editingFlash ? "Save Changes" : "Create Flash Sale"}
-              />
             </div>
           </Modal>
         )}
