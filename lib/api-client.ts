@@ -139,6 +139,48 @@ export interface AffiliateSummary {
   availableBalance: number
 }
 
+export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT'
+
+export interface PromoCode {
+  id: number
+  code: string
+  /** Nairobi wall-clock time, no offset (LocalDateTime). */
+  validFrom: string
+  validUntil: string
+  discountType: DiscountType
+  discountValue: number
+  scope: 'COMPANY' | 'EVENT' | 'TICKET'
+  eventId: number | null
+  companyId: number | null
+  ticketId: number | null
+  maxUses: number
+  /** Counted when a checkout applies the code, before payment completes. */
+  currentUses: number
+  isActive: boolean
+  createdAt: string
+}
+
+export interface FlashSale {
+  id: number
+  name: string
+  isActive: boolean
+  /** Nairobi wall-clock time, no offset (LocalDateTime). */
+  startTime: string
+  validUntil: string
+  originalPrice: number
+  salePrice: number
+  maxQuantity: number
+  /** Counted at checkout, before payment completes. */
+  soldQuantity: number
+  scope: 'EVENT' | 'TICKET'
+  eventName: string | null
+  ticketName: string | null
+  /** Absent until the backend change that added it is deployed. */
+  eventId?: number | null
+  ticketId?: number | null
+  createdAt: string
+}
+
 // API methods
 export const api = {
   // Auth endpoints
@@ -976,6 +1018,108 @@ export const api = {
         links_disabled?: number
       }>(`/affiliates/admin/remove?userId=${userId}&affiliateId=${affiliateId}${eventParam}`, {
         method: 'DELETE',
+      }, true)
+    },
+  },
+
+  // Promo code endpoints. `userId` is the acting organizer.
+  promoCodes: {
+    list: async (userId: number, companyId: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        promocodes: PromoCode[]
+      }>(`/promocodes/list?companyId=${companyId}&userId=${userId}`, {
+        method: 'GET',
+      }, true)
+    },
+    // Pass promoCode for one named code, or numberOfPromoCodes to generate a batch.
+    create: async (data: {
+      userId: number
+      companyId: number
+      scope: 'COMPANY' | 'EVENT' | 'TICKET'
+      eventId?: number
+      ticketId?: number
+      discountType: DiscountType
+      discountValue: number
+      validFrom: string
+      validUntil: string
+      maxUses: number
+      promoCode?: string
+      numberOfPromoCodes?: number
+    }) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        codes?: string[]
+      }>('/promocodes/create', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
+    toggle: async (userId: number, id: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        isActive?: boolean
+      }>(`/promocodes/toggle?id=${id}&userId=${userId}`, {
+        method: 'GET',
+      }, true)
+    },
+  },
+
+  // Flash sale endpoints. `userId` is the acting organizer.
+  flashSales: {
+    list: async (userId: number, companyId: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        flashSales: FlashSale[]
+      }>(`/flashsale/list?companyId=${companyId}&userId=${userId}`, {
+        method: 'GET',
+      }, true)
+    },
+    create: async (data: {
+      userId: number
+      flashSaleName: string
+      eventId: number
+      ticketId: number
+      salePrice: number
+      startTime: string
+      endTime: string
+      maxQuantity: number
+    }) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+      }>('/flashsale/create', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
+    update: async (id: number, data: {
+      userId: number
+      flashSaleName: string
+      salePrice: number
+      startTime: string
+      endTime: string
+      maxQuantity: number
+    }) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+      }>(`/flashsale/update?id=${id}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true)
+    },
+    toggle: async (userId: number, id: number) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        isActive?: boolean
+      }>(`/flashsale/toggle?id=${id}&userId=${userId}`, {
+        method: 'GET',
       }, true)
     },
   },

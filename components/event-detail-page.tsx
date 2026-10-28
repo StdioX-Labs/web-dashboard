@@ -41,6 +41,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api, AffiliateSummary } from "@/lib/api-client"
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
+import { EventPromotionsTab } from "@/components/event-promotions-tab"
 
 // Type definitions
 interface TicketType {
@@ -91,7 +92,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [currency, setCurrency] = useState("KES")
 
   // Existing state
-  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "transactions" | "attendees" | "affiliates">("overview")
+  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "transactions" | "attendees" | "affiliates" | "promotions">("overview")
 
   // Affiliates
   const [affiliates, setAffiliates] = useState<AffiliateSummary[]>([])
@@ -3126,10 +3127,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
               { id: "transactions", label: "Transactions" },
               { id: "attendees", label: "Attendees" },
               { id: "affiliates", label: "Affiliates" },
+              { id: "promotions", label: "Promotions" },
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees" | "affiliates")}
+                onClick={() => setActiveTab(tab.id as "overview" | "tickets" | "transactions" | "attendees" | "affiliates" | "promotions")}
                 className={cn(
                   "relative flex-1 min-w-max px-5 py-3.5 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors duration-200",
                   activeTab === tab.id
@@ -4026,6 +4028,28 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 )}
               </>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === "promotions" && (
+          <motion.div
+            key="promotions"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <EventPromotionsTab
+              eventId={Number(eventId)}
+              eventName={eventData.name}
+              currency={eventData.currency || currency}
+              eventEndDate={eventData.eventEndDate}
+              tickets={(ticketTypes || []).map((t: { id: number; name: string; price: number }) => ({
+                id: Number(t.id),
+                name: t.name,
+                price: Number(t.price) || 0,
+              }))}
+            />
           </motion.div>
         )}
 

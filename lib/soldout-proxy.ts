@@ -8,7 +8,7 @@ const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
  * Forwards a request to the SoldOut API with the service Basic credentials
  * attached server-side, so they never reach the browser.
  *
- * The affiliate endpoints report failures as `{ status: false, error: "..." }`
+ * The affiliate and promotion endpoints report failures as `{ status: false, error: "..." }`
  * with a 400, while the api-client surfaces `message` — so `error` is mirrored
  * onto `message` to keep client-side toasts useful.
  */
