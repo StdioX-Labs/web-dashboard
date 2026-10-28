@@ -99,8 +99,12 @@
   --color-brand-soft: hsl(var(--brand-soft));
 }
 
-* {
-  border-color: hsl(var(--border));
+/* Layered so `border-*` colour utilities can override it: in Tailwind v4,
+   unlayered CSS beats every layered rule, utilities included. */
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
 }
 
 body {

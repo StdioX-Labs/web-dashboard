@@ -3443,7 +3443,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     className={cn(
                       "rounded-2xl border border-border border-l-4 bg-card p-4 sm:p-6 transition-all duration-300",
                       statusConfig.border,
-                      (isClosed || isExpired) ? "opacity-75" : "hover:border-zinc-500/30 hover:border-l-current"
+                      (isClosed || isExpired) ? "opacity-75" : "hover:border-y-zinc-500/30 hover:border-r-zinc-500/30"
                     )}
                   >
                     {/* Header row */}
