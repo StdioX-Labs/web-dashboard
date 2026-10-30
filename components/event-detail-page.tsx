@@ -858,7 +858,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     // change. soldQuantity is not usable here: the platform never increments it.
     totalAvailable: Math.max(
       ticket.originalTicketCount ?? 0,
-      (ticket.ticketCount ?? ticket.quantityAvailable ?? 0) + (ticket.paidTicketsSold ?? 0)
+      Math.max(0, ticket.ticketCount ?? ticket.quantityAvailable ?? 0) + (ticket.paidTicketsSold ?? 0)
     ),
     sold: ticket.uniqueTicketCount ?? ticket.paidTicketsSold ?? 0,
     paidSold: ticket.paidSold ?? ticket.paidTicketsSold ?? 0,
@@ -868,7 +868,8 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     // sale instead of the single sale that was paid for.
     revenue: ticket.totalTicketSaleBalance ?? 0,
     status: ticket.isSoldOut ? 'sold_out' : ticket.isActive ? 'active' : 'inactive',
-    quantityAvailable: ticket.ticketCount ?? ticket.quantityAvailable ?? 0,
+    // Can be negative on tickets whose comps were once taken off stock.
+    quantityAvailable: Math.max(0, ticket.ticketCount ?? ticket.quantityAvailable ?? 0),
     ticketStatus: ticket.ticketStatus || (ticket.isActive ? 'ACTIVE' : 'INACTIVE'),
     isFree: ticket.isFree ?? ticket.ticketPrice === 0,
     ticketsToIssue: ticket.ticketsToIssue ?? 1,
@@ -1103,7 +1104,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           // Update with complete ticket details
           setEditTicketName(fullTicket.ticketName || ticket.name)
           setEditTicketPrice(fullTicket.ticketPrice?.toString() || ticket.price.toString())
-          setEditTicketQuantity(fullTicket.quantityAvailable?.toString() || ticket.totalAvailable.toString())
+          setEditTicketQuantity(fullTicket.quantityAvailable != null
+            ? Math.max(0, fullTicket.quantityAvailable).toString()
+            : ticket.totalAvailable.toString())
           setEditTicketLimitPerPerson(fullTicket.ticketLimitPerPerson?.toString() || "0")
           setEditTicketComplementary(fullTicket.numberOfComplementary?.toString() || "0")
           setEditTicketToIssue(fullTicket.ticketsToIssue?.toString() || "1")
@@ -5212,7 +5215,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                       value={editTicketQuantity}
                       onChange={(e) => setEditTicketQuantity(e.target.value)}
                       placeholder="e.g., 100"
-                      min="1"
+                      min="0"
                       className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                     />
                   </div>

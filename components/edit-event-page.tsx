@@ -133,7 +133,9 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
               id: ticket.id.toString(),
               name: ticket.ticketName || "",
               price: ticket.ticketPrice?.toString() || "0",
-              quantity: ticket.quantityAvailable?.toString() || "0",
+              // Stock went negative while complimentary issues were wrongly
+              // taken off it (fixed in the API in May 2026). Nothing is left to sell.
+              quantity: Math.max(0, ticket.quantityAvailable ?? 0).toString(),
               description: "", // API doesn't provide description
               limitPerPerson: ticket.ticketLimitPerPerson?.toString() || "0",
               complementary: ticket.numberOfComplementary?.toString() || "0",
@@ -755,7 +757,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                             updateTicketType(ticket.id, "quantity", e.target.value)
                           }
                           placeholder="e.g., 100"
-                          min="1"
+                          min={existingTicketIds.has(ticket.id) ? "0" : "1"}
                           className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                         />
                       </div>
