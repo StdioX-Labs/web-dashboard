@@ -22,6 +22,7 @@ import { DateTimePicker, DatePicker, TimePicker } from "@/components/ui/date-tim
 import { api, apiErrorField } from "@/lib/api-client"
 import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { EVENT_CATEGORIES } from "@/lib/event-categories"
+import { endAfterStartChange } from "@/lib/event-dates"
 import { TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 import { sessionManager } from "@/lib/session-manager"
 import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
@@ -577,7 +578,11 @@ export default function CreateEventPage() {
               </label>
               <DateTimePicker
                 selected={eventStartDate}
-                onChange={(date) => { setEventStartDate(date); clearEventError("eventStartDate"); clearEventError("eventEndDate") }}
+                onChange={(date) => {
+                  setEventEndDate(endAfterStartChange(eventStartDate, date, eventEndDate))
+                  setEventStartDate(date)
+                  clearEventError("eventStartDate"); clearEventError("eventEndDate")
+                }}
                 placeholderText="Select event start date and time"
                 className={cn(eventErrors.eventStartDate && errorInputClass)}
               />
@@ -593,9 +598,13 @@ export default function CreateEventPage() {
                 selected={eventEndDate}
                 onChange={(date) => { setEventEndDate(date); clearEventError("eventEndDate"); clearEventError("ticketSaleEndDate"); clearEventError("ticketSaleStartDate") }}
                 placeholderText="Select event end date and time"
+                minDate={eventStartDate}
                 className={cn(eventErrors.eventEndDate && errorInputClass)}
               />
               <FieldError message={eventErrors.eventEndDate} />
+              <p className="text-xs text-muted-foreground mt-2">
+                Moves with the start date. Set it later for multi-day events.
+              </p>
             </div>
 
             {/* Currency */}

@@ -20,6 +20,7 @@ import { DateTimePicker } from "@/components/ui/date-time-picker"
 import { api } from "@/lib/api-client"
 import { uploadToContabo } from "@/lib/contabo-uploader"
 import { EVENT_CATEGORIES, findCategoryIdByName } from "@/lib/event-categories"
+import { defaultEventEnd, endAfterStartChange } from "@/lib/event-dates"
 import { clampTicketsToIssue, TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 
 interface TicketType {
@@ -58,6 +59,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
   // Form state
   const [eventName, setEventName] = useState("")
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined)
+  const [eventEndDate, setEventEndDate] = useState<Date | undefined>(undefined)
   const [venue, setVenue] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
@@ -107,7 +109,12 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
           // Parse event date/time
           if (eventDetails.eventStartDate) {
-            setEventDate(new Date(eventDetails.eventStartDate))
+            const start = new Date(eventDetails.eventStartDate)
+            setEventDate(start)
+            // Earlier versions of this form saved the end as the start time.
+            // Such an end can't be saved again, so offer the default instead.
+            const end = eventDetails.eventEndDate ? new Date(eventDetails.eventEndDate) : undefined
+            setEventEndDate(end && end > start ? end : defaultEventEnd(start))
           }
 
           // Parse sale start date/time
@@ -245,8 +252,14 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
     setIsSubmitting(true)
 
     // Validation
-    if (!eventName || !eventDate || !venue || !description || !category) {
+    if (!eventName || !eventDate || !eventEndDate || !venue || !description || !category) {
       toast.error("Please fill in all required fields")
+      setIsSubmitting(false)
+      return
+    }
+
+    if (eventEndDate <= eventDate) {
+      toast.error("The event must end after it starts")
       setIsSubmitting(false)
       return
     }
@@ -254,6 +267,18 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
     // Validate sale period
     if (!saleStartDateTime || !saleEndDateTime) {
       toast.error("Please set the ticket sales period")
+      setIsSubmitting(false)
+      return
+    }
+
+    // The same ordering rules the API enforces, so the save isn't rejected.
+    const saleWindowError =
+      saleEndDateTime <= saleStartDateTime ? "Ticket sales must close after they open"
+      : saleStartDateTime >= eventEndDate ? "Ticket sales must open before the event ends"
+      : saleEndDateTime > eventEndDate ? "Ticket sales must close by the time the event ends"
+      : null
+    if (saleWindowError) {
+      toast.error(saleWindowError)
       setIsSubmitting(false)
       return
     }
@@ -291,7 +316,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
         eventDescription: description,
         eventLocation: venue,
         eventStartDate: eventDate.toISOString(),
-        eventEndDate: eventDate.toISOString(), // You may want to add separate end date
+        eventEndDate: eventEndDate.toISOString(),
         ticketSaleStartDate: saleStartDateTime.toISOString(),
         ticketSaleEndDate: saleEndDateTime.toISOString(),
       }
@@ -500,13 +525,31 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
               {/* Date and Time */}
               <div>
                 <label className="text-sm font-medium mb-2 block">
-                  Event Date & Time <span className="text-red-500">*</span>
+                  Event Start Date & Time <span className="text-red-500">*</span>
                 </label>
                 <DateTimePicker
                   selected={eventDate}
-                  onChange={(date) => setEventDate(date)}
-                  placeholderText="Select event date and time"
+                  onChange={(date) => {
+                    setEventEndDate(endAfterStartChange(eventDate, date, eventEndDate))
+                    setEventDate(date)
+                  }}
+                  placeholderText="Select event start date and time"
                 />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Event End Date & Time <span className="text-red-500">*</span>
+                </label>
+                <DateTimePicker
+                  selected={eventEndDate}
+                  onChange={(date) => setEventEndDate(date)}
+                  placeholderText="Select event end date and time"
+                  minDate={eventDate}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Moves with the start date. Set it later for multi-day events.
+                </p>
               </div>
 
               {/* Venue */}
@@ -558,7 +601,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                       selected={saleStartDateTime}
                       onChange={(date) => setSaleStartDateTime(date)}
                       placeholderText="Select start date & time"
-                      maxDate={eventDate}
+                      maxDate={eventEndDate}
                     />
                   </div>
                   <div>
@@ -568,7 +611,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                       onChange={(date) => setSaleEndDateTime(date)}
                       placeholderText="Select end date & time"
                       minDate={saleStartDateTime}
-                      maxDate={eventDate}
+                      maxDate={eventEndDate}
                     />
                   </div>
                 </div>
