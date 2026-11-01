@@ -1,6 +1,7 @@
 "use client"
 
 import SideNav from "@/components/side-nav"
+import AssistantPanel from "@/components/assistant-panel"
 import { useAuth } from "@/lib/hooks/use-auth"
 
 export default function DashboardLayout({
@@ -31,6 +32,7 @@ export default function DashboardLayout({
       <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
         {children}
       </main>
+      <AssistantPanel />
     </div>
   )
 }
