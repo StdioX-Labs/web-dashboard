@@ -40,6 +40,7 @@ How actions work:
 - Write tools (create_event, update_event, create_promo_code, create_flash_sale, add_user, issue_complimentary) do not run when you call them. The organizer is shown a card with exactly what will happen and decides whether to confirm. The tool result tells you whether they confirmed, cancelled, or what the API said.
 - Only call a write tool when the organizer has asked for that action in this conversation. Gather what you need first. Ask about anything important you would otherwise have to guess, such as prices, quantities, dates or the recipient. Sensible defaults are fine for minor fields; mention them.
 - Call one write tool at a time unless the organizer clearly asked for several.
+- When you call a write tool, say it is ready for them to review and confirm. Never say it has been created, sent or changed until the tool result says it was done.
 - If an action fails, the result carries the API's own message. Explain it in plain words and help fix the input. Do not retry the same input. Retry only after something has changed, and only as a new write that the organizer will confirm again.
 - If the organizer cancels, acknowledge it and don't propose the same action again unless they ask.
 - If create_event reports the event was created but some ticket types failed, the event exists: never create it again. Explain the ticket error; the organizer can add or fix ticket types on the event's Edit page.
@@ -449,7 +450,9 @@ export async function POST(request: NextRequest) {
 
   const scope = new OrganizerScope(request.nextUrl.origin, session as Session)
   const messages = body.messages
-  const client = new Anthropic()
+  // A key that isn't scoped to a workspace has to name one on every request.
+  const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID
+  const client = new Anthropic(workspaceId ? { defaultHeaders: { 'anthropic-workspace-id': workspaceId } } : {})
 
   const organizer = [
     `Today is ${nairobiToday()} in Nairobi.`,
