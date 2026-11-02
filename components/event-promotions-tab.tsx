@@ -645,7 +645,9 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       codeDiscountType === "PERCENTAGE"
         ? codePreviewTicket.price * (1 - Math.min(value, 100) / 100)
         : codePreviewTicket.price - value
-    return Math.max(0, Math.round(price * 100) / 100)
+    const rounded = Math.max(0, Math.round(price * 100) / 100)
+    // Checkout charges discounted shilling prices in whole shillings, rounded down (M-Pesa takes no cents).
+    return currency === "KES" ? Math.floor(rounded + 1e-9) : rounded
   })()
 
   // Checkout uses the cheapest live flash sale on a ticket, so overlapping
@@ -884,7 +886,7 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
 
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Drop a ticket&apos;s price for a limited time and quantity. A promo code at checkout takes the place of the flash price.
+              Drop a ticket&apos;s price for a limited time and quantity. A promo code doesn&apos;t add to the flash price: the buyer pays whichever is lower. Only paid tickets count toward the sale&apos;s quantity.
             </p>
             <button onClick={() => openFlashModal()} className={primaryButtonClass} disabled={paidTickets.length === 0}>
               <Plus className="w-4 h-4" />
@@ -984,8 +986,12 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
       <AnimatePresence>
         {showCodeModal && (
           <Modal
-            title={createdCodes ? "Codes ready" : "Create Promo Code"}
-            subtitle={createdCodes ? "Share these with your buyers." : "Buyers enter it at checkout for a discount."}
+            title={createdCodes ? (createdCodes.length === 1 ? "Code ready" : "Codes ready") : "Create Promo Code"}
+            subtitle={
+              createdCodes
+                ? createdCodes.length === 1 ? "Share it with your buyers." : "Share these with your buyers."
+                : "Buyers enter it at checkout for a discount."
+            }
             onClose={() => setShowCodeModal(false)}
             footer={
               !createdCodes && (
@@ -1233,8 +1239,9 @@ export function EventPromotionsTab({ eventId, eventName, currency, tickets, even
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-blue-800 dark:text-blue-300">
-                      Times are East Africa Time. A use is counted when a buyer applies the code at checkout,
-                      once for each ticket type in their order. Codes can be deactivated but not deleted.
+                      Times are East Africa Time. A use is counted when a buyer&apos;s payment goes through,
+                      once for each ticket type in their order; a cancelled or expired payment uses nothing.
+                      Codes can be deactivated but not deleted.
                     </p>
                   </div>
                 </div>
