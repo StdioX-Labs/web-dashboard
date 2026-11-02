@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { NextRequest, NextResponse } from 'next/server'
+import { after, NextRequest, NextResponse } from 'next/server'
+import { CONVERSATION_ID, logTurn } from '@/lib/assistant/chat-log'
 import { EVENT_CATEGORIES, findCategoryIdByName } from '@/lib/event-categories'
 import { getClientIp } from '@/lib/rate-limiter'
 import { GET as getCompanyEvents } from '@/app/api/admin/events/all/route'
@@ -566,7 +567,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  let body: { messages?: MessageParam[]; session?: Partial<Session> }
+  let body: { messages?: MessageParam[]; session?: Partial<Session>; conversationId?: string }
   try {
     body = await request.json()
   } catch {
@@ -591,6 +592,31 @@ export async function POST(request: NextRequest) {
   const suspicious = MANIPULATION.some((pattern) => pattern.test(latestOrganizerText(messages)))
   if (suspicious) {
     console.warn(`[assistant] possible manipulation attempt from company ${session.companyId}, user ${session.userId}`)
+  }
+
+  // Every reply also goes to the chat log, after the response is sent.
+  const started = Date.now()
+  const usage = { inputTokens: 0, outputTokens: 0, stopReason: null as string | null, toolsCalled: [] as string[] }
+  const userMessage = latestOrganizerText(messages).trim() || null
+  const conversationId = typeof body.conversationId === 'string' && CONVERSATION_ID.test(body.conversationId) ? body.conversationId : null
+  const reply = (payload: Record<string, unknown>, init?: ResponseInit, error: string | null = null) => {
+    if (conversationId) {
+      const transcript = [...messages]
+      const pendingActions = Array.isArray(payload.pending) ? (payload.pending as PendingAction[]).map((a) => a.name) : []
+      const latencyMs = Date.now() - started
+      after(() =>
+        logTurn({
+          conversationId,
+          userId: session.userId as number,
+          companyId: session.companyId as number,
+          companyName: session.companyName,
+          userEmail: session.email,
+          transcript,
+          turn: { userMessage, model: MODEL, ...usage, pendingActions, latencyMs, flagged: suspicious, error },
+        })
+      )
+    }
+    return NextResponse.json(payload, init)
   }
   // A key that isn't scoped to a workspace has to name one on every request.
   const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID
@@ -623,20 +649,24 @@ export async function POST(request: NextRequest) {
       })
 
       messages.push({ role: 'assistant', content: response.content })
+      usage.inputTokens += response.usage.input_tokens + (response.usage.cache_read_input_tokens ?? 0) + (response.usage.cache_creation_input_tokens ?? 0)
+      usage.outputTokens += response.usage.output_tokens
+      usage.stopReason = response.stop_reason
+      for (const block of response.content) if (block.type === 'tool_use') usage.toolsCalled.push(block.name)
 
       if (response.stop_reason === 'refusal') {
-        return NextResponse.json({
+        return reply({
           status: true,
           messages,
           notice: "The assistant couldn't help with that request. Try rephrasing it.",
         })
       }
       if (response.stop_reason === 'max_tokens') {
-        return NextResponse.json({ status: true, messages, notice: 'The reply was cut short. Ask the assistant to continue.' })
+        return reply({ status: true, messages, notice: 'The reply was cut short. Ask the assistant to continue.' })
       }
       if (response.stop_reason === 'pause_turn') continue
       if (response.stop_reason !== 'tool_use') {
-        return NextResponse.json({ status: true, messages })
+        return reply({ status: true, messages })
       }
 
       const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use')
@@ -664,13 +694,13 @@ export async function POST(request: NextRequest) {
       if (pending.length > 0) {
         // The browser adds a result for each write once the organizer decides,
         // then sends every result back together in one message.
-        return NextResponse.json({ status: true, messages, pending, heldResults: results })
+        return reply({ status: true, messages, pending, heldResults: results })
       }
 
       messages.push({ role: 'user', content: results })
     }
 
-    return NextResponse.json({
+    return reply({
       status: true,
       messages,
       notice: 'The assistant took too many steps on this one. Try asking for something more specific.',
@@ -681,6 +711,6 @@ export async function POST(request: NextRequest) {
     if (error instanceof Anthropic.RateLimitError) message = 'The assistant is busy right now. Please try again in a minute.'
     else if (error instanceof Anthropic.AuthenticationError) message = 'The assistant is not set up correctly (invalid API key).'
     else if (error instanceof Anthropic.BadRequestError) message = `The assistant couldn't process this conversation: ${error.message}`
-    return NextResponse.json({ status: false, message }, { status: 502 })
+    return reply({ status: false, message }, { status: 502 }, message)
   }
 }

@@ -121,6 +121,8 @@ export default function AssistantPanel() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const sendPosterOnPick = useRef(false)
+  // Groups this conversation's turns in the chat log; a new one after reset.
+  const conversationId = useRef<string>(crypto.randomUUID())
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -179,6 +181,7 @@ export default function AssistantPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages,
+          conversationId: conversationId.current,
           session: {
             userId: user.user_id,
             companyId: user.company_id,
@@ -301,6 +304,7 @@ export default function AssistantPanel() {
   function reset() {
     if (busy) return
     setTranscript([])
+    conversationId.current = crypto.randomUUID()
     setActions(() => ({}))
     setBatch(null)
     setError(null)
