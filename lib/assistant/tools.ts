@@ -459,6 +459,7 @@ export function validateWrite(name: WriteToolName, raw: Record<string, unknown>)
       }
       const tickets = raw.tickets
       if (!Array.isArray(tickets) || tickets.length === 0) problems.push('At least one ticket type is required')
+      else if (tickets.length > 20) problems.push('At most 20 ticket types at once')
       else tickets.forEach((t, i) => {
         const ticket = t as Record<string, unknown>
         if (typeof ticket.name !== 'string' || !ticket.name.trim()) problems.push(`tickets[${i}].name is required`)
@@ -518,6 +519,8 @@ export function validateWrite(name: WriteToolName, raw: Record<string, unknown>)
     case 'issue_complimentary': {
       num('eventId', { integer: true }); num('ticketId', { integer: true })
       num('quantity', { integer: true, min: 1 })
+      // A slip of the keyboard shouldn't give away a whole tier; larger batches go through the dashboard.
+      if (typeof raw.quantity === 'number' && raw.quantity > 50) problems.push('At most 50 complimentary tickets per request')
       phone('mobileNumber')
       email('email')
       break
