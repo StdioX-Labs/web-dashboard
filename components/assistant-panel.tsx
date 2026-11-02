@@ -53,11 +53,9 @@ const TASKS = [
   { icon: UserPlus, title: "Add a teammate", hint: "Staff or co-owner", prompt: "I want to add a teammate to my company." },
 ]
 
-// Shown above the input when the latest reply doesn't suggest its own next steps.
-const DEFAULT_SUGGESTIONS = ["How are sales going?", "Create a promo code", "Event report", "Issue comps"]
-
 // `:::suggest Show earlier events | Create a promo code` at the end of a reply
-// becomes tappable chips above the input rather than part of the bubble.
+// becomes tappable chips above the input rather than part of the bubble. A reply
+// without one shows no chips: generic ones mid-conversation are just noise.
 const SUGGEST_LINE = /^\s*:::suggest\s+(.*)$/
 
 function suggestionsFrom(transcript: MessageParam[]): string[] {
@@ -67,9 +65,8 @@ function suggestionsFrom(transcript: MessageParam[]): string[] {
     ? last.content
     : (last.content ?? []).map((b) => (b.type === "text" ? b.text : "")).join("\n")
   const line = text.split("\n").map((l) => l.match(SUGGEST_LINE)).find(Boolean)
-  if (line) return line[1].split("|").map((o) => o.trim()).filter(Boolean).slice(0, 4)
-  // A reply that asks the organizer to pick something already has its buttons.
-  return /^\s*:::choices\s/m.test(text) ? [] : DEFAULT_SUGGESTIONS
+  if (!line || /^\s*:::choices\s/m.test(text)) return []
+  return line[1].split("|").map((o) => o.trim()).filter(Boolean).slice(0, 3)
 }
 
 const ATTACH_POSTER = /^attach (a |the |your )?poster$/i
