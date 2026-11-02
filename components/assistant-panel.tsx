@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react"
 import type Anthropic from "@anthropic-ai/sdk"
 import { AnimatePresence, motion, MotionConfig } from "framer-motion"
 import {
-  Check, Loader2, Paperclip, RotateCcw, Send, Sparkles, X, AlertTriangle, Search,
+  Check, Loader2, Paperclip, RotateCcw, Send, History, ArrowLeft, MessageSquare, Sparkles, X, AlertTriangle, Search,
   CalendarPlus, BarChart3, TrendingUp, TicketPercent, Gift, UserPlus, ChevronDown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -99,6 +99,80 @@ function resultFor(state: ActionState): ToolResult {
   }
 }
 
+interface SavedChat {
+  conversationId: string
+  transcript: MessageParam[]
+  actions: Record<string, ActionState>
+  batch: { ids: string[]; held: ToolResult[] } | null
+}
+
+interface PastChat {
+  id: string
+  title: string
+  updatedAt: string
+  messageCount: number
+}
+
+// The open chat is kept per organizer in this browser, so a reload or closing
+// the panel picks up where they left off.
+const savedChatKey = (userId: number) => `assistant:chat:${userId}`
+
+function loadSavedChat(userId: number): SavedChat | null {
+  try {
+    const raw = localStorage.getItem(savedChatKey(userId))
+    const saved = raw ? (JSON.parse(raw) as SavedChat) : null
+    if (!saved?.conversationId || !Array.isArray(saved.transcript)) return null
+    // A write that was running when the page closed may or may not have gone through.
+    for (const state of Object.values(saved.actions ?? {})) {
+      if (state.status === "running") {
+        state.status = "failed"
+        state.outcome = { ok: false, message: "The page closed while this was running. Check the dashboard before trying again." }
+      }
+    }
+    return saved
+  } catch {
+    return null
+  }
+}
+
+function saveChat(userId: number, chat: SavedChat) {
+  try {
+    if (chat.transcript.length === 0) localStorage.removeItem(savedChatKey(userId))
+    else localStorage.setItem(savedChatKey(userId), JSON.stringify(chat))
+  } catch {
+    // Storage full or blocked: the chat still works, it just won't survive a reload.
+  }
+}
+
+/**
+ * A chat reopened from history may end with tool calls that never got a result
+ * (reads held back while a confirm card waited, or a card nobody decided on).
+ * The next message answers them first, so the conversation stays valid.
+ */
+function unansweredToolResults(transcript: MessageParam[]): ToolResult[] {
+  const last = transcript[transcript.length - 1]
+  if (!last || last.role !== "assistant" || typeof last.content === "string") return []
+  return (last.content ?? [])
+    .filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use")
+    .map((b) => ({
+      type: "tool_result" as const,
+      tool_use_id: b.id,
+      content: isWriteTool(b.name)
+        ? "The organizer left the chat before deciding on this action, so nothing was changed. Prepare it again if they still want it."
+        : "This result was lost when the chat was reopened. Look it up again if you still need it.",
+    }))
+}
+
+function timeAgo(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} h ago`
+  const days = Math.round(hours / 24)
+  return days < 7 ? `${days} d ago` : new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short" })
+}
+
 export default function AssistantPanel() {
   const [open, setOpen] = useState(false)
   const [transcript, setTranscript] = useState<MessageParam[]>([])
@@ -124,6 +198,30 @@ export default function AssistantPanel() {
   // Groups this conversation's turns in the chat log; a new one after reset.
   const conversationId = useRef<string>(crypto.randomUUID())
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [view, setView] = useState<"chat" | "history">("chat")
+  const [history, setHistory] = useState<PastChat[] | null>(null)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [restoring, setRestoring] = useState<string | null>(null)
+  const restored = useRef(false)
+
+  // Pick up the chat this organizer had open, once, after the first render.
+  useEffect(() => {
+    const user = sessionManager.getUser()
+    if (!user || restored.current) return
+    restored.current = true
+    const saved = loadSavedChat(user.user_id)
+    if (!saved) return
+    conversationId.current = saved.conversationId
+    setTranscript(saved.transcript)
+    setActions(() => saved.actions ?? {})
+    setBatch(saved.batch ?? null)
+  }, [])
+
+  useEffect(() => {
+    const user = sessionManager.getUser()
+    if (!user || !restored.current) return
+    saveChat(user.user_id, { conversationId: conversationId.current, transcript, actions, batch })
+  }, [transcript, actions, batch])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
@@ -231,7 +329,11 @@ export default function AssistantPanel() {
       content = `[I attached a poster image: ${attached.name}]${content ? `\n\n${content}` : ""}`
     }
     const previous = transcript
-    const next: MessageParam[] = [...transcript, { role: "user", content }]
+    const unanswered = unansweredToolResults(transcript)
+    const next: MessageParam[] = [
+      ...transcript,
+      { role: "user", content: unanswered.length > 0 ? [...unanswered, { type: "text", text: content }] : content },
+    ]
     setTranscript(next)
     setDraft("")
     const ok = await post(next)
@@ -307,6 +409,7 @@ export default function AssistantPanel() {
 
   function reset() {
     if (busy) return
+    setView("chat")
     setTranscript([])
     conversationId.current = crypto.randomUUID()
     setActions(() => ({}))
@@ -315,6 +418,53 @@ export default function AssistantPanel() {
     setNotice(null)
     setPoster(null)
     setAnnouncedPoster(null)
+  }
+
+  async function openHistory() {
+    const user = sessionManager.getUser()
+    if (!user) return
+    setView("history")
+    setHistoryError(null)
+    try {
+      const response = await fetch(`/api/assistant/conversations?companyId=${user.company_id}&userId=${user.user_id}`)
+      const data = await response.json()
+      if (!response.ok || !data.status) throw new Error(data.message || "Couldn't load your chats")
+      setHistory(data.conversations ?? [])
+    } catch (e) {
+      setHistoryError(e instanceof Error ? e.message : "Couldn't load your chats")
+    }
+  }
+
+  async function restoreChat(id: string) {
+    const user = sessionManager.getUser()
+    if (!user || busy) return
+    if (id === conversationId.current) {
+      setView("chat")
+      return
+    }
+    setRestoring(id)
+    setHistoryError(null)
+    try {
+      const response = await fetch(`/api/assistant/conversations?companyId=${user.company_id}&userId=${user.user_id}&id=${id}`)
+      const data = await response.json()
+      if (!response.ok || !data.status || !Array.isArray(data.conversation?.transcript)) {
+        throw new Error(data.message || "Couldn't open that chat")
+      }
+      // Turns sent from here carry on the same record in the chat log.
+      conversationId.current = id
+      setTranscript(data.conversation.transcript)
+      setActions(() => ({}))
+      setBatch(null)
+      setError(null)
+      setNotice(null)
+      setPoster(null)
+      setAnnouncedPoster(null)
+      setView("chat")
+    } catch (e) {
+      setHistoryError(e instanceof Error ? e.message : "Couldn't open that chat")
+    } finally {
+      setRestoring(null)
+    }
   }
 
   const user = sessionManager.getUser()
@@ -391,6 +541,17 @@ export default function AssistantPanel() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => (view === "history" ? setView("chat") : openHistory())}
+                    disabled={busy}
+                    className={cn(
+                      "p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40 transition-colors",
+                      view === "history" && "bg-secondary text-foreground"
+                    )}
+                    title="Past chats"
+                  >
+                    <History className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={reset}
                     disabled={busy || transcript.length === 0}
                     className="p-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40 transition-colors"
@@ -413,6 +574,70 @@ export default function AssistantPanel() {
                   </div>
                 )}
               </header>
+
+              <AnimatePresence>
+                {view === "history" && (
+                  <motion.div
+                    key="history"
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 24 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 34 }}
+                    className="absolute inset-x-0 bottom-0 top-[calc(3.5rem+env(safe-area-inset-top)+1px)] z-10 flex flex-col bg-background"
+                  >
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+                      <button onClick={() => setView("chat")} className="p-1 -ml-1 rounded-lg text-muted-foreground hover:text-foreground" title="Back to chat">
+                        <ArrowLeft className="w-4 h-4" />
+                      </button>
+                      <h3 className="text-sm font-semibold">Past chats</h3>
+                      <button
+                        onClick={reset}
+                        className="ml-auto rounded-full border border-border px-3 py-1 text-xs hover:border-brand/60 hover:bg-brand/10 transition-colors"
+                      >
+                        New chat
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1.5">
+                      {historyError && <p className="px-1 text-sm text-destructive">{historyError}</p>}
+                      {!history && !historyError && (
+                        <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Loading your chats…
+                        </div>
+                      )}
+                      {history && history.length === 0 && (
+                        <p className="px-1 py-2 text-sm text-muted-foreground">No past chats yet. They&apos;ll appear here after you talk to the assistant.</p>
+                      )}
+                      {history?.map((chat, k) => {
+                        const current = chat.id === conversationId.current
+                        return (
+                          <motion.button
+                            key={chat.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(k, 10) * 0.03 }}
+                            onClick={() => restoreChat(chat.id)}
+                            disabled={restoring !== null}
+                            className={cn(
+                              "flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-60",
+                              current ? "border-brand/60 bg-brand/10" : "border-border hover:border-brand/40 hover:bg-secondary"
+                            )}
+                          >
+                            {restoring === chat.id
+                              ? <Loader2 className="w-4 h-4 mt-0.5 shrink-0 animate-spin text-brand-soft" />
+                              : <MessageSquare className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm text-foreground">{chat.title || "Untitled chat"}</span>
+                              <span className="block text-[11px] text-muted-foreground">
+                                {timeAgo(chat.updatedAt)} · {chat.messageCount} messages{current ? " · open now" : ""}
+                              </span>
+                            </span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-3">
                 {transcript.length === 0 && (
