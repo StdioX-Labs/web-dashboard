@@ -2,6 +2,14 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { EVENT_CATEGORIES, findCategoryIdByName } from '@/lib/event-categories'
 import { getClientIp } from '@/lib/rate-limiter'
+import { GET as getCompanyEvents } from '@/app/api/admin/events/all/route'
+import { GET as getEvent } from '@/app/api/event/get/route'
+import { GET as getAttendees } from '@/app/api/gl/event/attendees/list/route'
+import { POST as getTransactions } from '@/app/api/transactions/detailed/route'
+import { GET as getPromoCodes } from '@/app/api/promocodes/list/route'
+import { GET as getFlashSales } from '@/app/api/flashsale/list/route'
+import { GET as getEventAffiliates } from '@/app/api/affiliates/admin/event/route'
+import { GET as getCompanyUsers } from '@/app/api/company/users/route'
 import {
   TOOL_DEFINITIONS,
   isReadTool,
@@ -14,7 +22,7 @@ import {
 
 // POST /api/assistant/chat
 // Runs the organizer assistant's tool loop. Reads run here, through the
-// dashboard's own API routes. A write is never run here: the loop stops and
+// dashboard's own API route handlers. A write is never run here: the loop stops and
 // hands it back to the browser, which shows a confirm card and runs it only
 // after the organizer clicks Confirm. The conversation lives in the browser
 // and is sent whole each turn.
@@ -84,17 +92,39 @@ function nairobiToday(): string {
 
 class RouteError extends Error {}
 
+// The read routes the tools wrap. They are called in-process rather than over
+// HTTP: behind the production proxy the server can't reach its own public
+// address ("fetch failed"), and an in-process call runs the same handler, with
+// the same validation and error messages, without the round trip.
+type RouteHandler = (request: NextRequest) => Promise<Response>
+const ROUTES: Record<string, { GET?: RouteHandler; POST?: RouteHandler }> = {
+  '/admin/events/all': { GET: getCompanyEvents },
+  '/event/get': { GET: getEvent },
+  '/gl/event/attendees/list': { GET: getAttendees },
+  '/transactions/detailed': { POST: getTransactions },
+  '/promocodes/list': { GET: getPromoCodes },
+  '/flashsale/list': { GET: getFlashSales },
+  '/affiliates/admin/event': { GET: getEventAffiliates },
+  '/company/users': { GET: getCompanyUsers },
+}
+
 async function callRoute<T = Record<string, unknown>>(
   origin: string,
   path: string,
   init: { method?: string; body?: unknown } = {}
 ): Promise<T> {
-  const response = await fetch(`${origin}/api${path}`, {
-    method: init.method ?? 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
-    cache: 'no-store',
-  })
+  const url = new URL(`/api${path}`, origin)
+  const method = (init.method ?? 'GET') as 'GET' | 'POST'
+  const handler = ROUTES[url.pathname.replace(/^\/api/, '')]?.[method]
+  if (!handler) throw new RouteError(`No ${method} route for ${url.pathname}`)
+
+  const response = await handler(
+    new NextRequest(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
+    })
+  )
   let data: Record<string, unknown> = {}
   try {
     data = await response.json()
