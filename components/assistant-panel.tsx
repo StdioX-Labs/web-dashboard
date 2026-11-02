@@ -53,6 +53,25 @@ const TASKS = [
   { icon: UserPlus, title: "Add a teammate", hint: "Staff or co-owner", prompt: "I want to add a teammate to my company." },
 ]
 
+// Shown above the input when the latest reply doesn't suggest its own next steps.
+const DEFAULT_SUGGESTIONS = ["How are sales going?", "Create a promo code", "Event report", "Issue comps"]
+
+// `:::suggest Show earlier events | Create a promo code` at the end of a reply
+// becomes tappable chips above the input rather than part of the bubble.
+const SUGGEST_LINE = /^\s*:::suggest\s+(.*)$/
+
+function suggestionsFrom(transcript: MessageParam[]): string[] {
+  const last = transcript[transcript.length - 1]
+  if (!last || last.role !== "assistant") return []
+  const text = typeof last.content === "string"
+    ? last.content
+    : (last.content ?? []).map((b) => (b.type === "text" ? b.text : "")).join("\n")
+  const line = text.split("\n").map((l) => l.match(SUGGEST_LINE)).find(Boolean)
+  if (line) return line[1].split("|").map((o) => o.trim()).filter(Boolean).slice(0, 4)
+  // A reply that asks the organizer to pick something already has its buttons.
+  return /^\s*:::choices\s/m.test(text) ? [] : DEFAULT_SUGGESTIONS
+}
+
 // Kept in step with the server, which rejects longer messages.
 const MAX_MESSAGE_CHARS = 4000
 
@@ -278,6 +297,7 @@ export default function AssistantPanel() {
   const user = sessionManager.getUser()
   const currency = user?.currency || "KES"
   const greetingName = user?.company_name || "there"
+  const suggestions = busy || waitingOnOrganizer ? [] : suggestionsFrom(transcript)
 
   return (
     <MotionConfig reducedMotion="user">
@@ -460,6 +480,31 @@ export default function AssistantPanel() {
                   )}
                 </AnimatePresence>
                 {waitingOnOrganizer && <p className="text-xs text-muted-foreground">Confirm or cancel the action above to continue.</p>}
+                <AnimatePresence mode="popLayout">
+                  {suggestions.length > 0 && (
+                    <motion.div
+                      key={suggestions.join("|")}
+                      className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      initial="hidden"
+                      animate="show"
+                      exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
+                      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+                    >
+                      {suggestions.map((sug) => (
+                        <motion.button
+                          key={sug}
+                          type="button"
+                          variants={{ hidden: { opacity: 0, y: 8, scale: 0.95 }, show: { opacity: 1, y: 0, scale: 1 } }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => send(sug)}
+                          className="shrink-0 whitespace-nowrap rounded-full border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground transition-colors hover:border-brand/60 hover:bg-brand/10"
+                        >
+                          {sug}
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
@@ -838,7 +883,7 @@ function Markdown({ text, onChoose }: { text: string; onChoose?: (choice: string
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
-    if (!line.trim() || /^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+    if (!line.trim() || /^\s*(-{3,}|\*{3,})\s*$/.test(line) || SUGGEST_LINE.test(line)) {
       i++
       continue
     }
@@ -890,7 +935,7 @@ function Markdown({ text, onChoose }: { text: string; onChoose?: (choice: string
       continue
     }
     const paragraph: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^\s*([-*•]|\d+\.)\s+|^\s*\||^#{1,6}\s|^\s*:::(stats|choices)/.test(lines[i])) {
+    while (i < lines.length && lines[i].trim() && !/^\s*([-*•]|\d+\.)\s+|^\s*\||^#{1,6}\s|^\s*:::(stats|choices|suggest)/.test(lines[i])) {
       paragraph.push(lines[i])
       i++
     }
