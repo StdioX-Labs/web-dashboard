@@ -331,6 +331,23 @@ export interface ActionContext {
   currency?: string
   /** update_event: the values being replaced. */
   current?: Record<string, string | undefined>
+  /** issue_complimentary: the event's ticket types, so the card can switch between them. */
+  ticketOptions?: CompTicketOption[]
+}
+
+export interface CompTicketOption {
+  ticketId: number
+  name: string
+  price: number
+  /** Complimentary tickets still set aside on this ticket type. */
+  compsLeft: number
+}
+
+/** How many more comps a ticket type needs set aside before this request can be issued. */
+export function compShortfall(action: PendingAction): number {
+  const input = action.input as unknown as IssueComplimentaryInput
+  const option = action.context.ticketOptions?.find((t) => t.ticketId === input.ticketId)
+  return option ? Math.max(0, input.quantity - option.compsLeft) : 0
 }
 
 /** A write the model asked for, waiting on the organizer's click. */
@@ -641,15 +658,20 @@ export function summarizeAction(action: PendingAction, companyCurrency = 'KES'):
     }
     case 'issue_complimentary': {
       const i = action.input as unknown as IssueComplimentaryInput
+      const option = context.ticketOptions?.find((t) => t.ticketId === i.ticketId)
+      const shortfall = compShortfall(action)
       return {
         title: 'Issue complimentary tickets',
         rows: [
           ['Event', eventLabel(i.eventId)],
-          ['Ticket', ticketLabel(i.ticketId)],
+          ['Ticket', option ? `${option.name} (#${i.ticketId})` : ticketLabel(i.ticketId)],
           ['Quantity', String(i.quantity)],
           ['Send to phone', formatPhoneNumber(i.mobileNumber)],
           ['Send to email', i.email.trim().toLowerCase()],
         ],
+        lines: shortfall > 0 && option
+          ? [`${option.name} has ${option.compsLeft} complimentary ${option.compsLeft === 1 ? 'ticket' : 'tickets'} set aside, so ${shortfall} more will be set aside first.`]
+          : undefined,
       }
     }
   }

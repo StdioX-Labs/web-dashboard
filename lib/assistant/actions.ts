@@ -6,6 +6,7 @@ import {
   nairobiToIso,
   slugify,
   toLocalDateTime,
+  type ActionContext,
   type AddUserInput,
   type CreateEventInput,
   type CreateFlashSaleInput,
@@ -193,7 +194,20 @@ async function addUser(input: AddUserInput, user: UserSession): Promise<WriteOut
   }
 }
 
-async function issueComplimentary(input: IssueComplimentaryInput, user: UserSession): Promise<WriteOutcome> {
+async function issueComplimentary(input: IssueComplimentaryInput, user: UserSession, context: ActionContext): Promise<WriteOutcome> {
+  // The API only issues comps a ticket type has set aside, so top it up first.
+  const option = context.ticketOptions?.find((t) => t.ticketId === input.ticketId)
+  const shortfall = option ? Math.max(0, input.quantity - option.compsLeft) : 0
+  const details = { ticket: option?.name, ticketId: input.ticketId, quantity: input.quantity, compsSetAside: shortfall }
+  if (option && shortfall > 0) {
+    try {
+      const response = await api.ticket.update(input.ticketId, { numberOfComplementary: option.compsLeft + shortfall })
+      if (!response.status) throw new Error(response.message || 'Failed to update the ticket type')
+    } catch (error) {
+      const failed = failure(error, 'Failed to update the ticket type')
+      return { ...failed, message: `Couldn't set aside comps on ${option.name}: ${failed.message}. Nothing was issued.`, details }
+    }
+  }
   try {
     const response = await api.company.issueComplementary({
       userId: user.user_id,
@@ -202,9 +216,17 @@ async function issueComplimentary(input: IssueComplimentaryInput, user: UserSess
       tickets: [{ ticketId: input.ticketId, quantity: input.quantity }],
     })
     if (!response.status) throw new Error(response.message || 'Failed to issue complimentary tickets')
-    return { ok: true, message: response.message || 'Complimentary tickets issued.' }
+    const name = option?.name ?? 'complimentary'
+    return {
+      ok: true,
+      message: `Issued ${input.quantity} ${name} ${input.quantity === 1 ? 'ticket' : 'tickets'}.${shortfall > 0 ? ` ${shortfall} more were set aside on ${name} first.` : ''}`,
+      details,
+    }
   } catch (error) {
-    return failure(error, 'Failed to issue complimentary tickets')
+    const failed = failure(error, 'Failed to issue complimentary tickets')
+    return shortfall > 0
+      ? { ...failed, message: `${failed.message}. ${shortfall} comps were set aside on ${option?.name} but no tickets were issued.`, details }
+      : { ...failed, details }
   }
 }
 
@@ -216,6 +238,6 @@ export function runWrite(action: PendingAction, user: UserSession, poster: File 
     case 'create_promo_code': return createPromoCode(input, user)
     case 'create_flash_sale': return createFlashSale(input, user)
     case 'add_user': return addUser(input, user)
-    case 'issue_complimentary': return issueComplimentary(input, user)
+    case 'issue_complimentary': return issueComplimentary(input, user, action.context)
   }
 }

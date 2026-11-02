@@ -43,6 +43,17 @@ export async function POST(request: NextRequest) {
 
     if (!contentType || !contentType.includes('application/json')) {
       console.error('Non-JSON response:', text)
+      // The API answers an empty 200 when it refuses (it swallows its own error).
+      if (response.ok && !text.trim()) {
+        return NextResponse.json(
+          {
+            status: false,
+            message: "SoldOut didn't issue the tickets. Usually the ticket type doesn't have enough complimentary tickets set aside, or the event isn't accepting sales.",
+            statusCode: response.status,
+          },
+          { status: 502 }
+        )
+      }
       return NextResponse.json(
         {
           status: false,

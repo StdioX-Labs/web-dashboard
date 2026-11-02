@@ -52,6 +52,7 @@ How actions work:
 - When you call a write tool, say it is ready for them to review and confirm. Never say it has been created, sent or changed until the tool result says it was done.
 - If an action fails, the result carries the API's own message. Explain it in plain words and help fix the input. Do not retry the same input. Retry only after something has changed, and only as a new write that the organizer will confirm again.
 - If the organizer cancels, acknowledge it and don't propose the same action again unless they ask.
+- issue_complimentary: a ticket type can only issue comps it has set aside. You don't need to check or fix that: the card shows every ticket type with its comps set aside, lets the organizer change the ticket type and quantity, and tops up the allocation by exactly what's missing before issuing. Never tell them to edit the ticket type first. The result says which ticket type and how many were actually issued, which may differ from what you proposed.
 - If create_event reports the event was created but some ticket types failed, the event exists: never create it again. Explain the ticket error; the organizer can add or fix ticket types on the event's Edit page.
 
 Dates and times:
@@ -376,6 +377,7 @@ async function runRead(scope: OrganizerScope, name: ReadToolName, input: Record<
           stock: t.quantityAvailable,
           ticketsPerSale: t.ticketsToIssue,
           limitPerPerson: t.ticketLimitPerPerson,
+          compsSetAside: t.numberOfComplementary,
           salesOpen: t.ticketSaleStartDate,
           salesClose: t.ticketSaleEndDate,
           status: t.ticketStatus,
@@ -525,6 +527,17 @@ async function prepareWrite(scope: OrganizerScope, block: Anthropic.Beta.BetaToo
     Object.assign(context, { eventName: event.eventName, ticketName: ticket.ticketName, ticketPrice: ticket.ticketPrice })
     if (name === 'create_flash_sale' && typeof input.salePrice === 'number' && input.salePrice >= ticket.ticketPrice) {
       throw new RouteError(`Not sent to the organizer yet. The sale price must be below the normal price of ${ticket.ticketPrice}.`)
+    }
+    if (name === 'issue_complimentary') {
+      // The card lets the organizer switch ticket type, and needs each type's
+      // comps still set aside to top it up before issuing.
+      const { event: full } = await scope.call<{ event: { tickets?: Array<Record<string, unknown>> } }>(`/event/get?eventId=${event.eventId}`)
+      context.ticketOptions = (full.tickets ?? []).map((t) => ({
+        ticketId: Number(t.id),
+        name: String(t.ticketName ?? `#${t.id}`),
+        price: Number(t.ticketPrice ?? 0),
+        compsLeft: Math.max(0, Number(t.numberOfComplementary ?? 0)),
+      }))
     }
   } else if (name === 'update_event' || (name === 'create_promo_code' && input.scope === 'EVENT')) {
     const event = await scope.ownEvent(input.eventId)

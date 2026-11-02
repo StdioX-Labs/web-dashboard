@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { sessionManager } from "@/lib/session-manager"
 import { validateImageFile } from "@/lib/contabo-uploader"
 import { runWrite, type WriteOutcome } from "@/lib/assistant/actions"
-import { isWriteTool, summarizeAction, type PendingAction } from "@/lib/assistant/tools"
+import { compShortfall, isWriteTool, summarizeAction, type PendingAction } from "@/lib/assistant/tools"
 
 type MessageParam = Anthropic.Beta.BetaMessageParam
 type ToolResult = Anthropic.Beta.BetaToolResultBlockParam
@@ -243,9 +243,13 @@ export default function AssistantPanel() {
     }
   }
 
-  async function decide(id: string, confirm: boolean) {
-    const state = actionsRef.current[id]
+  async function decide(id: string, confirm: boolean, edits?: Record<string, unknown>) {
+    let state = actionsRef.current[id]
     if (!state || state.status !== "waiting" || !batch) return
+    if (confirm && edits) {
+      // Changes made on the card are what runs, and what the assistant hears back.
+      state = { ...state, action: { ...state.action, input: { ...state.action.input, ...edits } } }
+    }
     const user = sessionManager.getUser()
     if (confirm && !user) {
       setError("Your session has expired. Please sign in again.")
@@ -600,7 +604,7 @@ function Transcript({
   currency: string
   poster: string | null
   hasPoster: boolean
-  onDecide: (id: string, confirm: boolean) => void
+  onDecide: (id: string, confirm: boolean, edits?: Record<string, unknown>) => void
   onChoose: (choice: string) => void
   disabled: boolean
   canChoose: boolean
@@ -682,12 +686,26 @@ function ActionCard({
   currency: string
   poster: string | null
   hasPoster: boolean
-  onDecide: (id: string, confirm: boolean) => void
+  onDecide: (id: string, confirm: boolean, edits?: Record<string, unknown>) => void
   disabled: boolean
 }) {
-  const summary = summarizeAction(state.action, currency)
-  const missingPoster = summary.needsPoster && !hasPoster
   const id = state.action.toolUseId
+  // Comps can be adjusted on the card: another ticket type, another quantity.
+  const options = state.action.name === "issue_complimentary" ? state.action.context.ticketOptions ?? [] : []
+  const editable = options.length > 0 && state.status === "waiting"
+  const [ticketId, setTicketId] = useState(Number(state.action.input.ticketId))
+  const [quantity, setQuantity] = useState(String(state.action.input.quantity ?? 1))
+  const quantityNumber = Number(quantity)
+  const quantityValid = Number.isInteger(quantityNumber) && quantityNumber >= 1 && quantityNumber <= 50
+  const shown: PendingAction = editable && quantityValid
+    ? { ...state.action, input: { ...state.action.input, ticketId, quantity: quantityNumber } }
+    : state.action
+  const summary = summarizeAction(shown, currency)
+  const shortfall = editable && quantityValid ? compShortfall(shown) : 0
+  const missingPoster = summary.needsPoster && !hasPoster
+  const rows = editable ? summary.rows.filter(([label]) => label !== "Ticket" && label !== "Quantity") : summary.rows
+  // The comp top-up note describes what confirming will do; after that the outcome says what happened.
+  const lines = state.action.name === "issue_complimentary" && state.status !== "waiting" ? [] : summary.lines ?? []
 
   return (
     <div
@@ -703,7 +721,7 @@ function ActionCard({
       </div>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-        {summary.rows.map(([label, value]) => (
+        {rows.map(([label, value]) => (
           <React.Fragment key={label}>
             <dt className="text-muted-foreground">{label}</dt>
             <dd className="text-foreground break-words whitespace-pre-wrap line-clamp-4">{value}</dd>
@@ -711,9 +729,44 @@ function ActionCard({
         ))}
       </dl>
 
-      {summary.lines && summary.lines.length > 0 && (
+      {editable && (
+        <div className="grid grid-cols-[1fr_5.5rem] gap-2">
+          <label className="space-y-1">
+            <span className="block text-[11px] text-muted-foreground">Ticket type</span>
+            <select
+              value={ticketId}
+              onChange={(e) => setTicketId(Number(e.target.value))}
+              className="w-full h-10 rounded-lg border border-border bg-background px-2 text-base sm:text-sm outline-none focus:border-brand"
+            >
+              {options.map((o) => (
+                <option key={o.ticketId} value={o.ticketId}>
+                  {o.name} · {o.compsLeft} set aside
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="space-y-1">
+            <span className="block text-[11px] text-muted-foreground">Comps</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={50}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className={cn(
+                "w-full h-10 rounded-lg border bg-background px-2 text-base sm:text-sm tabular-nums outline-none focus:border-brand",
+                quantityValid ? "border-border" : "border-destructive"
+              )}
+            />
+          </label>
+          {!quantityValid && <p className="col-span-2 text-[11px] text-destructive">Enter a number from 1 to 50.</p>}
+        </div>
+      )}
+
+      {lines.length > 0 && (
         <ul className="text-xs text-foreground space-y-0.5 border-t border-border pt-2">
-          {summary.lines.map((line) => (
+          {lines.map((line) => (
             <li key={line}>• {line}</li>
           ))}
         </ul>
@@ -747,11 +800,11 @@ function ActionCard({
             Cancel
           </button>
           <button
-            onClick={() => onDecide(id, true)}
-            disabled={disabled || missingPoster}
+            onClick={() => onDecide(id, true, editable ? { ticketId, quantity: quantityNumber } : undefined)}
+            disabled={disabled || missingPoster || (editable && !quantityValid)}
             className="flex-1 h-9 rounded-xl bg-brand text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50"
           >
-            Confirm
+            {shortfall > 0 ? `Set aside ${shortfall} & issue` : "Confirm"}
           </button>
         </div>
       )}
