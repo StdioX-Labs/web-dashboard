@@ -704,6 +704,47 @@ export const api = {
         method: 'GET',
       }, true)
     },
+    /** Signup's company and owner in one request: both are created, or neither. */
+    signup: async (data: {
+      company: {
+        companyName: string
+        physicalAddress: string
+        postalAddress: string
+        phoneNumber: string
+        emailAddress: string
+        currency: string
+        profileType: string
+        billingAccountType?: string
+        bio?: string
+        profilePhoto?: string
+        legalDocuments?: string
+      }
+      user: {
+        fullName: string
+        idNumber: string
+        mobileNumber: string
+        password: string
+        emailAddress: string
+        isExternal: boolean
+      }
+    }) => {
+      return apiRequest<{
+        message: string
+        status: boolean
+        company?: { id: number; companyName: string }
+        user?: {
+          user_id: number
+          email: string
+          phoneNumber: string
+          company_id: number
+          company_name: string
+          role: string
+        }
+      }>('/company/signup', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+    },
     create: async (companyData: {
       companyName: string
       physicalAddress: string
@@ -796,6 +837,15 @@ export const api = {
       }>(`/event/get?eventId=${eventId}`, {
         method: 'GET',
       }, true) // Use proxy route
+    },
+    /** Whether no event uses this URL yet. The API checks again on save. */
+    isSlugFree: async (slug: string) => {
+      const response = await apiRequest<{ isValid: boolean; status: boolean; message: string }>(
+        `/event/slug/validate?slug=${encodeURIComponent(slug)}`,
+        { method: 'GET' },
+        true
+      )
+      return response.isValid
     },
     update: async (eventId: number, eventData: Record<string, unknown>) => {
       return apiRequest<{

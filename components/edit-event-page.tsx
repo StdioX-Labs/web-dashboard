@@ -17,10 +17,11 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DateTimePicker } from "@/components/ui/date-time-picker"
-import { api } from "@/lib/api-client"
+import { api, apiErrorField } from "@/lib/api-client"
+import { FieldError, errorInputClass } from "@/components/form-errors"
 import { uploadToContabo } from "@/lib/contabo-uploader"
 import { EVENT_CATEGORIES, findCategoryIdByName } from "@/lib/event-categories"
-import { defaultEventEnd, endAfterStartChange } from "@/lib/event-dates"
+import { defaultEventEnd, endAfterStartChange, startDateError } from "@/lib/event-dates"
 import { clampTicketsToIssue, TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 
 interface TicketType {
@@ -58,6 +59,12 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
   // Form state
   const [eventName, setEventName] = useState("")
+  const [slug, setSlug] = useState("")
+  const [slugError, setSlugError] = useState("")
+  // As saved, so only real changes are checked: an event that already started
+  // keeps its start, and an unchanged URL isn't compared with itself.
+  const [savedSlug, setSavedSlug] = useState("")
+  const [savedStart, setSavedStart] = useState<Date | undefined>(undefined)
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined)
   const [eventEndDate, setEventEndDate] = useState<Date | undefined>(undefined)
   const [venue, setVenue] = useState("")
@@ -93,6 +100,8 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
           // Set event basic info
           setEventName(eventDetails.eventName || "")
+          setSlug(eventDetails.slug || "")
+          setSavedSlug(eventDetails.slug || "")
           setVenue(eventDetails.eventLocation || "")
           setDescription(eventDetails.eventDescription || "")
           // The form posts a category id. Prefer the id the API gives us and
@@ -111,6 +120,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
           if (eventDetails.eventStartDate) {
             const start = new Date(eventDetails.eventStartDate)
             setEventDate(start)
+            setSavedStart(start)
             // Earlier versions of this form saved the end as the start time.
             // Such an end can't be saved again, so offer the default instead.
             const end = eventDetails.eventEndDate ? new Date(eventDetails.eventEndDate) : undefined
@@ -260,6 +270,21 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
+    const startError = startDateError(eventDate, savedStart)
+    if (startError) {
+      toast.error(startError)
+      setIsSubmitting(false)
+      return
+    }
+
+    const slugChanged = slug !== savedSlug
+    if (slugChanged && !/^[a-z0-9-]+$/.test(slug)) {
+      setSlugError(slug ? "Use only lowercase letters, numbers and hyphens" : "Enter a URL for your event")
+      toast.error("Please fix the event URL")
+      setIsSubmitting(false)
+      return
+    }
+
     if (eventEndDate <= eventDate) {
       toast.error("The event must end after it starts")
       setIsSubmitting(false)
@@ -326,6 +351,7 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
       // Both were collected and validated by the form but never sent, so
       // changing either silently did nothing.
       if (eventPosterUrl) eventUpdateData.eventPosterUrl = eventPosterUrl
+      if (slugChanged) eventUpdateData.slug = slug
       if (category) eventUpdateData.eventCategoryId = parseInt(category)
 
       const eventResponse = await api.event.update(eventId, eventUpdateData)
@@ -421,7 +447,9 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
 
     } catch (error) {
       console.error('Error updating event/tickets:', error)
-      toast.error(error instanceof Error ? error.message : "Failed to update event")
+      const message = error instanceof Error ? error.message : "Failed to update event"
+      if (apiErrorField(error) === "slug") setSlugError(message)
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -502,6 +530,24 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                   className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
                   required
                 />
+              </div>
+
+              {/* Event URL */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Event URL Slug <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-")); setSlugError("") }}
+                  className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all font-mono", slugError && errorInputClass)}
+                />
+                <FieldError message={slugError} />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  https://soldoutafrica.com/{slug || "your-event-slug"}
+                  {slug !== savedSlug && savedSlug && " (links to the old URL will stop working)"}
+                </p>
               </div>
 
               {/* Category */}

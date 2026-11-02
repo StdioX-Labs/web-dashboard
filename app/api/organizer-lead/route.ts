@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { checkAttempt, getClientIp, tooManyAttemptsResponse, type BackoffConfig } from "@/lib/rate-limiter"
-import { formatPhoneNumber } from "@/lib/phone"
+import { formatPhoneNumber, isValidPhoneNumber } from "@/lib/phone"
 import { isQualified } from "@/lib/lead-qualification"
 import { META_PIXEL_ID } from "@/lib/meta-pixel"
 
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     const mobileNumber = formatPhoneNumber(rawPhone)
-    if (mobileNumber.length < 12) {
+    if (!isValidPhoneNumber(rawPhone)) {
       return NextResponse.json(
         { status: false, message: "Please enter a valid mobile number" },
         { status: 400 },

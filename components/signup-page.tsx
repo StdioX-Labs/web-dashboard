@@ -10,7 +10,7 @@ import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/comp
 import { cn } from "@/lib/utils"
 import { sessionManager } from "@/lib/session-manager"
 import { normalizeEmail } from "@/lib/email"
-import { formatPhoneNumber } from "@/lib/phone"
+import { formatPhoneNumber, isValidPhoneNumber, PHONE_NUMBER_HINT } from "@/lib/phone"
 import { GADS_SIGNUP_CONVERSION } from "@/lib/google-ads"
 
 declare global {
@@ -57,11 +57,6 @@ export default function SignupPage() {
   // Reasons the API gave, keyed by field. Company fields are prefixed so the
   // company's email can't be confused with the owner's.
   const [serverErrors, setServerErrors] = useState<FieldErrors>({})
-  // Set once the company exists. If creating the owner then fails, trying
-  // again must reuse it: a second create is refused as a duplicate, which used
-  // to strand people on a company name they had just registered themselves.
-  const [createdCompanyId, setCreatedCompanyId] = useState<number | null>(null)
-
   const clearServerError = (key: string) =>
     setServerErrors((prev) => {
       if (!prev[key] && !prev.form) return prev
@@ -119,9 +114,8 @@ export default function SignupPage() {
       return false
     }
 
-    const formattedPhone = formatPhoneNumber(mobileNumber)
-    if (formattedPhone.length < 12) {
-      toast.error("Please enter a valid mobile number")
+    if (!isValidPhoneNumber(mobileNumber)) {
+      toast.error("Please enter a valid mobile number", { description: PHONE_NUMBER_HINT })
       return false
     }
 
@@ -169,9 +163,8 @@ export default function SignupPage() {
       return false
     }
 
-    const formattedPhone = formatPhoneNumber(companyPhone)
-    if (formattedPhone.length < 12) {
-      toast.error("Please enter a valid company phone number")
+    if (!isValidPhoneNumber(companyPhone)) {
+      toast.error("Please enter a valid company phone number", { description: PHONE_NUMBER_HINT })
       return false
     }
 
@@ -420,11 +413,13 @@ export default function SignupPage() {
     setIsSubmitting(true)
     setServerErrors({})
 
-    // Step 1: Create the company, unless a previous attempt already did
-    let companyId = createdCompanyId
-    if (!companyId) {
-      try {
-        const companyData = {
+    // The company and its owner are created in one request, so a failure
+    // leaves neither behind. Creating them one after the other used to strand
+    // a company with nobody able to sign in to it whenever the second step
+    // failed, and its name was then "already registered" to every retry.
+    try {
+      const response = await api.company.signup({
+        company: {
           companyName: companyName.trim(),
           physicalAddress: physicalAddress || "PENDING",
           postalAddress: postalAddress || "PENDING",
@@ -435,56 +430,22 @@ export default function SignupPage() {
           billingAccountType: "MPESA",
           bio: "Company description here",
           profilePhoto: "https://example.com/photo.jpg",
-          legalDocuments: "https://example.com/docs.pdf"
-        }
+          legalDocuments: "https://example.com/docs.pdf",
+        },
+        user: {
+          fullName: fullName.trim(),
+          // The API requires one; the field is optional here, so stand in the
+          // same placeholder the Users page uses until it is given for payouts.
+          idNumber: idNumber.trim() || "00000000",
+          mobileNumber: formatPhoneNumber(mobileNumber),
+          password,
+          emailAddress: normalizeEmail(emailAddress),
+          isExternal: false,
+        },
+      })
 
-        console.log("Step 1: Creating company with data:", companyData)
-        const companyResponse = await api.company.create(companyData)
-        console.log("Company creation response:", companyResponse)
-
-        if (!companyResponse.status || !companyResponse.company) {
-          // The route keeps upstream's 200 for a refused create, so the
-          // reason arrives here rather than as a thrown ApiError.
-          const field = (companyResponse as { field?: string }).field
-          throw new ApiError(companyResponse.message || "We couldn't create your company", 400, { field })
-        }
-
-        companyId = companyResponse.company.id
-        setCreatedCompanyId(companyId)
-      } catch (error) {
-        console.error("Company creation error:", error)
-        const message = error instanceof Error ? error.message : "We couldn't create your company. Please try again."
-        const field = apiErrorField(error)
-        setServerErrors(field && COMPANY_FIELDS.includes(field) ? { [`company.${field}`]: message } : { form: message })
-        toast.error("Couldn't create your company", { description: message })
-        setIsSubmitting(false)
-        return
-      }
-    }
-
-    // Step 2: Create the owner with the company ID from step 1
-    try {
-      const userData = {
-        fullName: fullName.trim(),
-        // The API requires one; the field is optional here, so stand in the
-        // same placeholder the Users page uses until it is given for payouts.
-        idNumber: idNumber.trim() || "00000000",
-        mobileNumber: formatPhoneNumber(mobileNumber),
-        password,
-        emailAddress: normalizeEmail(emailAddress),
-        isExternal: false,
-        company: { id: companyId },
-        roles: "COMPANY_OWNER",
-      }
-
-      console.log("Step 2: Creating user with data:", { ...userData, password: "[redacted]" })
-
-      const userResponse = await api.user.create(userData)
-
-      console.log("User creation response:", userResponse)
-
-      if (!userResponse.status || !userResponse.user) {
-        throw new Error(userResponse.message || "We couldn't create your account")
+      if (!response.status || !response.user) {
+        throw new Error(response.message || "We couldn't create your account")
       }
 
       toast.success("Account created successfully!")
@@ -513,9 +474,11 @@ export default function SignupPage() {
       const field = apiErrorField(error)
       if (field && USER_FIELDS.includes(field)) {
         // About the owner's details: take them back to that step, with the
-        // reason beside the input. Their company is kept for the retry.
+        // reason beside the input. Nothing was created, so the retry is clean.
         setServerErrors({ [field]: message })
         setStep("user")
+      } else if (field?.startsWith("company.") && COMPANY_FIELDS.includes(field.slice("company.".length))) {
+        setServerErrors({ [field]: message })
       } else {
         setServerErrors({ form: message })
       }

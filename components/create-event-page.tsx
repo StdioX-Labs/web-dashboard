@@ -22,7 +22,7 @@ import { DateTimePicker, DatePicker, TimePicker } from "@/components/ui/date-tim
 import { api, apiErrorField } from "@/lib/api-client"
 import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { EVENT_CATEGORIES } from "@/lib/event-categories"
-import { endAfterStartChange } from "@/lib/event-dates"
+import { endAfterStartChange, startDateError } from "@/lib/event-dates"
 import { TICKET_FIELD_HELP } from "@/lib/ticket-limits"
 import { sessionManager } from "@/lib/session-manager"
 import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
@@ -241,6 +241,10 @@ export default function CreateEventPage() {
     else if (!/^[a-z0-9-]+$/.test(slug)) errors.slug = "Use only lowercase letters, numbers and hyphens"
     if (!category) errors.eventCategory = "Choose a category"
     if (!eventStartDate) errors.eventStartDate = "Set when the event starts"
+    else {
+      const startError = startDateError(eventStartDate)
+      if (startError) errors.eventStartDate = startError
+    }
     if (!eventEndDate) errors.eventEndDate = "Set when the event ends"
     else if (eventStartDate && eventEndDate <= eventStartDate) errors.eventEndDate = "The event must end after it starts"
     else if (eventEndDate.getTime() < Date.now()) errors.eventEndDate = "This date has already passed. Check the date and year."
@@ -263,6 +267,21 @@ export default function CreateEventPage() {
     }
 
     setIsSubmitting(true)
+
+    // Before the poster upload, so a taken URL is reported on its field
+    // straight away. The API refuses it again on create either way.
+    try {
+      if (!(await api.event.isSlugFree(slug))) {
+        setEventErrors({ slug: `soldoutafrica.com/${slug} is already taken by another event. Choose a different URL.` })
+        toast.error("That event URL is taken")
+        scrollToFirstError()
+        setIsSubmitting(false)
+        return
+      }
+    } catch (error) {
+      // Not being able to ask isn't a reason to stop: the create checks too.
+      console.warn("Couldn't check the event URL:", error)
+    }
 
     try {
       // Step 1: Upload image to Contabo

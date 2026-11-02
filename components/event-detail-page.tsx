@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
+import { formatPhoneNumber, isValidPhoneNumber, PHONE_NUMBER_HINT } from "@/lib/phone"
 import {
   ArrowLeft,
   Calendar,
@@ -565,6 +566,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
 
+    if (!isValidPhoneNumber(onboardPhone)) {
+      toast.error("Please enter a valid mobile number", { description: PHONE_NUMBER_HINT })
+      return
+    }
+
     const revShare = parseFloat(onboardRevShare || "0")
     if (Number.isNaN(revShare) || revShare < 0) {
       toast.error("Please enter a valid revenue share")
@@ -582,7 +588,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         userId: user.user_id,
         fullName: onboardName.trim(),
         // The API accepts any Kenyan shape and stores it canonically.
-        mobileNumber: onboardPhone.trim(),
+        mobileNumber: formatPhoneNumber(onboardPhone),
         eventId,
         revShareModels: onboardModel,
         revShare,

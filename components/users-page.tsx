@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Search, Plus, Edit, Ban, Shield, User, Users as UsersIcon, CheckCircle, XCircle, X, Mail, Phone, TrendingUp, Copy, Link as LinkIcon, DollarSign, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { formatPhoneNumber, isValidPhoneNumber, PHONE_NUMBER_HINT } from "@/lib/phone"
 import { api, apiErrorField } from "@/lib/api-client"
 import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { sessionManager } from "@/lib/session-manager"
@@ -83,24 +84,6 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deactivated">("all")
   const [activeTab, setActiveTab] = useState<"users" | "affiliates">("users")
-
-  // Format phone number to 254XXXXXXXXX format
-  const formatPhoneNumber = (input: string): string => {
-    // Remove all non-digit characters
-    let cleaned = input.replace(/\D/g, '')
-
-    // If starts with 0, replace with 254
-    if (cleaned.startsWith('0')) {
-      cleaned = '254' + cleaned.substring(1)
-    }
-
-    // If doesn't start with 254, add it
-    if (!cleaned.startsWith('254')) {
-      cleaned = '254' + cleaned
-    }
-
-    return cleaned
-  }
 
   const fetchUsers = async () => {
     try {
@@ -181,7 +164,7 @@ export default function UsersPage() {
     if (!formData.email.trim()) errors.emailAddress = "Enter an email address"
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email.trim())) errors.emailAddress = "Enter a valid email address"
     if (!formData.phone) errors.mobileNumber = "Enter a phone number"
-    else if (!/^254\d{9}$/.test(formatPhoneNumber(formData.phone))) errors.mobileNumber = "Phone number must be 254 followed by 9 digits"
+    else if (!isValidPhoneNumber(formData.phone)) errors.mobileNumber = PHONE_NUMBER_HINT
     if (formData.idNumber && (formData.idNumber.length < 6 || formData.idNumber.length > 12)) errors.idNumber = "ID number must be 6 to 12 characters"
     setUserErrors(errors)
     return Object.keys(errors).length === 0
@@ -362,6 +345,27 @@ export default function UsersPage() {
   const openSuspendModal = (user: User) => {
     setSelectedUser(user)
     setShowSuspendModal(true)
+  }
+
+  /**
+   * Why a role can't be picked in the edit form, or null when it can. The API
+   * enforces the same rules: a company always keeps one owner, only a Super
+   * Admin makes owners, and nobody changes their own role from Staff.
+   */
+  const roleLockReason = (role: UserRole): string | null => {
+    const currentUser = sessionManager.getUser()
+    if (!selectedUser || !currentUser || role === selectedUser.roles) return null
+    if (selectedUser.roles === "COMPANY_OWNER" && ownerCount <= 1) {
+      return selectedUser.id === currentUser.user_id
+        ? "You're the only owner. Add another Company Owner before giving up the role."
+        : `${selectedUser.fullName} is the only owner, so their role can't change until there's another.`
+    }
+    if (currentUser.role === "SUPER_ADMIN") return null
+    if (selectedUser.id === currentUser.user_id && currentUser.role !== "COMPANY_OWNER") {
+      return "You can't change your own role. Ask your company owner."
+    }
+    if (role === "COMPANY_OWNER") return "Only SoldOut support can make an existing user a Company Owner."
+    return null
   }
 
   // Check if current user can edit/suspend another user based on roles
@@ -657,7 +661,7 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); clearUserError("fullName") }} placeholder="John Doe" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.fullName && errorInputClass)} /><FieldError message={userErrors.fullName} /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearUserError("emailAddress") }} placeholder="john@example.com" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.emailAddress && errorInputClass)} /><FieldError message={userErrors.emailAddress} /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} placeholder="254712345678" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} placeholder="254712345678" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">0712 345 678 or 254712345678</p></div>
                   <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
                   <FieldError message={userErrors.roles} /><FormError message={userErrors.form} /><div className="flex gap-3 pt-4"><button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleAddUser} disabled={isSavingUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">{isSavingUser ? "Adding..." : "Add User"}</button></div>
                 </div>
@@ -698,9 +702,9 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <div><label className="text-sm font-medium mb-2 block">Full Name *</label><input type="text" value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); clearUserError("fullName") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.fullName && errorInputClass)} /><FieldError message={userErrors.fullName} /></div>
                   <div><label className="text-sm font-medium mb-2 block">Email Address *</label><input type="email" value={formData.email} onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearUserError("emailAddress") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.emailAddress && errorInputClass)} /><FieldError message={userErrors.emailAddress} /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">Format: 254XXXXXXXXX</p></div>
+                  <div><label className="text-sm font-medium mb-2 block">Phone Number *</label><input type="tel" value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) }); clearUserError("mobileNumber") }} className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.mobileNumber && errorInputClass)} /><FieldError message={userErrors.mobileNumber} /><p className="text-xs text-muted-foreground mt-1">0712 345 678 or 254712345678</p></div>
                   <div><label className="text-sm font-medium mb-2 block">ID Number</label><input type="text" value={formData.idNumber} onChange={(e) => { setFormData({ ...formData, idNumber: e.target.value }); clearUserError("idNumber") }} placeholder="12345678" className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", userErrors.idNumber && errorInputClass)} /><FieldError message={userErrors.idNumber} /></div>
-                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50")}><input type="radio" name="role" value={role} checked={formData.role === role} onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{roleDetails[role].description}</p></div></label>)})}</div></div>
+                  <div><label className="text-sm font-medium mb-2 block">Role *</label><div className="space-y-3">{(["COMPANY_OWNER", "STAFF"] as const).map((role) => { const RoleIcon = roleDetails[role].icon; const lockReason = roleLockReason(role); return (<label key={role} className={cn("flex items-start gap-3 p-4 rounded-xl border-2 transition-all", lockReason ? "cursor-not-allowed opacity-60 border-border" : "cursor-pointer", !lockReason && (formData.role === role ? "border-zinc-500 bg-zinc-700/5" : "border-border hover:border-zinc-500/50"))}><input type="radio" name="role" value={role} checked={formData.role === role} disabled={!!lockReason} onChange={(e) => { setFormData({ ...formData, role: e.target.value as UserRole }); clearUserError("roles") }} className="mt-1" /><div className="flex-1"><div className="flex items-center gap-2 mb-1"><RoleIcon className={cn("w-4 h-4", roleDetails[role].color)} /><span className="font-semibold">{roleDetails[role].label}</span></div><p className="text-xs text-muted-foreground">{lockReason ?? roleDetails[role].description}</p></div></label>)})}</div></div>
                   <FieldError message={userErrors.roles} /><FormError message={userErrors.form} /><div className="flex gap-3 pt-4"><button onClick={() => setShowEditModal(false)} className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-semibold hover:bg-secondary/80 transition-all">Cancel</button><button onClick={handleEditUser} disabled={isSavingUser} className="flex-1 px-4 py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed">{isSavingUser ? "Saving..." : "Save Changes"}</button></div>
                 </div>
               ) : (

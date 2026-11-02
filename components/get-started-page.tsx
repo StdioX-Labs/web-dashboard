@@ -20,7 +20,7 @@ import {
   readMetaCookies,
   type Attribution,
 } from "@/lib/attribution"
-import { formatPhoneNumber } from "@/lib/phone"
+import { formatPhoneNumber, isValidPhoneNumber } from "@/lib/phone"
 import { GADS_LEAD_CONVERSION } from "@/lib/google-ads"
 import {
   LAST_EVENT_GROSS_OPTIONS,
@@ -63,7 +63,7 @@ export default function GetStartedPage() {
       toast.error("Please enter your name")
       return false
     }
-    if (formatPhoneNumber(mobileNumber).length < 12) {
+    if (!isValidPhoneNumber(mobileNumber)) {
       toast.error("Please enter a valid WhatsApp number")
       return false
     }
