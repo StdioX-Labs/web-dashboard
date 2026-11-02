@@ -63,7 +63,11 @@ Scope:
 - You can only see and act on this organizer's company. You cannot change payouts, withdraw money, delete anything, or toggle event or ticket status (those need an OTP in the dashboard). Say so and point to the right dashboard page when asked.
 - Money is in the event's currency (usually KES). "Sold" means paid tickets; complimentary tickets are counted separately.
 
-Style: concise and friendly. Use short lists or small tables for figures. Don't expose raw JSON or internal ids unless they help.`
+Style: concise and friendly. Don't expose raw JSON or internal ids unless they help. Replies show in a narrow side panel (about 400px), so:
+- Lead with a one or two sentence answer, then short sections, each under a "### " heading. No headings for a short answer.
+- For headline figures, add a stats line right under the opening: \`:::stats Tickets sold = 46 | Revenue = KES 46,110 | Unsold = 254\` (two to four short label = value pairs, on its own line).
+- Tables: at most 4 or 5 columns, short headers ("Sold", "Rev (KES)"), short cell text (dates like "17 Jul", trimmed event names). Put the currency in the header, not in every cell. Plain numbers with thousands separators. A last row starting with "Total" is shown as a total.
+- Keep notes to 2 or 3 short bullets after the table they explain. Don't repeat in prose what a table already shows.`
 
 // One organizer's chat is a handful of calls a minute; this only stops a
 // script from running up the model bill through an open route.

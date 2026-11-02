@@ -468,7 +468,7 @@ function Bubble({ role, text }: { role: string; text: string }) {
     )
   }
   return (
-    <div className="max-w-[95%] rounded-2xl rounded-bl-md bg-secondary px-3 py-2 text-sm text-foreground break-words">
+    <div className="w-full rounded-2xl rounded-bl-md bg-secondary px-3.5 py-3 text-sm text-foreground break-words">
       <Markdown text={text} />
     </div>
   )
@@ -593,13 +593,81 @@ function Inline({ text }: { text: string }) {
   )
 }
 
+// "1,050", "KES 46,110", "-12%", "20 / 100": figures that line up on the right
+const NUMERIC_CELL = /^(?:[A-Z]{3}\s?)?[-+]?[\d,]+(?:\.\d+)?%?(?:\s*\/\s*[\d,]+)?$|^[-–—]$/
+const LIST_LINE = /^\s*([-*•]|\d+\.)\s+/
+
+function stripBold(cell: string) {
+  return cell.replace(/^\*\*(.*)\*\*$/, "$1").trim()
+}
+
+function MarkdownTable({ rows }: { rows: string[][] }) {
+  const [head = [], ...body] = rows
+  const columns = Math.max(head.length, ...body.map((r) => r.length))
+  const numeric = Array.from({ length: columns }, (_, j) => {
+    const cells = body.map((r) => stripBold(r[j] ?? "")).filter(Boolean)
+    return j > 0 && cells.length > 0 && cells.every((c) => NUMERIC_CELL.test(c))
+  })
+  const isTotal = (r: string[]) => /^(total|totals|all events|overall)\b/i.test(stripBold(r[0] ?? ""))
+  return (
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-xs border-collapse">
+        <thead className="bg-muted">
+          <tr>
+            {head.map((c, j) => (
+              <th key={j} className={cn("px-2 py-1.5 font-medium text-muted-foreground whitespace-nowrap first:pl-2.5 last:pr-2.5", j === 0 && "sticky left-0 bg-muted", numeric[j] ? "text-right" : "text-left")}>
+                <Inline text={c} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((r, k) => (
+            <tr key={k} className={cn("border-t border-border", isTotal(r) ? "border-t-2 bg-muted font-semibold" : "bg-secondary")}>
+              {Array.from({ length: columns }, (_, j) => (
+                <td key={j} className={cn("px-2 py-1.5 whitespace-nowrap first:pl-2.5 last:pr-2.5", j === 0 && "sticky left-0 bg-inherit", numeric[j] && "text-right tabular-nums")}>
+                  <Inline text={r[j] ?? ""} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// `:::stats Tickets sold = 46 | Revenue = KES 46,110` renders as a row of chips
+function StatChips({ spec }: { spec: string }) {
+  const stats = spec.split("|").map((part) => {
+    const [label, ...rest] = part.split("=")
+    return { label: label.trim(), value: rest.join("=").trim() }
+  }).filter((s) => s.label && s.value)
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {stats.map((s, k) => (
+        <div key={k} className="rounded-lg border border-border bg-background/40 px-2.5 py-2">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+          <div className="text-sm font-semibold tabular-nums"><Inline text={s.value} /></div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Markdown({ text }: { text: string }) {
   const lines = text.split("\n")
   const blocks: React.ReactNode[] = []
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
-    if (!line.trim()) {
+    if (!line.trim() || /^\s*(-{3,}|\*{3,})\s*$/.test(line)) {
+      i++
+      continue
+    }
+    const stats = line.match(/^\s*:::stats\s+(.*)$/)
+    if (stats) {
+      blocks.push(<StatChips key={blocks.length} spec={stats[1]} />)
       i++
       continue
     }
@@ -610,33 +678,19 @@ function Markdown({ text }: { text: string }) {
         if (!cells.every((c) => /^:?-{2,}:?$/.test(c))) rows.push(cells)
         i++
       }
-      const [head, ...body] = rows
-      blocks.push(
-        <div key={blocks.length} className="overflow-x-auto my-1">
-          <table className="text-xs border-collapse">
-            <thead>
-              <tr>{head?.map((c, j) => <th key={j} className="text-left font-semibold pr-3 pb-1 border-b border-border"><Inline text={c} /></th>)}</tr>
-            </thead>
-            <tbody>
-              {body.map((r, k) => (
-                <tr key={k}>{r.map((c, j) => <td key={j} className="pr-3 py-0.5 align-top"><Inline text={c} /></td>)}</tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+      blocks.push(<MarkdownTable key={blocks.length} rows={rows} />)
       continue
     }
-    if (/^\s*([-*•]|\d+\.)\s+/.test(line)) {
+    if (LIST_LINE.test(line)) {
       const ordered = /^\s*\d+\./.test(line)
       const items: string[] = []
-      while (i < lines.length && /^\s*([-*•]|\d+\.)\s+/.test(lines[i])) {
-        items.push(lines[i].replace(/^\s*([-*•]|\d+\.)\s+/, ""))
+      while (i < lines.length && LIST_LINE.test(lines[i])) {
+        items.push(lines[i].replace(LIST_LINE, ""))
         i++
       }
       const List = ordered ? "ol" : "ul"
       blocks.push(
-        <List key={blocks.length} className={cn("pl-5 my-1 space-y-0.5", ordered ? "list-decimal" : "list-disc")}>
+        <List key={blocks.length} className={cn("pl-5 space-y-1 marker:text-muted-foreground", ordered ? "list-decimal" : "list-disc")}>
           {items.map((it, k) => <li key={k}><Inline text={it} /></li>)}
         </List>
       )
@@ -644,16 +698,20 @@ function Markdown({ text }: { text: string }) {
     }
     const heading = line.match(/^#{1,6}\s+(.*)$/)
     if (heading) {
-      blocks.push(<p key={blocks.length} className="font-semibold mt-1"><Inline text={heading[1]} /></p>)
+      blocks.push(
+        <h4 key={blocks.length} className={cn("text-[13px] font-semibold text-foreground", blocks.length > 0 && "pt-2 mt-1 border-t border-border/60")}>
+          <Inline text={heading[1]} />
+        </h4>
+      )
       i++
       continue
     }
     const paragraph: string[] = []
-    while (i < lines.length && lines[i].trim() && !/^\s*([-*•]|\d+\.)\s+|^\s*\||^#{1,6}\s/.test(lines[i])) {
+    while (i < lines.length && lines[i].trim() && !/^\s*([-*•]|\d+\.)\s+|^\s*\||^#{1,6}\s|^\s*:::stats/.test(lines[i])) {
       paragraph.push(lines[i])
       i++
     }
-    blocks.push(<p key={blocks.length} className="my-1 whitespace-pre-wrap"><Inline text={paragraph.join("\n")} /></p>)
+    blocks.push(<p key={blocks.length} className="whitespace-pre-wrap leading-relaxed"><Inline text={paragraph.join("\n")} /></p>)
   }
-  return <>{blocks}</>
+  return <div className="space-y-2.5">{blocks}</div>
 }
