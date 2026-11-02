@@ -485,7 +485,7 @@ export default function AssistantPanel() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "spring", stiffness: 420, damping: 26 }}
-            className="group fixed right-4 sm:right-5 z-40 flex items-center gap-2 h-12 pl-4 pr-5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 bottom-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-5"
+            className="group fixed right-4 sm:right-5 z-40 flex items-center justify-center gap-2 h-12 w-12 sm:w-auto sm:pl-4 sm:pr-5 rounded-full bg-brand text-white shadow-lg shadow-brand/30 bottom-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-5"
             aria-label="Open the assistant"
           >
             <span className="absolute inset-0 rounded-full bg-brand animate-ping opacity-20 pointer-events-none" />
@@ -496,7 +496,7 @@ export default function AssistantPanel() {
             >
               <Sparkles className="w-5 h-5" />
             </motion.span>
-            <span className="relative text-sm font-semibold">Assistant</span>
+            <span className="relative hidden sm:inline text-sm font-semibold">Assistant</span>
           </motion.button>
         )}
       </AnimatePresence>
