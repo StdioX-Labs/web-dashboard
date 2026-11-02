@@ -72,6 +72,8 @@ function suggestionsFrom(transcript: MessageParam[]): string[] {
   return /^\s*:::choices\s/m.test(text) ? [] : DEFAULT_SUGGESTIONS
 }
 
+const ATTACH_POSTER = /^attach (a |the |your )?poster$/i
+
 // Kept in step with the server, which rejects longer messages.
 const MAX_MESSAGE_CHARS = 4000
 
@@ -121,6 +123,7 @@ export default function AssistantPanel() {
   const [announcedPoster, setAnnouncedPoster] = useState<File | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const sendPosterOnPick = useRef(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -218,12 +221,14 @@ export default function AssistantPanel() {
     }
   }
 
-  async function send(text: string) {
+  // `attached` lets a poster picked from an "Attach poster" choice go out
+  // straight away, before the poster state has caught up.
+  async function send(text: string, attached: File | null = poster) {
     const trimmed = text.trim()
-    if ((!trimmed && poster === announcedPoster) || busy || waitingOnOrganizer) return
+    if ((!trimmed && attached === announcedPoster) || busy || waitingOnOrganizer) return
     let content = trimmed
-    if (poster && poster !== announcedPoster) {
-      content = `[I attached a poster image: ${poster.name}]${content ? `\n\n${content}` : ""}`
+    if (attached && attached !== announcedPoster) {
+      content = `[I attached a poster image: ${attached.name}]${content ? `\n\n${content}` : ""}`
     }
     const previous = transcript
     const next: MessageParam[] = [...transcript, { role: "user", content }]
@@ -231,7 +236,7 @@ export default function AssistantPanel() {
     setDraft("")
     const ok = await post(next)
     if (ok) {
-      if (poster) setAnnouncedPoster(poster)
+      if (attached) setAnnouncedPoster(attached)
     } else {
       setTranscript(previous)
       setDraft(text)
@@ -272,6 +277,15 @@ export default function AssistantPanel() {
     }
   }
 
+  function choose(choice: string) {
+    if (ATTACH_POSTER.test(choice)) {
+      sendPosterOnPick.current = true
+      fileRef.current?.click()
+      return
+    }
+    send(choice)
+  }
+
   function pickPoster(file: File | undefined) {
     if (!file) return
     const check = validateImageFile(file)
@@ -281,6 +295,10 @@ export default function AssistantPanel() {
     }
     setError(null)
     setPoster(file)
+    if (sendPosterOnPick.current) {
+      sendPosterOnPick.current = false
+      send(draft, file)
+    }
   }
 
   function reset() {
@@ -431,7 +449,7 @@ export default function AssistantPanel() {
                   poster={posterPreview}
                   hasPoster={poster !== null}
                   onDecide={decide}
-                  onChoose={(choice) => send(choice)}
+                  onChoose={choose}
                   disabled={busy}
                   canChoose={!busy && !waitingOnOrganizer}
                 />
@@ -853,26 +871,39 @@ function StatChips({ spec }: { spec: string }) {
 // buttons; picking one sends it as the organizer's reply.
 function Choices({ spec, onChoose }: { spec: string; onChoose?: (choice: string) => void }) {
   const options = spec.split("|").map((o) => o.trim()).filter(Boolean).slice(0, 8)
+  // Short options (categories, yes/no) sit side by side as pills; longer ones stack.
+  const compact = options.length > 1 && options.every((o) => o.length <= 26)
   return (
     <motion.div
-      className="flex flex-col gap-1.5"
+      className={cn(compact ? "flex flex-wrap gap-1.5" : "flex flex-col gap-1.5")}
       initial="hidden"
       animate="show"
       variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
     >
-      {options.map((o) => (
-        <motion.button
-          key={o}
-          variants={{ hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0 } }}
-          whileTap={onChoose ? { scale: 0.98 } : undefined}
-          disabled={!onChoose}
-          onClick={() => onChoose?.(o)}
-          className="group flex items-center justify-between gap-2 rounded-xl border border-border bg-background/50 px-3 py-2.5 text-left text-sm transition-colors enabled:hover:border-brand enabled:hover:bg-brand/10 disabled:opacity-50 disabled:cursor-default"
-        >
-          <span><Inline text={o} /></span>
-          <span className="text-muted-foreground transition-transform group-hover:translate-x-0.5">›</span>
-        </motion.button>
-      ))}
+      {options.map((o) => {
+        const poster = ATTACH_POSTER.test(o)
+        return (
+          <motion.button
+            key={o}
+            variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } }}
+            whileTap={onChoose ? { scale: 0.97 } : undefined}
+            disabled={!onChoose}
+            onClick={() => onChoose?.(o)}
+            className={cn(
+              "group flex items-center gap-2 border text-sm transition-colors disabled:opacity-50 disabled:cursor-default",
+              poster
+                ? "w-full justify-center rounded-xl border-dashed border-brand/60 bg-brand/10 px-3 py-3 font-medium enabled:hover:bg-brand/20"
+                : compact
+                  ? "rounded-full border-border bg-background/50 px-3 py-1.5 enabled:hover:border-brand enabled:hover:bg-brand/10"
+                  : "justify-between rounded-xl border-border bg-background/50 px-3 py-2.5 text-left enabled:hover:border-brand enabled:hover:bg-brand/10"
+            )}
+          >
+            {poster && <Paperclip className="w-4 h-4" />}
+            <span><Inline text={o} /></span>
+            {!poster && !compact && <span className="text-muted-foreground transition-transform group-hover:translate-x-0.5">›</span>}
+          </motion.button>
+        )
+      })}
     </motion.div>
   )
 }
