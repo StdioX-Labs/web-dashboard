@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const searchParams = request.nextUrl.searchParams
     const ticketGroup = searchParams.get('ticketGroup')
@@ -14,16 +17,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get auth token from request headers
-    const authHeader = request.headers.get('authorization')
-
-    const response = await fetch(`${BASE_URL}/event/ticket/group/get?ticketGroup=${ticketGroup}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { 'Authorization': authHeader } : {}),
-      },
-    })
+    const response = await soldoutFetch(
+      auth.accessToken,
+      `/event/ticket/group/get?ticketGroup=${encodeURIComponent(ticketGroup)}`
+    )
 
     const data = await response.json()
 

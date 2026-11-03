@@ -1,44 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
+    // The scanning user comes from the session, never from the browser.
+    body.userId = auth.user.user_id
     
     console.log('=== Scanner API Proxy ===')
     console.log('Request body:', JSON.stringify(body, null, 2))
 
-    // Build headers with Basic Authentication
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    console.log('Calling backend API: /scanner/scan')
 
-    // Add Basic Auth credentials from environment variables
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-
-    if (username && password) {
-      const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-      headers['Authorization'] = `Basic ${basicAuth}`
-      console.log('Using Basic Auth credentials')
-    } else {
-      console.error('Missing API credentials in environment variables')
-      return NextResponse.json(
-        {
-          status: false,
-          error: 'API credentials not configured'
-        },
-        { status: 500 }
-      )
-    }
-
-    console.log('Calling backend API:', `${BASE_URL}/scanner/scan`)
-
-    const response = await fetch(`${BASE_URL}/scanner/scan`, {
+    const response = await soldoutFetch(auth.accessToken, '/scanner/scan', {
       method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+      body,
     })
 
     console.log('Backend response status:', response.status)
@@ -63,7 +43,7 @@ export async function POST(request: NextRequest) {
           {
             error: 'Authentication failed',
             status: false,
-            details: 'Invalid API credentials'
+            details: 'Your session was not accepted. Please sign in again.'
           },
           { status: 401 }
         )

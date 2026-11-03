@@ -1,47 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
-const SOLDOUT_API_USERNAME = process.env.SOLDOUT_API_USERNAME
-const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
+import { soldoutApiBaseUrl } from '@/lib/auth/env'
+import { getAuth, unauthorized } from '@/lib/auth/server'
 
 /**
- * Forwards a request to the SoldOut API with the service Basic credentials
- * attached server-side, so they never reach the browser.
+ * Calls the SoldOut API as the signed-in user: their Keycloak access token is
+ * forwarded as `Authorization: Bearer`. There is no shared service credential.
+ * `path` is relative to SOLDOUT_API_BASE_URL (which already ends in /api/v1).
+ */
+export function soldoutFetch(
+  accessToken: string,
+  path: string,
+  init: { method?: string; body?: unknown; timeoutMs?: number } = {}
+): Promise<Response> {
+  return fetch(`${soldoutApiBaseUrl()}${path}`, {
+    method: init.method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    signal: AbortSignal.timeout(init.timeoutMs ?? 30000),
+    ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
+  })
+}
+
+/**
+ * Forwards a request to the SoldOut API with the signed-in user's access
+ * token attached server-side, so the token never reaches the browser.
  *
  * The affiliate and promotion endpoints report failures as `{ status: false, error: "..." }`
  * with a 400, while the api-client surfaces `message` — so `error` is mirrored
  * onto `message` to keep client-side toasts useful.
+ *
+ * Pass `accessToken` to call with a token other than the session's (the
+ * public signup route uses the dashboard's service-account token).
  */
 export async function proxyToSoldOut(
   request: NextRequest,
   path: string,
-  init: { method?: string; body?: unknown } = {}
+  init: { method?: string; body?: unknown; accessToken?: string } = {}
 ): Promise<NextResponse> {
   const method = init.method || 'GET'
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-
-  if (SOLDOUT_API_USERNAME && SOLDOUT_API_PASSWORD) {
-    const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
-    headers['Authorization'] = `Basic ${credentials}`
-  } else {
-    const authHeader = request.headers.get('Authorization')
-    if (authHeader) {
-      headers['Authorization'] = authHeader
-    }
+  let accessToken = init.accessToken
+  if (!accessToken) {
+    const auth = await getAuth(request)
+    if (!auth) return unauthorized()
+    accessToken = auth.accessToken
   }
 
   try {
     console.log('SoldOut proxy:', method, path)
 
-    const response = await fetch(`${BASE_URL}${path}`, {
-      method,
-      headers,
-      signal: AbortSignal.timeout(30000),
-      ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
-    })
+    const response = await soldoutFetch(accessToken, path, { method, body: init.body })
 
     const text = await response.text()
 

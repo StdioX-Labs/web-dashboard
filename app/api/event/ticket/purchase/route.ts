@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.soldoutafrica.com/api/v1"
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
 
@@ -21,34 +24,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get Basic Auth credentials from environment variables
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-
-    console.log('Using credentials:', { username: username ? 'SET' : 'NOT SET', password: password ? 'SET' : 'NOT SET' })
-
-    if (!username || !password) {
-      console.error('Missing API credentials in environment variables')
-      return NextResponse.json(
-        { error: "API configuration error", status: false },
-        { status: 500 }
-      )
-    }
-
-    // Create Basic Auth header
-    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-
     // Forward the request to the backend API
-    const backendUrl = `${BASE_URL}/event/ticket/purchase`
-    console.log('Backend URL:', backendUrl)
-
-    const response = await fetch(backendUrl, {
+    const response = await soldoutFetch(auth.accessToken, '/event/ticket/purchase', {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${basicAuth}`,
-      },
-      body: JSON.stringify(body),
+      body,
     })
 
     console.log('Backend response status:', response.status)

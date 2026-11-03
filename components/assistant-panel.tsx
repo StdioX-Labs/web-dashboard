@@ -280,13 +280,7 @@ export default function AssistantPanel() {
         body: JSON.stringify({
           messages,
           conversationId: conversationId.current,
-          session: {
-            userId: user.user_id,
-            companyId: user.company_id,
-            companyName: user.company_name,
-            currency: user.currency,
-            email: user.email,
-          },
+          // Who is asking is read from the session cookie on the server.
         }),
       })
       let data: ChatResponse

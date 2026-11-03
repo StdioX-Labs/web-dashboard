@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
-const SOLDOUT_API_USERNAME = process.env.SOLDOUT_API_USERNAME
-const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
 
     console.log('Issuing complementary ticket with data:', JSON.stringify(body, null, 2))
 
-    // Get auth token from headers
-    const authHeader = request.headers.get('Authorization')
+    // The issuing organizer comes from the session, never from the browser.
+    body.userId = auth.user.user_id
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add basic auth if credentials are available
-    if (SOLDOUT_API_USERNAME && SOLDOUT_API_PASSWORD) {
-      const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
-      headers['Authorization'] = `Basic ${credentials}`
-    } else if (authHeader) {
-      headers['Authorization'] = authHeader
-    }
-
-    const response = await fetch(`${BASE_URL}/event/issue/complementary`, {
+    const response = await soldoutFetch(auth.accessToken, '/event/issue/complementary', {
       method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+      body,
     })
 
     console.log('API Response status:', response.status, response.statusText)

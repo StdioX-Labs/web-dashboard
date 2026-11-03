@@ -1,11 +1,12 @@
 import { createHash, randomUUID } from "node:crypto"
 import { NextRequest, NextResponse } from "next/server"
+import { serviceAccessToken } from "@/lib/auth/oidc"
+import { soldoutFetch } from "@/lib/soldout-proxy"
 import { checkAttempt, getClientIp, tooManyAttemptsResponse, type BackoffConfig } from "@/lib/rate-limiter"
 import { formatPhoneNumber, isValidPhoneNumber } from "@/lib/phone"
 import { isQualified } from "@/lib/lead-qualification"
 import { META_PIXEL_ID } from "@/lib/meta-pixel"
 
-const BASE_URL = "https://api.soldoutafrica.com/api/v1"
 const META_API = "https://graph.facebook.com/v21.0"
 
 const sha256 = (value: string) =>
@@ -157,25 +158,23 @@ export async function POST(request: NextRequest) {
       utmCampaign: body.utm_campaign || null,
     }
 
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-    if (!username || !password) {
-      console.error("Missing API credentials in environment variables")
+    // Public form: no one is signed in, so core is called with the
+    // dashboard's own service-account token (client_credentials).
+    let accessToken: string
+    try {
+      accessToken = await serviceAccessToken()
+    } catch (error) {
+      console.error("Lead create - service token unavailable:", error)
       return NextResponse.json(
-        { status: false, message: "API credentials not configured" },
+        { status: false, message: "Could not save your details. Please try again." },
         { status: 500 },
       )
     }
 
-    const basicAuth = Buffer.from(`${username}:${password}`).toString("base64")
-    const response = await fetch(`${BASE_URL}/organizer-lead/create`, {
+    const response = await soldoutFetch(accessToken, "/organizer-lead/create", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${basicAuth}`,
-      },
-      body: JSON.stringify(lead),
-      signal: AbortSignal.timeout(15_000),
+      body: lead,
+      timeoutMs: 15_000,
     })
 
     const responseText = await response.text()

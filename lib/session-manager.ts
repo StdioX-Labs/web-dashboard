@@ -1,124 +1,76 @@
-export interface UserSession {
-  phoneNumber: string
-  role: string
-  is_active: boolean
-  kycStatus: string
-  profile_type: string | null
-  company_id: number
-  user_id: number
-  company_name: string
-  currency: string
-  email: string
-}
+// Browser-side view of the signed-in organizer.
+//
+// The session itself is an encrypted httpOnly cookie that JavaScript cannot
+// read (see lib/auth/session.ts). Pages get the user's details from
+// GET /api/auth/me, loaded once by the dashboard layout (lib/hooks/use-auth)
+// before any page renders, and cached here so the existing synchronous
+// `sessionManager.getUser()` calls keep working. Nothing is kept in
+// localStorage.
+
+import type { UserSession } from '@/lib/auth/user'
+
+export type { UserSession }
 
 export interface SessionData {
   user: UserSession
+  /** Access token expiry, epoch milliseconds. Refreshed server-side. */
   expiresAt: number
-  createdAt: number
 }
 
-const SESSION_KEY = 'user_session'
-const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+let current: SessionData | null = null
+let loading: Promise<SessionData | null> | null = null
+
+function signInUrl(returnTo?: string) {
+  const target = returnTo ?? (typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/dashboard')
+  return `/api/auth/login?returnTo=${encodeURIComponent(target)}`
+}
 
 export const sessionManager = {
-  // Create a new session
-  createSession: (user: UserSession): void => {
-    const now = Date.now()
-    const sessionData: SessionData = {
-      user,
-      expiresAt: now + SESSION_DURATION,
-      createdAt: now,
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData))
-      localStorage.setItem('authToken', `session_${user.user_id}_${now}`)
-    }
-  },
-
-  // Get current session
-  getSession: (): SessionData | null => {
-    if (typeof window === 'undefined') {
-      return null
-    }
-
+  /** Fetches the signed-in user from the server; null when signed out. */
+  load: (force = false): Promise<SessionData | null> => {
+    if (typeof window === 'undefined') return Promise.resolve(null)
+    if (current && !force) return Promise.resolve(current)
+    // Left behind by the old OTP login; never read any more.
     try {
-      const sessionStr = localStorage.getItem(SESSION_KEY)
-      if (!sessionStr) {
-        return null
-      }
-
-      const session: SessionData = JSON.parse(sessionStr)
-
-      // Check if session has expired
-      if (Date.now() > session.expiresAt) {
-        sessionManager.clearSession()
-        return null
-      }
-
-      // A deactivated account holds no valid session, even one issued earlier
-      if (session.user?.is_active === false) {
-        sessionManager.clearSession()
-        return null
-      }
-
-      return session
-    } catch (error) {
-      console.error('Error reading session:', error)
-      return null
-    }
-  },
-
-  // Get user from session
-  getUser: (): UserSession | null => {
-    const session = sessionManager.getSession()
-    return session?.user || null
-  },
-
-  // Check if session is valid
-  isSessionValid: (): boolean => {
-    const session = sessionManager.getSession()
-    if (!session) {
-      return false
-    }
-
-    return Date.now() < session.expiresAt
-  },
-
-  // Clear session
-  clearSession: (): void => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(SESSION_KEY)
+      localStorage.removeItem('user_session')
       localStorage.removeItem('authToken')
-      localStorage.removeItem('user')
-      sessionStorage.clear()
+    } catch {
+      // storage unavailable (private mode); nothing to clean
     }
+    loading ??= fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' })
+      .then(async (response) => {
+        if (!response.ok) return null
+        const data = (await response.json()) as { user?: UserSession; expiresAt?: number }
+        if (!data.user || data.user.is_active === false) return null
+        return { user: data.user, expiresAt: (data.expiresAt ?? 0) * 1000 }
+      })
+      .catch(() => null)
+      .then((session) => {
+        current = session
+        loading = null
+        return session
+      })
+    return loading
   },
 
-  // Extend session (reset expiration to 24 hours from now)
-  extendSession: (): boolean => {
-    const session = sessionManager.getSession()
-    if (!session) {
-      return false
-    }
+  /** The cached session. Available once load() has resolved (the dashboard layout waits for it). */
+  getSession: (): SessionData | null => current,
 
-    session.expiresAt = Date.now() + SESSION_DURATION
+  getUser: (): UserSession | null => current?.user ?? null,
 
+  isSessionValid: (): boolean => current !== null,
+
+  /** Sends the browser through Keycloak sign-in, returning to `returnTo` afterwards. */
+  signIn: (returnTo?: string): void => {
+    if (typeof window !== 'undefined') window.location.assign(signInUrl(returnTo))
+  },
+
+  /** Ends the session here and at Keycloak (RP-initiated logout). */
+  clearSession: (): void => {
+    current = null
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+      sessionStorage.clear()
+      window.location.assign('/api/auth/logout')
     }
-
-    return true
-  },
-
-  // Get time until session expires (in milliseconds)
-  getTimeUntilExpiry: (): number => {
-    const session = sessionManager.getSession()
-    if (!session) {
-      return 0
-    }
-
-    return Math.max(0, session.expiresAt - Date.now())
   },
 }
-

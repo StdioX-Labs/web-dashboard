@@ -1,41 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const SOLDOUT_API_BASE = 'https://api.soldoutafrica.com/api/v1'
-const SOLDOUT_API_USERNAME = process.env.SOLDOUT_API_USERNAME
-const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const searchParams = request.nextUrl.searchParams
     const page = searchParams.get('page') || '0'
     const size = searchParams.get('size') || '300'
-    const companyId = searchParams.get('companyId') // Get company ID from query params
+    // The signed-in user's company, never one named by the browser.
+    const companyId = auth.user.company_id ? String(auth.user.company_id) : null
     const includeDetails = searchParams.get('includeDetails') === 'true' // Optional flag to fetch detailed event data
 
-    // Get auth token from request headers
-    const authHeader = request.headers.get('Authorization')
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add basic auth if credentials are available
-    if (SOLDOUT_API_USERNAME && SOLDOUT_API_PASSWORD) {
-      const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
-      headers['Authorization'] = `Basic ${credentials}`
-    } else if (authHeader) {
-      headers['Authorization'] = authHeader
-    }
-
     // Add companyId to the API request if provided
-    const apiUrl = companyId
-      ? `${SOLDOUT_API_BASE}/admin/events/get/all?page=${page}&size=${size}&companyId=${companyId}`
-      : `${SOLDOUT_API_BASE}/admin/events/get/all?page=${page}&size=${size}`
+    const query = new URLSearchParams({ page, size })
+    if (companyId) query.set('companyId', companyId)
 
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers,
-    })
+    const response = await soldoutFetch(auth.accessToken, `/admin/events/get/all?${query}`)
 
     const data = await response.json()
 
@@ -53,10 +36,7 @@ export async function GET(request: NextRequest) {
       // Fetch detailed event data for each event in parallel
       const detailedEventsPromises = data.data.data.map(async (event: { eventId: number; [key: string]: unknown }) => {
         try {
-          const detailResponse = await fetch(
-            `${SOLDOUT_API_BASE}/event/get?eventId=${event.eventId}`,
-            { method: 'GET', headers }
-          )
+          const detailResponse = await soldoutFetch(auth.accessToken, `/event/get?eventId=${event.eventId}`)
 
           if (detailResponse.ok) {
             const detailData = await detailResponse.json()

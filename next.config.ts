@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Disable static export to enable API routes
-  output: undefined,
+  // Self-contained server in .next/standalone for the container image (see Dockerfile).
+  output: "standalone",
 
   turbopack: {},
 };

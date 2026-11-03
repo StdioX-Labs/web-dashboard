@@ -18,27 +18,30 @@ calls, and what data it renders.
 Browser components never call the upstream API directly. Every call goes:
 
 ```
-component → lib/api-client.ts (api.*) → /api/... Next route handler → api.soldoutafrica.com
+component → lib/api-client.ts (api.*) → /api/... Next route handler → SoldOut core API
 ```
 
-`lib/api-client.ts` sets `USE_PROXY = true`, so `apiRequest()` prefixes every endpoint with
-`/api`. The route handlers under `app/api/**` attach HTTP Basic credentials
-(`SOLDOUT_API_USERNAME` / `SOLDOUT_API_PASSWORD`) server-side, so upstream credentials are
-never shipped to the browser.
+`apiRequest()` prefixes every endpoint with `/api`; the browser holds no token. Route handlers
+call core at `SOLDOUT_API_BASE_URL` with the signed-in user's Keycloak access token as
+`Authorization: Bearer` (`lib/soldout-proxy.ts`: `proxyToSoldOut` / `soldoutFetch`). There is
+no shared service credential and no HTTP Basic anywhere.
 
-### Session & auth
+### Session & auth (Keycloak OIDC)
 
 | Concern | Implementation |
 | --- | --- |
-| Session store | `lib/session-manager.ts` → `localStorage` key `user_session`, 24h TTL |
-| Session shape | `phoneNumber, role, is_active, kycStatus, profile_type, company_id, user_id, company_name, currency, email` |
-| Route guard | `lib/hooks/use-auth.ts` (`useAuth`) used by `app/dashboard/layout.tsx`; redirects to `/` when there is no valid session |
-| Login flow | Email → OTP. The OTP and user record stay server-side (`lib/pending-login-store.ts`); the client only holds an opaque `loginToken` |
-| Deactivated accounts | `/api/auth/verify-otp` returns **403** and withholds the user object when `is_active === false`, so no session can be minted even with a valid code. Checked at verification rather than at code request, so account status is only revealed to whoever received the code. `sessionManager.getSession()` also discards any stored session whose user is inactive |
-| Rate limiting | `lib/rate-limiter.ts`, IP-based, applied to `/api/auth/login` (default 10 requests / min) and `/api/auth/verify-otp` (5 attempts / 5 min, its own window since guessing a 4-digit code is brute-force). Exceeding either blocks progressively — 1, 15, 30 then 60 min — with the violation count reset after an hour of good behaviour |
-
-`authToken` in `localStorage` is a local marker (`session_<userId>_<ts>`), not an upstream
-bearer token — real authentication happens with Basic auth inside the route handlers.
+| Sign-in | `GET /api/auth/login` starts authorization code + PKCE against Keycloak (realm `soa`, confidential client `soa-dashboard-web`, `client_secret_post`). Keycloak asks for email or phone and sends the one-time code; the app never sees it. `GET /api/auth/callback` exchanges the code (`lib/auth/oidc.ts`, openid-client v6) |
+| Issuers | Browser redirects use `KEYCLOAK_ISSUER` (public); token, refresh and JWKS calls go to `KEYCLOAK_INTERNAL_ISSUER`. The metadata is built by hand rather than discovered, and the ID token's `iss` is checked against the public issuer |
+| Session store | Encrypted httpOnly, Secure, SameSite=Lax cookie `soa_session.N` (JSON → deflate → JWE dir/A256GCM, key derived from `AUTH_SECRET`, chunked under 4 KB). Holds access, refresh and ID tokens plus the profile (`lib/auth/session.ts`) |
+| Session shape | `phoneNumber, role, is_active, kycStatus, profile_type, company_id, user_id, company_name, currency, email`, from the access-token claims (`preferred_username`, `email`, `realm_access.roles`, `company_id`, `soa_user_id`) plus one `/company/fetch/users` lookup at sign-in for company name, currency, KYC and active flag. `profile_type` is always null |
+| Browser access | `GET /api/auth/me` → `sessionManager.load()`; `useAuth` in `app/dashboard/layout.tsx` waits for it, so `sessionManager.getUser()` works synchronously in pages |
+| Route guard | `proxy.ts` (Next 16 proxy). Public: `/`, `/signup`, `/get-started`, `/api/auth/login|callback|logout`, `/api/health`, `/api/organizer-lead`, `/api/company/signup`. Everything else: pages redirect to sign-in, `/api/*` answers 401 `{ authRequired: true }` (api-client then re-runs sign-in). Cross-origin non-GET `/api` requests are refused |
+| Refresh | `proxy.ts` refreshes the tokens 60 s before the access token expires and hands the new cookie to both the route handler and the browser. A refused refresh clears the cookie and forces sign-in |
+| Logout | `/api/auth/logout` clears the cookie and redirects to Keycloak's end-session endpoint (RP-initiated logout) with `id_token_hint` |
+| Acting user | `userId`, `companyId` and `requesterUserId` sent to core come from the session, never from the browser |
+| Deactivated accounts | The callback creates no session when core reports the user inactive and logs them out of Keycloak |
+| Public routes and core | `/api/company/signup` and `/api/organizer-lead` have no user, so they use a `client_credentials` token for `soa-dashboard-web` (service accounts must be enabled on that client) |
+| Step-up OTP | Suspending or reactivating an event or ticket still needs a code: `POST /api/auth/step-up-otp` asks core (`/user/otp/login`) to text one to the signed-in user's phone; core's echoed code is not forwarded |
 
 ### Caching
 
@@ -129,17 +132,15 @@ origin 502 with its own branded error page, hiding the real message.
 **File:** `app/page.tsx` → `components/login-page.tsx`
 
 **Purpose.** Entry point. Redirects to `/dashboard` if a valid session already exists,
-otherwise shows the email + OTP sign-in. The "Sign Up" tab routes to `/signup`.
+otherwise shows a Sign in button that redirects to Keycloak. The "Sign Up" tab routes to `/signup`.
 
 **APIs**
 
 | Action | Client call | Proxy route | Upstream |
 | --- | --- | --- | --- |
-| Request / resend OTP | `api.auth.requestOtp(email, 'email')` | `POST /api/auth/login` | `POST /user/otp/login` |
-| Verify OTP | `api.auth.verifyOtp(loginToken, otp)` | `POST /api/auth/verify-otp` | (validated against the server-side pending-login store) |
+| Sign in | redirect | `GET /api/auth/login` → Keycloak → `GET /api/auth/callback` | Keycloak token endpoint |
 
-Deactivated accounts (`is_active: false`) are rejected at verification with a 403 and an
-"account has been deactivated" toast — a correct OTP does not get them in.
+Deactivated accounts (`is_active: false`) get no session; the callback sends them back to `/?error=deactivated`.
 
 **Data displayed.** Branding panel with static marketing stats (Events 100+, Tickets 100K+,
 Rating 99%); email field with client-side validation; 4-digit OTP field with resend / change
@@ -540,12 +541,13 @@ treated as complete. Time selection is 12-hour with a full 0–59 minute range.
 
 ## 4. API route reference
 
-All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inject Basic auth.
+All handlers live under `app/api/**/route.ts`, run on the Node runtime, and forward the signed-in user's bearer token.
 
 | Route | Method | Upstream | Used by |
 | --- | --- | --- | --- |
-| `/api/auth/login` | POST | `/user/otp/login` | Login, event detail (OTP for sensitive actions) |
-| `/api/auth/verify-otp` | POST | server-side pending-login store | Login |
+| `/api/auth/login`, `/api/auth/callback`, `/api/auth/logout` | GET | Keycloak | Sign-in / sign-out |
+| `/api/auth/me` | GET | session cookie | Every dashboard page |
+| `/api/auth/step-up-otp` | POST | `/user/otp/login` | Event detail (OTP for suspend / activate) |
 | `/api/user/create` | POST | `/user/create` | Signup, Users |
 | `/api/user/edit` | PUT | `/company/user/edit` | Users |
 | `/api/user/void` | POST/PUT | `/company/user/suspend` | Users |
@@ -575,21 +577,26 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and inje
 | `/api/organizer-lead` | POST | `/organizer-lead/create` + Meta CAPI | Get started |
 | `/api/upload-image` | POST | Contabo S3 | Create event |
 | `/api/health` | GET | — | Health probe |
-| `/api/test-api` | GET | connectivity probe | Development |
 | `/api/tickets/validate`, `/api/tickets/redeem`, `/api/payments/mpesa` | POST | — | Stubs, not wired to any page |
 
 ### Environment variables
 
 | Variable | Purpose |
 | --- | --- |
-| `SOLDOUT_API_USERNAME` / `SOLDOUT_API_PASSWORD` | Basic auth for the upstream API |
+| `KEYCLOAK_ISSUER` | Public issuer, e.g. `https://staging-auth.soldoutafrica.com/realms/soa` |
+| `KEYCLOAK_INTERNAL_ISSUER` | In-cluster issuer URL for token / refresh / JWKS (defaults to `KEYCLOAK_ISSUER`) |
+| `KEYCLOAK_TOKEN_URL` | client_credentials endpoint for the public routes (defaults to the internal token endpoint) |
+| `KEYCLOAK_CLIENT_ID` / `KEYCLOAK_CLIENT_SECRET` | Confidential client `soa-dashboard-web` |
+| `AUTH_SECRET` | Session cookie encryption key, 32+ characters |
+| `APP_URL` | The dashboard's public URL; redirect URI is `$APP_URL/api/auth/callback` |
+| `SOLDOUT_API_BASE_URL` | Core API base including `/api/v1` (defaults to production) |
 | `META_CAPI_TOKEN` | Meta Conversions API token. Unset → the server-side Lead event is skipped with a warning |
 | `META_TEST_EVENT_CODE` | Temporary: surfaces server events in the Events Manager Test Events tab. **Unset once verified** — events carrying a test code are excluded from optimisation and reporting |
-| `NEXT_PUBLIC_API_BASE_URL` | Overrides the upstream base in a few routes |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_WORKSPACE_ID` | Organizer assistant |
 | Contabo S3 credentials | Used by `/api/upload-image` (`eu2.contabostorage.com`) |
-| `RATE_LIMIT_MAX_REQUESTS` / `RATE_LIMIT_WINDOW_MS` | Request-side allowance for `/api/auth/login` (defaults 10 / 60000). Read by `getRateLimitConfig` |
-| `OTP_VERIFY_RATE_LIMIT_MAX_REQUESTS` / `OTP_VERIFY_RATE_LIMIT_WINDOW_MS` | Code-guessing allowance for `/api/auth/verify-otp` (defaults 5 / 300000), kept separate from the request-side window on purpose |
-| `RATE_LIMIT_BLOCK_DURATION_MS` / `USE_PROGRESSIVE_BLOCKING` | Flat block length, used only when progressive blocking is turned off with `false` |
+| `AUTH_FREE_ATTEMPTS`, `AUTH_BACKOFF_BASE_MS`, `AUTH_BACKOFF_MAX_MS`, `AUTH_BACKOFF_RESET_MS` | Backoff for `/api/auth/step-up-otp` (`lib/rate-limiter.ts`) |
+
+See `.env.example`. The container image (`Dockerfile`) runs the standalone server on port 3000.
 
 ---
 

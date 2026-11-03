@@ -1,14 +1,12 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
-import { AnimatePresence, motion } from "framer-motion"
-import { User, Mail, Phone, Lock, Building, Loader2, ArrowRight, CheckCircle, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import React, { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+import { User, Mail, Phone, Lock, Building, Loader2, ArrowRight, CheckCircle, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
-import { api, ApiError, apiErrorField } from "@/lib/api-client"
+import { api, apiErrorField } from "@/lib/api-client"
 import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { cn } from "@/lib/utils"
-import { sessionManager } from "@/lib/session-manager"
 import { normalizeEmail } from "@/lib/email"
 import { formatPhoneNumber, isValidPhoneNumber, PHONE_NUMBER_HINT } from "@/lib/phone"
 import { GADS_SIGNUP_CONVERSION } from "@/lib/google-ads"
@@ -19,19 +17,11 @@ declare global {
   }
 }
 
-type SignupStep = "user" | "company" | "verify" | "success"
+type SignupStep = "user" | "company" | "success"
 
-/**
- * Why the code box is showing: a brand-new account proving it can read the
- * inbox it signed up with, or an existing account being signed in rather than
- * signed up.
- */
-type VerifyReason = "signup" | "existing"
-
-const STEP_ORDER: SignupStep[] = ["user", "company", "verify", "success"]
+const STEP_ORDER: SignupStep[] = ["user", "company", "success"]
 
 export default function SignupPage() {
-  const router = useRouter()
   const [step, setStep] = useState<SignupStep>("user")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const stepIndex = STEP_ORDER.indexOf(step)
@@ -65,21 +55,6 @@ export default function SignupPage() {
       delete next.form
       return next
     })
-
-  // Email verification
-  const [isCheckingAccount, setIsCheckingAccount] = useState(false)
-  const [verifyReason, setVerifyReason] = useState<VerifyReason>("signup")
-  const [loginToken, setLoginToken] = useState<string | null>(null)
-  const [otp, setOtp] = useState("")
-  const [otpError, setOtpError] = useState("")
-  const [otpTouched, setOtpTouched] = useState(false)
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
-  const [isSendingCode, setIsSendingCode] = useState(false)
-  // Set when the account is real but no code could be sent (rate limit, outage).
-  // Unlocks the "sign in later" escape hatch so nobody is stranded on a step
-  // that cannot issue a code for an account they already own.
-  const [codeSendFailed, setCodeSendFailed] = useState(false)
-  const otpInputRef = useRef<HTMLInputElement>(null)
 
   // Prefilled by /get-started so a lead who just gave us their details does
   // not retype them. useSearchParams would force a Suspense boundary here;
@@ -183,224 +158,23 @@ export default function SignupPage() {
 
 
   /**
-   * Step 1 -> step 2, but only once we know this email does not already have an
-   * account. There is no dedicated "does this user exist" endpoint; the
-   * OTP-login endpoint only issues a code for an account that exists, so it
-   * answers the question.
-   *
-   * Asking here rather than at the end matters: creating a user with a taken
-   * email fails *after* a company has already been created for it. And when the
-   * account does exist, the code that request just emailed is exactly what they
-   * need next, so they go straight to the code box instead of being bounced to
-   * the login page to start over.
+   * Step 1 -> step 2. Whether the email already has an account is no longer
+   * checked here (that used the old OTP login, which is gone); signup itself
+   * reports a taken email beside the field.
    */
-  const handleUserFormSubmit = async (e: React.FormEvent) => {
+  const handleUserFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateUserForm()) return
-
-    const email = normalizeEmail(emailAddress)
-    setIsCheckingAccount(true)
-
-    try {
-      const response = await api.auth.requestOtp(email, 'email')
-
-      if (response.status) {
-        // Account exists - sign them in instead of signing them up.
-        if (response.loginToken) setLoginToken(response.loginToken)
-
-        setVerifyReason("existing")
-        setStep("verify")
-        setIsCheckingAccount(false)
-
-        toast.info("You already have an account", {
-          description: `We've sent a sign-in code to ${email}.`,
-        })
-
-        setTimeout(() => otpInputRef.current?.focus(), 100)
-        return
-      }
-
-      // Reported failure without an exception - treat as "no account yet"
-      setIsCheckingAccount(false)
-      setStep("company")
-    } catch (error) {
-      console.error('Error checking for an existing account:', error)
-      setIsCheckingAccount(false)
-
-      if (error instanceof ApiError) {
-        // Don't mistake "we couldn't ask" for "no account exists" - carrying on
-        // with an email that is already taken only fails later, once a company
-        // has been created for it.
-        if (error.statusCode === 429) {
-          // The server says exactly how long to wait
-          toast.error("Too many requests", {
-            description: error.message,
-            duration: 10000,
-          })
-          return
-        }
-
-        if (error.statusCode === 0 || (error.statusCode ?? 0) >= 500) {
-          toast.error("Could not reach the server", {
-            description: "Please check your connection and try again.",
-          })
-          return
-        }
-      }
-
-      // A 4xx from the OTP endpoint for a well-formed email means no such user
-      setStep("company")
-    }
+    setStep("company")
   }
 
   /**
-   * Email a verification code and remember the token it will be checked
-   * against.
-   *
-   * A failure here is not fatal and must not be presented as one: by the time
-   * this runs the account has been created, so this is a real user who can sign
-   * in whenever they like. `codeSendFailed` surfaces that way out rather than
-   * leaving them stuck on a step that cannot issue a code.
+   * After signup the new owner signs in at Keycloak, which emails them a code:
+   * that both signs them in and proves they can read the inbox they gave.
    */
-  const sendVerificationCode = async (email: string) => {
-    setIsSendingCode(true)
-    setOtp("")
-    setOtpError("")
-    setOtpTouched(false)
-
-    try {
-      const response = await api.auth.requestOtp(email, 'email')
-
-      if (response.status) {
-        if (response.loginToken) setLoginToken(response.loginToken)
-        setCodeSendFailed(false)
-        setIsSendingCode(false)
-        setTimeout(() => otpInputRef.current?.focus(), 100)
-        return
-      }
-
-      setCodeSendFailed(true)
-      setIsSendingCode(false)
-      toast.error("Could not send the code", {
-        description: response.message || "Please try again.",
-      })
-    } catch (error) {
-      console.error('Error sending the verification code:', error)
-      setCodeSendFailed(true)
-      setIsSendingCode(false)
-
-      if (error instanceof ApiError && error.statusCode === 429) {
-        // The server says exactly how long to wait
-        toast.error("Too many requests", {
-          description: error.message,
-          duration: 10000,
-        })
-        return
-      }
-
-      toast.error("Could not send the code", {
-        description: error instanceof ApiError
-          ? error.message
-          : "Please check your connection and try again.",
-      })
-    }
-  }
-
-  const handleOtpChange = (value: string) => {
-    // Only allow numbers, max 4 digits
-    const numericValue = value.replace(/\D/g, "").slice(0, 4)
-    setOtp(numericValue)
-
-    if (otpTouched) {
-      if (!numericValue) {
-        setOtpError("Enter the code we emailed you")
-      } else if (numericValue.length !== 4) {
-        setOtpError("The code is 4 digits")
-      } else {
-        setOtpError("")
-      }
-    }
-  }
-
-  const handleOtpVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setOtpTouched(true)
-
-    if (!otp || otp.length !== 4) {
-      setOtpError("Please enter a valid 4-digit code")
-      return
-    }
-
-    if (!loginToken) {
-      setOtpError("That code has expired. Please request a new one.")
-      return
-    }
-
-    setIsVerifyingOtp(true)
-
-    try {
-      const response = await api.auth.verifyOtp(loginToken, otp)
-
-      if (!response.status || !response.user) {
-        setOtpError(response.message || "Invalid verification code. Please try again.")
-        setIsVerifyingOtp(false)
-        return
-      }
-
-      // Belt and braces - the verify route already rejects deactivated accounts.
-      if (response.user.is_active === false) {
-        setOtpError("This account has been deactivated.")
-        toast.error("Account deactivated", {
-          description: "Please contact your administrator to regain access.",
-        })
-        setIsVerifyingOtp(false)
-        return
-      }
-
-      // The session comes from the verified response rather than the create
-      // response, so it only exists once the address has been proved. The
-      // company was created moments ago, so fall back to the currency just
-      // picked if the user record has not caught up with it yet.
-      sessionManager.createSession(
-        verifyReason === "signup"
-          ? { ...response.user, currency: response.user.currency || currency }
-          : response.user
-      )
-
-      setStep("success")
-
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 2000)
-    } catch (error) {
-      console.error('Error verifying the code:', error)
-
-      if (error instanceof ApiError && error.statusCode === 429) {
-        // The server says exactly how long to wait
-        toast.error("Too many attempts", {
-          description: error.message,
-          duration: 10000,
-        })
-      } else {
-        setOtpError(error instanceof ApiError
-          ? error.message
-          : "Verification failed. Please try again.")
-      }
-
-      setIsVerifyingOtp(false)
-    }
-  }
-
-  /** Only reachable on the existing-account path, where nothing was created. */
-  const backToUserStep = () => {
-    setStep("user")
-    // Back to signing up, so the header and progress bar stop reading as a login
-    setVerifyReason("signup")
-    setLoginToken(null)
-    setOtp("")
-    setOtpError("")
-    setOtpTouched(false)
-    setCodeSendFailed(false)
+  const continueToSignIn = (email: string) => {
+    const params = new URLSearchParams({ returnTo: "/dashboard", login_hint: email })
+    window.location.assign(`/api/auth/login?${params}`)
   }
 
   const USER_FIELDS = ["fullName", "idNumber", "mobileNumber", "emailAddress"]
@@ -458,16 +232,13 @@ export default function SignupPage() {
       // what campaigns optimise on.
       window.fbq?.("track", "CompleteRegistration")
 
-      // The account exists now, but nothing has yet proved this person can
-      // read the inbox they signed up with. The OTP-login endpoint issues a
-      // code for an account that exists - which this one now does - so the
-      // code that signs them in is also what verifies the address. No session
-      // is minted here; that happens once the code checks out.
-      setVerifyReason("signup")
-      setStep("verify")
+      // The account exists now. Signing in at Keycloak sends a code to the
+      // address, which is what verifies it; no session is created here.
+      setStep("success")
       setIsSubmitting(false)
 
-      await sendVerificationCode(normalizeEmail(emailAddress))
+      const email = normalizeEmail(emailAddress)
+      setTimeout(() => continueToSignIn(email), 2000)
     } catch (error) {
       console.error("Signup error:", error)
       const message = error instanceof Error ? error.message : "We couldn't create your account. Please try again."
@@ -502,13 +273,12 @@ export default function SignupPage() {
             SoldOut Africa
           </h1>
           <p className="text-muted-foreground">
-            {verifyReason === "existing" ? "Sign in to your account" : "Create your account"}
+            Create your account
           </p>
         </motion.div>
 
-        {/* Progress Steps. Hidden on the existing-account path, where the
-            company step is skipped and this is a sign-in, not a sign-up. */}
-        {verifyReason !== "existing" && (
+        {/* Progress Steps */}
+        {(
           <div className="flex items-center justify-center mb-8 gap-2">
             {STEP_ORDER.map((s, i) => (
               <React.Fragment key={s}>
@@ -663,20 +433,10 @@ export default function SignupPage() {
 
               <button
                 type="submit"
-                disabled={isCheckingAccount}
                 className="w-full py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isCheckingAccount ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Checking your email...
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
+                Continue
+                <ArrowRight className="w-5 h-5" />
               </button>
             </form>
           )}
@@ -810,151 +570,25 @@ export default function SignupPage() {
             </form>
           )}
 
-          {/* Step 3: Verify the email address */}
-          {step === "verify" && (
-            <form onSubmit={handleOtpVerification} className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">
-                  {verifyReason === "existing" ? "Sign in instead" : "Verify your email"}
-                </h2>
-                {/* Only the existing-account path can go back - on the signup
-                    path the account has already been created. */}
-                {verifyReason === "existing" && (
-                  <button
-                    type="button"
-                    onClick={backToUserStep}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    ← Back
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-start gap-3 rounded-xl border border-border bg-secondary/40 p-3">
-                <ShieldCheck className="w-5 h-5 text-zinc-300 shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">
-                  {verifyReason === "existing" ? (
-                    <>
-                      An account already exists for{" "}
-                      <span className="font-medium text-foreground">{emailAddress}</span>.
-                      Enter the sign-in code we just emailed you.
-                    </>
-                  ) : (
-                    <>
-                      Your account is ready. Enter the 4-digit code we sent to{" "}
-                      <span className="font-medium text-foreground">{emailAddress}</span>{" "}
-                      to confirm the address is yours.
-                    </>
-                  )}
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="signup-otp" className="block text-sm font-medium mb-2">
-                  Verification Code *
-                </label>
-                <input
-                  ref={otpInputRef}
-                  id="signup-otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  value={otp}
-                  onChange={(e) => handleOtpChange(e.target.value)}
-                  onBlur={() => setOtpTouched(true)}
-                  placeholder="0000"
-                  maxLength={4}
-                  aria-invalid={!!otpError && otpTouched}
-                  aria-describedby={otpError && otpTouched ? "signup-otp-error" : undefined}
-                  className={`w-full h-12 px-4 rounded-xl border bg-background text-center text-lg tracking-[0.5em] outline-none transition-all ${
-                    otpError && otpTouched
-                      ? "border-destructive ring-4 ring-destructive/10"
-                      : "border-border focus:border-brand focus:ring-4 focus:ring-brand/25"
-                  }`}
-                />
-                <AnimatePresence mode="wait">
-                  {otpError && otpTouched && (
-                    <motion.p
-                      id="signup-otp-error"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-xs text-destructive mt-2"
-                      role="alert"
-                    >
-                      {otpError}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingOtp || isSendingCode || otp.length !== 4}
-                className="w-full py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-zinc-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isVerifyingOtp ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    {verifyReason === "existing" ? "Sign In" : "Verify Email"}
-                    <CheckCircle className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => sendVerificationCode(normalizeEmail(emailAddress))}
-                  disabled={isSendingCode || isVerifyingOtp}
-                  className="text-sm text-zinc-300 hover:underline disabled:opacity-50 disabled:no-underline"
-                >
-                  {isSendingCode ? "Sending..." : "Resend code"}
-                </button>
-              </div>
-
-              {/* The account exists whether or not a code ever arrives, so never
-                  leave them stranded here. */}
-              {codeSendFailed && verifyReason === "signup" && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Your account has already been created. If the code does not
-                  arrive, you can{" "}
-                  <button
-                    type="button"
-                    onClick={() => router.push("/")}
-                    className="text-zinc-300 hover:underline"
-                  >
-                    sign in
-                  </button>{" "}
-                  with this email at any time.
-                </p>
-              )}
-            </form>
-          )}
-
-          {/* Step 4: Success */}
+          {/* Step 3: Success */}
           {step === "success" && (
             <div className="text-center py-8">
               <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-10 h-10 text-green-600 dark:text-green-400" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">
-                {verifyReason === "existing" ? "Welcome Back!" : "You're All Set!"}
-              </h2>
+              <h2 className="text-2xl font-bold mb-2">You&apos;re All Set!</h2>
               <p className="text-muted-foreground mb-6">
-                {verifyReason === "existing"
-                  ? "You're signed in. Redirecting to dashboard..."
-                  : "Your email is verified and your account is ready. Redirecting to dashboard..."}
+                Your account is ready. Sign in next: we&apos;ll send a code to{" "}
+                <span className="font-medium text-foreground">{emailAddress}</span> to confirm it&apos;s yours.
               </p>
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-zinc-300" />
-                <span className="text-sm text-muted-foreground">Loading dashboard</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => continueToSignIn(normalizeEmail(emailAddress))}
+                className="inline-flex items-center justify-center gap-2 text-sm text-zinc-300 hover:underline"
+              >
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Taking you to sign in
+              </button>
             </div>
           )}
         </motion.div>

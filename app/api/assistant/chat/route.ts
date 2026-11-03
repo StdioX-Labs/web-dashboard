@@ -3,6 +3,7 @@ import { after, NextRequest, NextResponse } from 'next/server'
 import { CONVERSATION_ID, logTurn } from '@/lib/assistant/chat-log'
 import { EVENT_CATEGORIES, findCategoryIdByName } from '@/lib/event-categories'
 import { getClientIp } from '@/lib/rate-limiter'
+import { requireAuth } from '@/lib/auth/server'
 import { GET as getCompanyEvents } from '@/app/api/admin/events/all/route'
 import { GET as getEvent } from '@/app/api/event/get/route'
 import { GET as getAttendees } from '@/app/api/gl/event/attendees/list/route'
@@ -215,6 +216,7 @@ const ROUTES: Record<string, { GET?: RouteHandler; POST?: RouteHandler }> = {
 
 async function callRoute<T = Record<string, unknown>>(
   origin: string,
+  cookie: string,
   path: string,
   init: { method?: string; body?: unknown } = {}
 ): Promise<T> {
@@ -226,7 +228,8 @@ async function callRoute<T = Record<string, unknown>>(
   const response = await handler(
     new NextRequest(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      // The organizer's own session cookie, so the route calls core as them.
+      headers: { 'Content-Type': 'application/json', cookie },
       ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
     })
   )
@@ -276,11 +279,12 @@ interface CompanyEvent {
 class OrganizerScope {
   private events?: Promise<CompanyEvent[]>
 
-  constructor(private origin: string, readonly session: Session) {}
+  constructor(private origin: string, private cookie: string, readonly session: Session) {}
 
   companyEvents(): Promise<CompanyEvent[]> {
     this.events ??= callRoute<{ data?: { data?: CompanyEvent[] } }>(
       this.origin,
+      this.cookie,
       `/admin/events/all?page=0&size=300&companyId=${this.session.companyId}`
     ).then((r) => r.data?.data ?? [])
     return this.events
@@ -306,7 +310,7 @@ class OrganizerScope {
   }
 
   call<T = Record<string, unknown>>(path: string, init?: { method?: string; body?: unknown }) {
-    return callRoute<T>(this.origin, path, init)
+    return callRoute<T>(this.origin, this.cookie, path, init)
   }
 }
 
@@ -580,16 +584,26 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  let body: { messages?: MessageParam[]; session?: Partial<Session>; conversationId?: string }
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
+  let body: { messages?: MessageParam[]; conversationId?: string }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ status: false, message: 'Invalid request' }, { status: 400 })
   }
 
-  const session = body.session
-  if (!session || !Number.isInteger(session.userId) || !Number.isInteger(session.companyId)) {
-    return NextResponse.json({ status: false, message: 'Your session has expired. Please sign in again.' }, { status: 401 })
+  // Who is asking comes from the signed-in session, never from the request body.
+  const session: Session = {
+    userId: auth.user.user_id,
+    companyId: auth.user.company_id,
+    companyName: auth.user.company_name || undefined,
+    currency: auth.user.currency || undefined,
+    email: auth.user.email || undefined,
+  }
+  if (!session.userId || !session.companyId) {
+    return NextResponse.json({ status: false, message: 'Your account is not linked to a company.' }, { status: 403 })
   }
   if (!Array.isArray(body.messages) || body.messages.length === 0) {
     return NextResponse.json({ status: false, message: 'No message to answer' }, { status: 400 })
@@ -600,7 +614,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: false, message: problem }, { status: 400 })
   }
 
-  const scope = new OrganizerScope(request.nextUrl.origin, session as Session)
+  const scope = new OrganizerScope(request.nextUrl.origin, request.headers.get('cookie') ?? '', session)
   const messages = body.messages
   const suspicious = MANIPULATION.some((pattern) => pattern.test(latestOrganizerText(messages)))
   if (suspicious) {
@@ -618,10 +632,10 @@ export async function POST(request: NextRequest) {
       const pendingActions = Array.isArray(payload.pending) ? (payload.pending as PendingAction[]).map((a) => a.name) : []
       const latencyMs = Date.now() - started
       after(() =>
-        logTurn({
+        logTurn(auth.accessToken, {
           conversationId,
-          userId: session.userId as number,
-          companyId: session.companyId as number,
+          userId: session.userId,
+          companyId: session.companyId,
           companyName: session.companyName,
           userEmail: session.email,
           transcript,

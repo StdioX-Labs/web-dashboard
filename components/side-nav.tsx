@@ -6,7 +6,7 @@ import { Home, Calendar, Megaphone, Users, LogOut, X, Menu, ChevronLeft, Chevron
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { sessionManager } from "@/lib/session-manager"
 
@@ -51,7 +51,6 @@ type NavContentProps = {
 
 function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContentProps) {
   const pathname = usePathname()
-  const router = useRouter()
 
   // Get user from session
   const [userName, setUserName] = useState("User")
@@ -69,18 +68,10 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
     // Close mobile menu
     setIsMobileOpen(false)
 
-    // Clear session
+    toast.success("Signing you out…")
+
+    // Clears the session cookie and ends the Keycloak session, then lands on /.
     sessionManager.clearSession()
-
-    // Show success message
-    toast.success("Logged out successfully!", {
-      description: "You have been securely logged out of your account.",
-    })
-
-    // Redirect to login page after a short delay
-    setTimeout(() => {
-      router.push('/')
-    }, 500)
   }
 
   return (
@@ -200,7 +191,6 @@ function NavContent({ isCollapsed, setIsCollapsed, setIsMobileOpen }: NavContent
 }
 
 function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
-  const router = useRouter()
   const [userName, setUserName] = useState("U")
 
   useEffect(() => {

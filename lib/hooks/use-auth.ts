@@ -1,49 +1,52 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { sessionManager, UserSession } from '@/lib/session-manager'
 
-export function useAuth(redirectTo = '/') {
-  const router = useRouter()
-  const [user, setUser] = useState<UserSession | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+/**
+ * Loads the signed-in user from /api/auth/me. Without a session the browser is
+ * sent through Keycloak sign-in and returns to the current page afterwards.
+ * proxy.ts already redirects signed-out page loads, so this only triggers
+ * when the session ends while a page is open.
+ */
+export function useAuth() {
+  const [user, setUser] = useState<UserSession | null>(sessionManager.getUser())
+  const [isLoading, setIsLoading] = useState(user === null)
 
   useEffect(() => {
-    const checkSession = () => {
-      const session = sessionManager.getSession()
-      
+    let cancelled = false
+    sessionManager.load().then((session) => {
+      if (cancelled) return
       if (!session) {
-        // No valid session, redirect to login
-        router.push(redirectTo)
+        sessionManager.signIn()
         return
       }
-
       setUser(session.user)
       setIsLoading(false)
+    })
+    return () => {
+      cancelled = true
     }
-
-    checkSession()
-  }, [router, redirectTo])
+  }, [])
 
   return { user, isLoading }
 }
 
 export function useSession() {
-  const [user, setUser] = useState<UserSession | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<UserSession | null>(sessionManager.getUser())
+  const [isLoading, setIsLoading] = useState(user === null)
 
   useEffect(() => {
-    const session = sessionManager.getSession()
-    setUser(session?.user || null)
-    setIsLoading(false)
+    sessionManager.load().then((session) => {
+      setUser(session?.user ?? null)
+      setIsLoading(false)
+    })
   }, [])
 
   const logout = () => {
-    sessionManager.clearSession()
     setUser(null)
+    sessionManager.clearSession()
   }
 
   return { user, isLoading, logout }
 }
-

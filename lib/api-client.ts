@@ -1,7 +1,9 @@
-import { normalizeEmail, normalizeLoginId } from './email'
+import { normalizeEmail } from './email'
+import { sessionManager } from './session-manager'
 
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
-const USE_PROXY = true // Set to true to use Next.js API proxy
+// Every call goes to the dashboard's own /api routes, which call the SoldOut
+// API server-side with the signed-in user's access token. The browser holds
+// no token: the session is an httpOnly cookie sent automatically.
 const PROXY_BASE_URL = '/api'
 
 export class ApiError extends Error {
@@ -28,9 +30,11 @@ export function apiErrorField(error: unknown): string | undefined {
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
-  useProxy = USE_PROXY
+  // Kept so existing call sites compile; every request goes through /api.
+  _useProxy = true
 ): Promise<T> {
-  const url = useProxy ? `${PROXY_BASE_URL}${endpoint}` : `${BASE_URL}${endpoint}`
+  void _useProxy
+  const url = `${PROXY_BASE_URL}${endpoint}`
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -42,24 +46,11 @@ export async function apiRequest<T>(
     Object.assign(headers, optHeaders)
   }
 
-  // Add auth token if it exists
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('authToken')
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-  }
-
   try {
     const fetchOptions: RequestInit = {
       ...options,
       headers,
-    }
-
-    // Only add CORS settings if not using proxy
-    if (!useProxy) {
-      fetchOptions.mode = 'cors'
-      fetchOptions.credentials = 'omit'
+      credentials: 'same-origin',
     }
 
     console.log('API Request:', { url, method: fetchOptions.method })
@@ -87,6 +78,11 @@ export async function apiRequest<T>(
         errorMessage = errorData.message || (typeof errorData.error === 'string' ? errorData.error : '') || errorMessage
       } catch (_) {
         // Not JSON: keep the status-based message rather than a bare "Bad Gateway"
+      }
+
+      // The session ended (refresh refused, or signed out elsewhere): sign in again.
+      if (response.status === 401 && errorData?.authRequired) {
+        sessionManager.signIn()
       }
 
       throw new ApiError(
@@ -195,38 +191,16 @@ export interface FlashSale {
 
 // API methods
 export const api = {
-  // Auth endpoints
+  // Auth endpoints. Sign-in itself is a redirect to Keycloak (/api/auth/login).
   auth: {
-    requestOtp: async (id: string, method: 'email' | 'phone') => {
-      return apiRequest<{
-        message: string
-        loginToken?: string // Opaque token to reference server-side pending login
-        status: boolean
-      }>('/auth/login', {
+    /**
+     * Sends a one-time code to the signed-in user's own phone, which core asks
+     * for before an event or ticket type is suspended or reactivated.
+     */
+    requestStepUpOtp: async () => {
+      return apiRequest<{ message: string; status: boolean }>('/auth/step-up-otp', {
         method: 'POST',
-        body: JSON.stringify({ id: normalizeLoginId(id, method), method }),
-      }, true) // Use proxy
-    },
-    verifyOtp: async (loginToken: string, otp: string) => {
-      return apiRequest<{
-        message: string
-        user?: {
-          phoneNumber: string
-          role: string
-          is_active: boolean
-          kycStatus: string
-          profile_type: string | null
-          company_id: number
-          user_id: number
-          company_name: string
-          currency: string
-          email: string
-        }
-        status: boolean
-      }>('/auth/verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ loginToken, otp }),
-      }, true) // Use proxy
+      })
     },
   },
 

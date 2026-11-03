@@ -992,7 +992,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       return
     }
     try {
-      await api.auth.requestOtp(user.phoneNumber, 'phone')
+      await api.auth.requestStepUpOtp()
       setSuspendStep("otp")
       setSuspendError("")
       toast.info("OTP sent to your phone")

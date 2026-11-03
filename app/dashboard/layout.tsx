@@ -9,7 +9,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoading } = useAuth('/')
+  const { user, isLoading } = useAuth()
 
   if (isLoading) {
     return (

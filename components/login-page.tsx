@@ -5,13 +5,20 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Mail, ArrowRight, Calendar, Ticket, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
-import { api, ApiError } from "@/lib/api-client"
-import { sessionManager } from "@/lib/session-manager"
 import { normalizeEmail } from "@/lib/email"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 
 type AuthMode = "signin" | "signup"
+
+const SIGN_IN_ERRORS: Record<string, string> = {
+  access_denied: "Sign-in was cancelled.",
+  signin_failed: "We couldn't sign you in. Please try again.",
+  signin_expired: "That sign-in took too long. Please start again.",
+  signin_unavailable: "Sign-in is unavailable right now. Please try again in a few minutes.",
+  deactivated: "This account has been deactivated. Please contact your administrator.",
+  account_not_linked: "This sign-in isn't linked to a SoldOut account yet. Please contact support.",
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,37 +31,21 @@ export default function LoginPage() {
   const [cursorType, setCursorType] = useState<"default" | "pointer" | "text">("default")
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // OTP state
-  const [showOtpInput, setShowOtpInput] = useState(false)
-  const [otp, setOtp] = useState("")
-  const [otpError, setOtpError] = useState("")
-  const [otpTouched, setOtpTouched] = useState(false)
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
-  const otpInputRef = useRef<HTMLInputElement>(null)
-
-  // Store login token for server-side OTP verification
-  const [loginToken, setLoginToken] = useState<string | null>(null)
-
-  // Set when someone tries to sign up with an email that already has an account
-  const [existingAccount, setExistingAccount] = useState(false)
-
-  // Set when we switch modes on the user's behalf, to keep what they typed
-  const preserveOnModeChange = useRef(false)
+  // Why the last sign-in came back here, from /api/auth/callback's ?error=
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("error")
+    if (code) {
+      toast.error(SIGN_IN_ERRORS[code] ?? SIGN_IN_ERRORS.signin_failed)
+      window.history.replaceState(null, "", window.location.pathname)
+    }
+  }, [])
 
   // Clear form when mode changes
   useEffect(() => {
-    if (preserveOnModeChange.current) {
-      preserveOnModeChange.current = false
-      return
-    }
     setEmail("")
     setEmailError("")
     setTouched(false)
-    setShowOtpInput(false)
-    setOtp("")
-    setOtpError("")
-    setOtpTouched(false)
-    setExistingAccount(false)
+    setIsSubmitting(false)
   }, [mode])
 
   // Update cursor style
@@ -119,301 +110,23 @@ export default function LoginPage() {
     validateEmail(email)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  /**
+   * Sign in happens at Keycloak: it asks for the email or phone number and
+   * sends the one-time code itself, then returns to /api/auth/callback.
+   */
+  const handleSignIn = () => {
+    setIsSubmitting(true)
+    window.location.assign("/api/auth/login?returnTo=%2Fdashboard")
+  }
+
+  // Sign up: carry the email over to the signup form so it isn't typed twice.
+  // If the address already has an account, signup says so.
+  const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setTouched(true)
-
-    if (!validateEmail(email)) {
-      return
-    }
-
+    if (!validateEmail(email)) return
     setIsSubmitting(true)
-
-    if (mode === "signup") {
-      await handleSignupContinue()
-      return
-    }
-
-    // For sign in, request OTP
-    try {
-      // Call the API to request OTP
-      const response = await api.auth.requestOtp(email, 'email')
-
-      if (response.status) {
-        // Store login token for server-side OTP verification
-        if (response.loginToken) {
-          setLoginToken(response.loginToken)
-        }
-
-        // Show success message
-        toast.success(response.message || "Verification code sent", {
-          description: `Please check your email for the verification code.`,
-        })
-
-        // Show OTP input
-        setShowOtpInput(true)
-        setIsSubmitting(false)
-        // Focus on OTP input
-        setTimeout(() => otpInputRef.current?.focus(), 100)
-      } else {
-        toast.error("Failed to send verification code", {
-          description: response.message || "Please try again.",
-        })
-        setIsSubmitting(false)
-      }
-    } catch (error) {
-      console.error('Error requesting OTP:', error)
-
-      if (error instanceof ApiError) {
-        // Handle rate limiting specifically
-        if (error.statusCode === 429) {
-          // The server says exactly how long to wait
-          toast.error("Too many requests", {
-            description: error.message,
-            duration: 10000,
-          })
-        } else {
-          toast.error("Failed to send verification code", {
-            description: error.message,
-          })
-        }
-      } else {
-        toast.error("Failed to send verification code", {
-          description: "Please check your connection and try again.",
-        })
-      }
-
-      setIsSubmitting(false)
-    }
-  }
-
-  /**
-   * Sign-up path: find out whether this email already has an account before
-   * sending anyone to the signup form.
-   *
-   * There is no dedicated "does this user exist" endpoint, but the OTP-login
-   * endpoint only issues a code for an account that exists, so it answers the
-   * question. When it does exist the code is exactly what they need anyway, so
-   * they go straight to verification rather than being bounced to the Login tab
-   * to start over.
-   */
-  const handleSignupContinue = async () => {
-    try {
-      const response = await api.auth.requestOtp(email, 'email')
-
-      if (response.status) {
-        // Account exists — sign them in instead of signing them up.
-        if (response.loginToken) {
-          setLoginToken(response.loginToken)
-        }
-
-        setExistingAccount(true)
-        // Keep the email they just typed when we flip to the Login tab
-        preserveOnModeChange.current = true
-        setMode("signin")
-        setShowOtpInput(true)
-        setIsSubmitting(false)
-
-        toast.info("You already have an account", {
-          description: `We've sent a sign-in code to ${email}.`,
-        })
-
-        setTimeout(() => otpInputRef.current?.focus(), 100)
-        return
-      }
-
-      // Reported failure without an exception — treat as "no account yet"
-      goToSignup()
-    } catch (error) {
-      console.error('Error checking for an existing account:', error)
-
-      if (error instanceof ApiError) {
-        // Don't mistake "we couldn't ask" for "no account exists" — sending
-        // someone to signup with an email that is already taken only fails
-        // later, after a company has been created for them.
-        if (error.statusCode === 429) {
-          // The server says exactly how long to wait
-          toast.error("Too many requests", {
-            description: error.message,
-            duration: 10000,
-          })
-          setIsSubmitting(false)
-          return
-        }
-
-        if (error.statusCode === 0 || (error.statusCode ?? 0) >= 500) {
-          toast.error("Could not reach the server", {
-            description: "Please check your connection and try again.",
-          })
-          setIsSubmitting(false)
-          return
-        }
-      }
-
-      // A 4xx from the OTP endpoint for a well-formed email means no such user
-      goToSignup()
-    }
-  }
-
-  // Carry the email over so it does not have to be typed again
-  const goToSignup = () => {
     router.push(`/signup?email=${encodeURIComponent(email)}`)
-  }
-
-  const handleOtpVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setOtpTouched(true)
-
-    if (!otp || otp.length !== 4) {
-      setOtpError("Please enter a valid 4-digit code")
-      return
-    }
-
-    setIsVerifyingOtp(true)
-
-    try {
-      // Verify OTP server-side
-      if (!loginToken) {
-        console.error('No login token available. Please request a new code.')
-        toast.error("Verification error", {
-          description: "Session expired. Please request a new code.",
-        })
-        setIsVerifyingOtp(false)
-        return
-      }
-
-      const response = await api.auth.verifyOtp(loginToken, otp)
-
-      if (!response.status || !response.user) {
-        setOtpError(response.message || "Invalid verification code. Please try again.")
-        toast.error("Verification failed", {
-          description: response.message || "The code you entered is incorrect.",
-        })
-        setIsVerifyingOtp(false)
-        return
-      }
-
-      // Belt and braces — the verify route already rejects deactivated accounts.
-      if (response.user.is_active === false) {
-        setOtpError("This account has been deactivated.")
-        toast.error("Account deactivated", {
-          description: "Please contact your administrator to regain access.",
-        })
-        setIsVerifyingOtp(false)
-        return
-      }
-
-      // OTP verified server-side, create session with returned user data
-      sessionManager.createSession(response.user)
-
-      toast.success("Login successful!", {
-        description: `Welcome back, ${response.user.company_name}!`,
-      })
-
-      // Redirect to dashboard
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 500)
-    } catch (error) {
-      console.error('Error verifying OTP:', error)
-
-      if (error instanceof ApiError) {
-        if (error.statusCode === 429) {
-          // The server says exactly how long to wait
-          toast.error("Too many attempts", {
-            description: error.message,
-            duration: 10000,
-          })
-        } else {
-          setOtpError(error.message || "Verification failed")
-          toast.error("Verification failed", {
-            description: error.message || "Please try again.",
-          })
-        }
-      } else {
-        toast.error("Verification failed", {
-          description: "An unexpected error occurred. Please try again.",
-        })
-      }
-      setIsVerifyingOtp(false)
-    }
-  }
-
-  const handleOtpChange = (value: string) => {
-    // Only allow numbers and max 4 digits
-    const numericValue = value.replace(/\D/g, "").slice(0, 4)
-    setOtp(numericValue)
-
-    if (otpTouched) {
-      if (!numericValue) {
-        setOtpError("OTP is required")
-      } else if (numericValue.length !== 4) {
-        setOtpError("OTP must be 4 digits")
-      } else {
-        setOtpError("")
-      }
-    }
-  }
-
-  const handleResendOtp = async () => {
-    setIsSubmitting(true)
-
-    try {
-      // Call the API to resend OTP
-      const response = await api.auth.requestOtp(email, 'email')
-
-      if (response.status) {
-        // Store new login token for server-side OTP verification
-        if (response.loginToken) {
-          setLoginToken(response.loginToken)
-        }
-
-        toast.success("Code resent successfully", {
-          description: "Please check your email for the new code.",
-        })
-
-        setIsSubmitting(false)
-        setOtp("")
-        setOtpError("")
-        setOtpTouched(false)
-      } else {
-        toast.error("Failed to resend code", {
-          description: response.message || "Please try again.",
-        })
-        setIsSubmitting(false)
-      }
-    } catch (error) {
-      console.error('Error resending OTP:', error)
-
-      if (error instanceof ApiError) {
-        // Handle rate limiting specifically
-        if (error.statusCode === 429) {
-          // The server says exactly how long to wait
-          toast.error("Too many requests", {
-            description: error.message,
-            duration: 10000,
-          })
-        } else {
-          toast.error("Failed to resend code", {
-            description: error.message,
-          })
-        }
-      } else {
-        toast.error("Failed to resend code", {
-          description: "Please check your connection and try again.",
-        })
-      }
-
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleBackToEmail = () => {
-    setShowOtpInput(false)
-    setOtp("")
-    setOtpError("")
-    setOtpTouched(false)
-    setExistingAccount(false)
   }
 
   return (
@@ -620,14 +333,7 @@ export default function LoginPage() {
                   >
                     <button
                       type="button"
-                      onClick={() => {
-                        setMode("signin")
-                        // Reset OTP state when switching modes
-                        setShowOtpInput(false)
-                        setOtp("")
-                        setOtpError("")
-                        setOtpTouched(false)
-                      }}
+                      onClick={() => setMode("signin")}
                       className={cn(
                         "flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 text-center",
                         mode === "signin"
@@ -639,14 +345,7 @@ export default function LoginPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setMode("signup")
-                        // Reset OTP state when switching modes
-                        setShowOtpInput(false)
-                        setOtp("")
-                        setOtpError("")
-                        setOtpTouched(false)
-                      }}
+                      onClick={() => setMode("signup")}
                       className={cn(
                         "flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 text-center",
                         mode === "signup"
@@ -661,7 +360,7 @@ export default function LoginPage() {
                   {/* Form heading - Centered */}
                   <AnimatePresence mode="wait">
                     <motion.div
-                      key={showOtpInput ? "otp" : mode}
+                      key={mode}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -669,39 +368,74 @@ export default function LoginPage() {
                       className="mb-10 text-center"
                     >
                       <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-                        {showOtpInput
-                          ? "Enter verification code"
-                          : mode === "signin"
-                            ? "Welcome back"
-                            : "Get started"}
+                        {mode === "signin" ? "Welcome back" : "Get started"}
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        {showOtpInput
-                          ? `We've sent a 4-digit code to ${email}`
-                          : mode === "signin"
-                            ? "Enter your email to access your dashboard"
-                            : "Enter your email to create your account"}
+                        {mode === "signin"
+                          ? "Sign in with your email or phone number to access your dashboard"
+                          : "Enter your email to create your account"}
                       </p>
-                      {existingAccount && showOtpInput && (
-                        <p className="text-xs text-zinc-300 mt-3 px-4">
-                          You already have an account with this email, so we&apos;re signing
-                          you in instead of creating a new one.
-                        </p>
-                      )}
                     </motion.div>
                   </AnimatePresence>
 
-                  {/* Conditional Form - Email or OTP */}
                   <AnimatePresence mode="wait">
-                    {!showOtpInput ? (
-                      // Email Input Form
+                    {mode === "signin" ? (
+                      <motion.div
+                        key="signin"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-6"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={handleSignIn}
+                          disabled={isSubmitting}
+                          whileHover={{ scale: 1.02, y: -1 }}
+                          whileTap={{ scale: 0.98 }}
+                          onMouseEnter={() => setCursorType("pointer")}
+                          onMouseLeave={() => setCursorType("default")}
+                          className={cn(
+                            "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
+                            "flex items-center justify-center gap-2",
+                            "transition-all duration-300",
+                            "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white",
+                            "hover:shadow-lg hover:shadow-zinc-500/25",
+                            "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
+                          )}
+                        >
+                          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                          {isSubmitting ? (
+                            <>
+                              <motion.div
+                                className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              />
+                              <span>Redirecting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Sign in</span>
+                              <ArrowRight className="h-4 w-4" />
+                            </>
+                          )}
+                        </motion.button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          We&apos;ll send a one-time code to your email or phone.
+                        </p>
+                      </motion.div>
+                    ) : (
+                      // Email Input Form (sign up)
                       <motion.form
                         key="email-form"
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ duration: 0.3 }}
-                        onSubmit={handleSubmit}
+                        onSubmit={handleSignupSubmit}
                         className="space-y-6"
                       >
                         <div>
@@ -792,133 +526,15 @@ export default function LoginPage() {
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                               />
-                              <span>{mode === "signin" ? "Sending code..." : "Checking your email..."}</span>
+                              <span>Loading...</span>
                             </>
                           ) : (
                             <>
-                              <span>{mode === "signin" ? "Continue" : "Get started"}</span>
+                              <span>Get started</span>
                               <ArrowRight className="h-4 w-4" />
                             </>
                           )}
                         </motion.button>
-                      </motion.form>
-                    ) : (
-                      // OTP Input Form
-                      <motion.form
-                        key="otp-form"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3 }}
-                        onSubmit={handleOtpVerification}
-                        className="space-y-6"
-                      >
-                        <div>
-                          <div
-                            className="relative"
-                            onMouseEnter={() => setCursorType("text")}
-                            onMouseLeave={() => setCursorType("default")}
-                          >
-                            <input
-                              ref={otpInputRef}
-                              id="otp"
-                              type="text"
-                              inputMode="numeric"
-                              value={otp}
-                              onChange={(e) => handleOtpChange(e.target.value)}
-                              onFocus={() => setOtpTouched(true)}
-                              placeholder="0000"
-                              maxLength={4}
-                              className={cn(
-                                "w-full h-14 px-4 rounded-xl border bg-background",
-                                "transition-all duration-200 outline-none text-2xl font-bold",
-                                "placeholder:text-muted-foreground text-center tracking-widest",
-                                otpError && otpTouched
-                                  ? "border-destructive ring-4 ring-destructive/10"
-                                  : "border-zinc-500 ring-4 ring-zinc-400/10"
-                              )}
-                              aria-invalid={!!otpError && otpTouched}
-                              aria-describedby={otpError && otpTouched ? "otp-error" : undefined}
-                            />
-                          </div>
-
-                          {/* Error message */}
-                          <AnimatePresence mode="wait">
-                            {otpError && otpTouched && (
-                              <motion.p
-                                id="otp-error"
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                                className="text-xs text-destructive mt-2 text-center"
-                                role="alert"
-                              >
-                                {otpError}
-                              </motion.p>
-                            )}
-                          </AnimatePresence>
-                        </div>
-
-                        {/* Verify button */}
-                        <motion.button
-                          type="submit"
-                          disabled={isVerifyingOtp || otp.length !== 4}
-                          whileHover={{ scale: 1.02, y: -1 }}
-                          whileTap={{ scale: 0.98 }}
-                          onMouseEnter={() => setCursorType("pointer")}
-                          onMouseLeave={() => setCursorType("default")}
-                          className={cn(
-                            "relative w-full h-12 px-6 rounded-xl font-semibold text-sm overflow-hidden",
-                            "flex items-center justify-center gap-2",
-                            "transition-all duration-300",
-                            "bg-gradient-to-r from-zinc-700 to-zinc-900 text-white",
-                            "hover:shadow-lg hover:shadow-zinc-500/25",
-                            "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:y-0"
-                          )}
-                        >
-                          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-                          {isVerifyingOtp ? (
-                            <>
-                              <motion.div
-                                className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              />
-                              <span>Verifying...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Verify & Login</span>
-                              <ArrowRight className="h-4 w-4" />
-                            </>
-                          )}
-                        </motion.button>
-
-                        {/* Resend and Back buttons */}
-                        <div className="flex items-center justify-center gap-4 text-sm">
-                          <button
-                            type="button"
-                            onClick={handleResendOtp}
-                            disabled={isSubmitting}
-                            onMouseEnter={() => setCursorType("pointer")}
-                            onMouseLeave={() => setCursorType("default")}
-                            className="text-muted-foreground hover:text-zinc-300 transition-colors disabled:opacity-50"
-                          >
-                            Resend code
-                          </button>
-                          <span className="text-muted-foreground">•</span>
-                          <button
-                            type="button"
-                            onClick={handleBackToEmail}
-                            onMouseEnter={() => setCursorType("pointer")}
-                            onMouseLeave={() => setCursorType("default")}
-                            className="text-muted-foreground hover:text-zinc-300 transition-colors"
-                          >
-                            Change email
-                          </button>
-                        </div>
                       </motion.form>
                     )}
                   </AnimatePresence>

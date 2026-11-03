@@ -1,51 +1,31 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.soldoutafrica.com/api/v1"
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 async function handleSuspendUser(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const searchParams = request.nextUrl.searchParams
     const userId = searchParams.get("userId")
-    const requesterUserId = searchParams.get("requesterUserId")
+    // The requester is the signed-in user, never an id from the browser.
+    const requesterUserId = auth.user.user_id
 
     console.log('Suspending/activating user:', { userId, requesterUserId })
 
-    if (!userId || !requesterUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "userId and requesterUserId are required", status: false },
+        { error: "userId is required", status: false },
         { status: 400 }
       )
     }
 
-    // Get Basic Auth credentials from environment variables
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-
-    console.log('Using credentials:', { username: username ? 'SET' : 'NOT SET', password: password ? 'SET' : 'NOT SET' })
-
-    if (!username || !password) {
-      console.error('Missing API credentials in environment variables')
-      return NextResponse.json(
-        { error: "API configuration error", status: false },
-        { status: 500 }
-      )
-    }
-
-    // Create Basic Auth header
-    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-    console.log('Basic Auth created (first 20 chars):', basicAuth.substring(0, 20))
-
     // Forward the request to the backend API
-    const backendUrl = `${BASE_URL}/company/user/suspend?userId=${userId}&requesterUserId=${requesterUserId}`
-    console.log('Backend URL:', backendUrl)
+    const backendPath = `/company/user/suspend?userId=${encodeURIComponent(userId)}&requesterUserId=${requesterUserId}`
+    console.log('Backend path:', backendPath)
 
-    const response = await fetch(backendUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${basicAuth}`,
-      },
-    })
+    const response = await soldoutFetch(auth.accessToken, backendPath, { method: "PUT" })
 
     console.log('Backend response status:', response.status)
 

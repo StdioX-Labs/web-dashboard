@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.soldoutafrica.com/api/v1"
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const searchParams = request.nextUrl.searchParams
-    const companyId = searchParams.get("companyId")
+    // The signed-in user's company, never one named by the browser.
+    const companyId = auth.user.company_id || searchParams.get("companyId")
 
     console.log('Fetching users for company:', companyId)
 
@@ -16,32 +20,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Basic Auth credentials from environment variables
-    const username = process.env.SOLDOUT_API_USERNAME
-    const password = process.env.SOLDOUT_API_PASSWORD
-
-    if (!username || !password) {
-      console.error('Missing API credentials in environment variables')
-      return NextResponse.json(
-        { error: "API configuration error", status: false },
-        { status: 500 }
-      )
-    }
-
-    // Create Basic Auth header
-    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64')
-
     // Forward the request to the backend API
-    const backendUrl = `${BASE_URL}/company/fetch/users?companyId=${companyId}`
-    console.log('Backend URL:', backendUrl)
+    const backendPath = `/company/fetch/users?companyId=${encodeURIComponent(String(companyId))}`
+    console.log('Backend path:', backendPath)
 
-    const response = await fetch(backendUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Basic ${basicAuth}`,
-      },
-    })
+    const response = await soldoutFetch(auth.accessToken, backendPath)
 
     console.log('Backend response status:', response.status)
 

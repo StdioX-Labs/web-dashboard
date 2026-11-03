@@ -3,8 +3,7 @@
 // never affects the chat: it runs after the response and failures only warn.
 
 import type Anthropic from '@anthropic-ai/sdk'
-
-const LOG_URL = 'https://api.soldoutafrica.com/api/v1/ai/assistant/log'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export interface TurnLog {
   conversationId: string
@@ -29,19 +28,13 @@ export interface TurnLog {
 
 export const CONVERSATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export async function logTurn(entry: TurnLog): Promise<void> {
-  const username = process.env.SOLDOUT_API_USERNAME
-  const password = process.env.SOLDOUT_API_PASSWORD
-  if (!username || !password) return
+/** Logged as the organizer who chatted, with their access token. */
+export async function logTurn(accessToken: string, entry: TurnLog): Promise<void> {
   try {
-    const response = await fetch(LOG_URL, {
+    const response = await soldoutFetch(accessToken, '/ai/assistant/log', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
-      },
-      body: JSON.stringify(entry),
-      signal: AbortSignal.timeout(15000),
+      body: entry,
+      timeoutMs: 15000,
     })
     if (!response.ok) console.warn(`[assistant] chat log not saved (${response.status})`)
   } catch (error) {

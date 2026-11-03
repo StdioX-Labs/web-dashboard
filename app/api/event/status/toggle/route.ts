@@ -1,38 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BASE_URL = 'https://api.soldoutafrica.com/api/v1'
-const SOLDOUT_API_USERNAME = process.env.SOLDOUT_API_USERNAME
-const SOLDOUT_API_PASSWORD = process.env.SOLDOUT_API_PASSWORD
+import { requireAuth } from '@/lib/auth/server'
+import { soldoutFetch } from '@/lib/soldout-proxy'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const searchParams = request.nextUrl.searchParams
     const eventId = searchParams.get('eventId')
-    const userId = searchParams.get('userId')
+    // The acting user, from the session; core checks the OTP against them.
+    const userId = auth.user.user_id
 
-    if (!eventId || !userId) {
+    if (!eventId) {
       return NextResponse.json(
-        { status: false, message: 'eventId and userId are required' },
+        { status: false, message: 'eventId is required' },
         { status: 400 }
       )
     }
 
     const body = await request.json()
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    if (SOLDOUT_API_USERNAME && SOLDOUT_API_PASSWORD) {
-      const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
-      headers['Authorization'] = `Basic ${credentials}`
-    }
-
-    const response = await fetch(`${BASE_URL}/event/status/toggle?eventId=${eventId}&userId=${userId}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    })
+    const response = await soldoutFetch(
+      auth.accessToken,
+      `/event/status/toggle?eventId=${encodeURIComponent(eventId)}&userId=${userId}`,
+      { method: 'POST', body }
+    )
 
     const contentType = response.headers.get('content-type')
     const text = await response.text()
