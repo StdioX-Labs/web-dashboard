@@ -451,7 +451,7 @@ export default function DashboardHome() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mb-8 sm:mb-10 grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center"
+        className="mb-8 sm:mb-10 grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-center"
       >
         <div className="relative w-full max-w-[420px] mx-auto lg:mx-0">
           <div className="relative aspect-[1.586/1] w-full overflow-hidden rounded-[1.25rem] sm:rounded-[1.5rem] bg-gradient-to-br from-[#232A2D] via-[#15171A] to-[#0B0B0D] p-4 sm:p-6 text-white shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
