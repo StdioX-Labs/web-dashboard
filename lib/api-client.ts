@@ -1,5 +1,6 @@
 import { normalizeEmail } from './email'
 import { sessionManager } from './session-manager'
+import type { WithdrawalRecord, WithdrawalRequest } from './withdrawal'
 
 // Every call goes to the dashboard's own /api routes, which call the SoldOut
 // API server-side with the signed-in user's access token. The browser holds
@@ -981,6 +982,35 @@ export const api = {
           size: params.size || 50,
         }),
       }, true) // Use proxy route
+    },
+  },
+
+  // Treasury: balance, withdrawals and withdrawal requests. The company is
+  // always the signed-in user's (the API route adds it).
+  wallet: {
+    get: async () => {
+      return apiRequest<{
+        status: boolean
+        message?: string
+        wallet: { balance: number; currency: string }
+        canRequest: boolean
+        withdrawals: WithdrawalRecord[]
+      }>('/wallet', { method: 'GET' })
+    },
+    /**
+     * First call answers 428 (thrown as ApiError; `response` carries
+     * stepUpChallengeId and expiresIn). Repeat with stepUpChallengeId and
+     * stepUpCode to place the request.
+     */
+    withdraw: async (data: WithdrawalRequest) => {
+      return apiRequest<{
+        status: boolean
+        message: string
+        transactionReference?: string
+      }>('/wallet/withdraw', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
     },
   },
 

@@ -576,6 +576,8 @@ All handlers live under `app/api/**/route.ts`, run on the Node runtime, and forw
 | `/api/transactions/detailed` | POST | `/gl/transactions/fetch/detailed` | Home, Transactions, Event detail |
 | `/api/organizer-lead` | POST | `/organizer-lead/create` + Meta CAPI | Get started |
 | `/api/upload-image` | POST | Contabo S3 | Create event |
+| `/api/wallet` | GET | `/wallet/get` (balance + wallet transactions, withdrawals only) | Payouts |
+| `/api/wallet/withdraw` | POST | `/transaction/withdraw/initialize` (428 step-up code, then the same body with `stepUpChallengeId` + `stepUpCode`) | Payouts |
 | `/api/health` | GET | — | Health probe |
 | `/api/tickets/validate`, `/api/tickets/redeem`, `/api/payments/mpesa` | POST | — | Stubs, not wired to any page |
 
@@ -602,7 +604,7 @@ See `.env.example`. The container image (`Dockerfile`) runs the standalone serve
 
 ## 5. Known gaps
 
-- **Payouts** and **Promotions** render mock/`localStorage` data — no backend.
+- **Promotions** renders mock/`localStorage` data — no backend.
 - The **Users → Affiliates** tab and the "Withdraw"/"Report" buttons on the dashboard hero are
   inert (the per-event Affiliates tab is fully wired).
 - **Edit event** has no separate end-date field and cannot replace the poster.
