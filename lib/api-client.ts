@@ -1224,6 +1224,10 @@ export const api = {
         message?: string
         error?: string
         status: boolean
+        // Set when the same account redeemed this ticket moments ago: the server answers
+        // status true for a retried request, but at the door it means the ticket is used.
+        repeatScan?: boolean
+        secondsSinceScan?: number
       }>('/scanner/scan', {
         method: 'POST',
         body: JSON.stringify(scanData),
