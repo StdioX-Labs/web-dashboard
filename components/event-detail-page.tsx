@@ -109,6 +109,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [onboardModel, setOnboardModel] = useState<"PERCENTAGE" | "FIXED_AMOUNT">("PERCENTAGE")
   const [onboardRevShare, setOnboardRevShare] = useState("10")
   const [onboardCanWithdraw, setOnboardCanWithdraw] = useState(false)
+  const [onboardPhoneError, setOnboardPhoneError] = useState("")
   const [isOnboarding, setIsOnboarding] = useState(false)
   const [revShareTarget, setRevShareTarget] = useState<AffiliateSummary | null>(null)
   const [revShareValue, setRevShareValue] = useState("")
@@ -547,6 +548,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setOnboardModel("PERCENTAGE")
     setOnboardRevShare("10")
     setOnboardCanWithdraw(false)
+    setOnboardPhoneError("")
   }
 
   const handleOnboardAffiliate = async () => {
@@ -609,9 +611,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       await loadAffiliates()
     } catch (error) {
       console.error("Error onboarding affiliate:", error)
-      toast.error("Failed to onboard affiliate", {
-        description: error instanceof Error ? error.message : "Please try again",
-      })
+      const message = error instanceof Error ? error.message : "Please try again"
+      // A number already selling for another organiser: say so beside the field.
+      if (apiErrorField(error) === "mobileNumber") setOnboardPhoneError(message)
+      toast.error("Failed to onboard affiliate", { description: message })
     } finally {
       setIsOnboarding(false)
     }
@@ -4546,13 +4549,17 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   <input
                     type="tel"
                     value={onboardPhone}
-                    onChange={(e) => setOnboardPhone(e.target.value)}
+                    onChange={(e) => { setOnboardPhone(e.target.value); setOnboardPhoneError("") }}
                     placeholder="0722000000"
-                    className="w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all"
+                    className={cn("w-full h-12 px-4 rounded-xl border border-border bg-background text-sm outline-none focus:border-brand focus:ring-4 focus:ring-brand/25 transition-all", onboardPhoneError && errorInputClass)}
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    0722000000, +254 722 000000 and 254722000000 all work.
-                  </p>
+                  {onboardPhoneError ? (
+                    <FieldError message={onboardPhoneError} />
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      0722000000, +254 722 000000 and 254722000000 all work.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
