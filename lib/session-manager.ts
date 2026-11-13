@@ -92,6 +92,8 @@ export const sessionManager = {
       localStorage.removeItem('authToken')
       localStorage.removeItem('user')
       sessionStorage.clear()
+      // The signed cookie that proves the sign-in to the server goes too
+      fetch('/api/auth/logout', { method: 'POST', keepalive: true }).catch(() => {})
     }
   },
 

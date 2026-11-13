@@ -91,6 +91,55 @@ export async function proxyToSoldOut(
 }
 
 /**
+ * Calls the SoldOut API with the service login and hands back what it said,
+ * for routes that need to look at an answer (who owns what) before relaying
+ * anything. Never forwards the browser's own Authorization header.
+ */
+export async function soldOutJson(
+  path: string
+): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; status: number; message: string }> {
+  if (!SOLDOUT_API_USERNAME || !SOLDOUT_API_PASSWORD) {
+    console.error('SoldOut service login is not configured')
+    return { ok: false, status: 500, message: 'The dashboard is missing its API configuration.' }
+  }
+  try {
+    const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: { Authorization: `Basic ${credentials}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(30000),
+      cache: 'no-store',
+    })
+    const data = (await response.json().catch(() => null)) as Record<string, unknown> | null
+    if (!response.ok || !data || data.status === false) {
+      const message = (data?.error || data?.message || `Request failed (${response.status})`) as string
+      return { ok: false, status: response.ok ? 400 : response.status, message }
+    }
+    return { ok: true, data }
+  } catch (error) {
+    console.error('SoldOut lookup failed:', path, error)
+    return { ok: false, status: 502, message: "Couldn't reach SoldOut right now. Please try again." }
+  }
+}
+
+/** Fetches an image (a gate scan photo) with the service login, or null when there is none. */
+export async function soldOutImage(path: string): Promise<ArrayBuffer | null> {
+  if (!SOLDOUT_API_USERNAME || !SOLDOUT_API_PASSWORD) return null
+  try {
+    const credentials = Buffer.from(`${SOLDOUT_API_USERNAME}:${SOLDOUT_API_PASSWORD}`).toString('base64')
+    const response = await fetch(`${BASE_URL}${path}`, {
+      headers: { Authorization: `Basic ${credentials}`, Accept: 'image/jpeg' },
+      signal: AbortSignal.timeout(30000),
+      cache: 'no-store',
+    })
+    if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) return null
+    return await response.arrayBuffer()
+  } catch (error) {
+    console.error('SoldOut image failed:', path, error)
+    return null
+  }
+}
+
+/**
  * Returns a 400 response naming the query params that were missing, or null
  * when they are all present.
  */

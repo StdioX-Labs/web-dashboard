@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkAttempt, getBackoffConfig, getClientIp, resetAttempts, tooManyAttemptsResponse } from '@/lib/rate-limiter'
 import { normalizeLoginId } from '@/lib/email'
 import { verifyPendingLogin } from '@/lib/pending-login-store'
+import { setSessionCookie } from '@/lib/dashboard-session'
 
 
 // Configure route segment
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (result.user?.email) resetAttempts(`login:${normalizeLoginId(result.user.email, 'email')}:${clientIp}`)
     if (result.user?.phoneNumber) resetAttempts(`login:${normalizeLoginId(result.user.phoneNumber, 'phone')}:${clientIp}`)
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         status: true,
         message: 'OTP verified successfully',
@@ -100,6 +101,10 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     )
+    // Proof of who signed in, for routes that must not trust the browser's
+    // own copy of the session (see lib/dashboard-session)
+    if (result.user) setSessionCookie(response, result.user.user_id, result.user.company_id)
+    return response
   } catch (error) {
     console.error('Verify OTP Proxy Error - Full details:', error)
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error)
