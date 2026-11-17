@@ -9,6 +9,7 @@ import { formatPhoneNumber, isValidPhoneNumber, PHONE_NUMBER_HINT } from "@/lib/
 import { api, apiErrorField } from "@/lib/api-client"
 import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/components/form-errors"
 import { sessionManager } from "@/lib/session-manager"
+import ScannersPanel from "@/components/scanners-panel"
 
 /**
  * FEATURE FLAG: Affiliates Tab
@@ -83,7 +84,17 @@ export default function UsersPage() {
   const [affiliates, setAffiliates] = useState<Affiliate[]>(generateMockAffiliates())
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deactivated">("all")
-  const [activeTab, setActiveTab] = useState<"users" | "affiliates">("users")
+  const [activeTab, setActiveTab] = useState<"users" | "affiliates" | "scanners">("users")
+  // Gate scanner accounts are for owners; the scanner routes check this again server-side
+  const [canManageScanners, setCanManageScanners] = useState(false)
+  const [showScannerAdd, setShowScannerAdd] = useState(false)
+
+  useEffect(() => {
+    const role = sessionManager.getUser()?.role
+    const allowed = role === "COMPANY_OWNER" || role === "SUPER_ADMIN"
+    setCanManageScanners(allowed)
+    if (allowed && new URLSearchParams(window.location.search).get("tab") === "scanners") setActiveTab("scanners")
+  }, [])
 
   const fetchUsers = async () => {
     try {
@@ -444,13 +455,27 @@ export default function UsersPage() {
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 max-w-[1600px] mx-auto">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 sm:mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{activeTab === "users" ? "Users" : "Affiliates"}</h1>
-          <button onClick={() => { setUserErrors({}); setShowAddModal(true) }} className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{activeTab === "users" ? "Users" : activeTab === "scanners" ? "Scanners" : "Affiliates"}</h1>
+          <button
+            onClick={() => {
+              if (activeTab === "scanners") return setShowScannerAdd(true)
+              setUserErrors({})
+              setShowAddModal(true)
+            }}
+            aria-label={activeTab === "users" ? "Add User" : activeTab === "scanners" ? "Add Scanner" : "Add Affiliate"}
+            className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-zinc-700 to-zinc-900 text-white rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-zinc-500/25 transition-all cursor-pointer"
+          >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{activeTab === "users" ? "Add User" : "Add Affiliate"}</span>
+            <span className="hidden sm:inline">{activeTab === "users" ? "Add User" : activeTab === "scanners" ? "Add Scanner" : "Add Affiliate"}</span>
           </button>
         </div>
-        <p className="text-sm sm:text-base text-muted-foreground">{activeTab === "users" ? "Manage team members and their access levels" : "Manage affiliates and track their sales performance"}</p>
+        <p className="text-sm sm:text-base text-muted-foreground">
+          {activeTab === "users"
+            ? "Manage team members and their access levels"
+            : activeTab === "scanners"
+              ? "Door staff who scan tickets at your gates with the gate app"
+              : "Manage affiliates and track their sales performance"}
+        </p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-6">
@@ -459,9 +484,15 @@ export default function UsersPage() {
           {ENABLE_AFFILIATES && (
             <button onClick={() => setActiveTab("affiliates")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "affiliates" ? "bg-zinc-700 text-white shadow-lg shadow-zinc-500/25" : "text-muted-foreground hover:text-foreground")}>Affiliates</button>
           )}
+          {canManageScanners && (
+            <button onClick={() => setActiveTab("scanners")} className={cn("px-6 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer", activeTab === "scanners" ? "bg-zinc-700 text-white shadow-lg shadow-zinc-500/25" : "text-muted-foreground hover:text-foreground")}>Scanners</button>
+          )}
         </div>
       </motion.div>
 
+      {activeTab === "scanners" ? (
+        <ScannersPanel addOpen={showScannerAdd} onAddOpenChange={setShowScannerAdd} />
+      ) : (<>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {(activeTab === "users" ? [
           { label: "Total Users", value: totalUsers, icon: UsersIcon, color: "text-zinc-300", bg: "bg-zinc-800 dark:bg-zinc-800/50" },
@@ -649,6 +680,7 @@ export default function UsersPage() {
           {filteredAffiliates.length === 0 && <div className="text-center py-12 text-muted-foreground"><UsersIcon className="w-12 h-12 mx-auto mb-3 opacity-50" /><p>No affiliates found</p></div>}
         </motion.div>
       )}
+      </>)}
 
       <AnimatePresence>
         {showAddModal && (

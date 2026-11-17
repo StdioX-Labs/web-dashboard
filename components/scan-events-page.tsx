@@ -114,8 +114,20 @@ export default function ScanEventsPage() {
   const lastScannedCodeRef = useRef("")
   const lastScanTimeRef = useRef(0)
   const scanTicketRef = useRef<((barcode: string) => Promise<void>) | null>(null)
+  // Tickets this browser let in, by "eventId:barcode", so a re-scan never reads as valid
+  const admittedRef = useRef(new Map<string, number>())
 
   // ── Helpers ─────────────────────────────────────────────────────────────
+
+  const agoText = (seconds: number): string => {
+    const s = Math.max(0, Math.round(seconds))
+    if (s < 5) return "just now"
+    if (s < 60) return `${s} seconds ago`
+    const m = Math.floor(s / 60)
+    if (m < 60) return `${m} minute${m === 1 ? "" : "s"} ago`
+    const h = Math.floor(m / 60)
+    return `${h} hour${h === 1 ? "" : "s"} ago`
+  }
 
   const formatPhoneNumber = (input: string): string => {
     const digitsOnly = input.replace(/\D/g, "")
@@ -257,10 +269,11 @@ export default function ScanEventsPage() {
           return
         }
 
+        const code = barcode.trim()
         const response = await api.scanner.scan({
           userId: user.user_id,
           eventId: selectedEvent.id,
-          barcode: barcode.trim(),
+          barcode: code,
         })
 
         const ticketData: ScannedTicket | undefined = Array.isArray(response.ticket)
@@ -279,9 +292,18 @@ export default function ScanEventsPage() {
 
           setModalTicket(ticketData)
 
-          if (response.status) {
+          const key = `${selectedEvent.id}:${code}`
+          const admittedAt = admittedRef.current.get(key)
+          if (response.status && !response.repeatScan && admittedAt === undefined) {
+            admittedRef.current.set(key, Date.now())
             setModalStatus("success")
             setModalMessage(response.message || "Ticket scanned & redeemed!")
+          } else if (response.status) {
+            // The server answers a repeat scan by the same account with success, so a retried
+            // request isn't refused. Here it's someone showing the same ticket again.
+            const secs = response.secondsSinceScan ?? (admittedAt !== undefined ? (Date.now() - admittedAt) / 1000 : 0)
+            setModalStatus("already")
+            setModalMessage(`Scanned by you ${agoText(secs)}. Don't let anyone else in on this ticket.`)
           } else {
             setModalStatus("already")
             setModalMessage(response.error || response.message || "Ticket already scanned")
@@ -557,7 +579,7 @@ export default function ScanEventsPage() {
           api.scanner.scan({ userId: user.user_id, eventId: selectedEvent.id, barcode })
         )
       )
-      const successCount = results.filter((r) => r.status).length
+      const successCount = results.filter((r) => r.status && !r.repeatScan).length
       const failedCount = results.length - successCount
       if (successCount > 0) toast.success(`Successfully redeemed ${successCount} ticket(s)`)
       if (failedCount > 0) toast.error(`Failed to redeem ${failedCount} ticket(s)`)

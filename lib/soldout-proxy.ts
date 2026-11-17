@@ -102,6 +102,48 @@ export async function proxyToSoldOut(
 }
 
 /**
+ * Calls the SoldOut API as the signed-in user and hands back what it said, for
+ * routes that need to look at an answer (who owns what) before relaying anything.
+ */
+export async function soldOutJson(
+  path: string,
+  accessToken: string
+): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; status: number; message: string }> {
+  try {
+    const response = await fetch(`${soldoutApiBaseUrl()}${path}`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(30000),
+      cache: 'no-store',
+    })
+    const data = (await response.json().catch(() => null)) as Record<string, unknown> | null
+    if (!response.ok || !data || data.status === false) {
+      const message = (data?.error || data?.message || `Request failed (${response.status})`) as string
+      return { ok: false, status: response.ok ? 400 : response.status, message }
+    }
+    return { ok: true, data }
+  } catch (error) {
+    console.error('SoldOut lookup failed:', path, error)
+    return { ok: false, status: 502, message: "Couldn't reach SoldOut right now. Please try again." }
+  }
+}
+
+/** Fetches an image (a gate scan photo) as the signed-in user, or null when there is none. */
+export async function soldOutImage(path: string, accessToken: string): Promise<ArrayBuffer | null> {
+  try {
+    const response = await fetch(`${soldoutApiBaseUrl()}${path}`, {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'image/jpeg' },
+      signal: AbortSignal.timeout(30000),
+      cache: 'no-store',
+    })
+    if (!response.ok || !response.headers.get('content-type')?.startsWith('image/')) return null
+    return await response.arrayBuffer()
+  } catch (error) {
+    console.error('SoldOut image failed:', path, error)
+    return null
+  }
+}
+
+/**
  * Returns a 400 response naming the query params that were missing, or null
  * when they are all present.
  */

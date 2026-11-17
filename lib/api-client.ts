@@ -1228,6 +1228,10 @@ export const api = {
         message?: string
         error?: string
         status: boolean
+        // Set when the same account redeemed this ticket moments ago: the server answers
+        // status true for a retried request, but at the door it means the ticket is used.
+        repeatScan?: boolean
+        secondsSinceScan?: number
       }>('/scanner/scan', {
         method: 'POST',
         body: JSON.stringify(scanData),
@@ -1255,5 +1259,83 @@ export const api = {
       }, true) // Use proxy route
     },
   },
+
+  // Gate scanner accounts of the signed-in owner's company. The routes take the
+  // company from the signed session cookie, so none of these send it.
+  scanners: {
+    list: async () =>
+      apiRequest<{ status: boolean; message?: string; scanners: GateScanner[] }>('/scanners', { method: 'GET' }, true),
+    create: async (data: { name: string; phone: string; password: string; eventId: number | null }) =>
+      apiRequest<GateScanner & { status: boolean; message?: string }>('/scanners', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }, true),
+    attach: async (id: number, eventId: number | null) =>
+      apiRequest<GateScanner & { status: boolean; message?: string }>(`/scanners/${id}/attach`, {
+        method: 'POST',
+        body: JSON.stringify({ eventId }),
+      }, true),
+    setPassword: async (id: number, password: string) =>
+      apiRequest<GateScanner & { status: boolean; message?: string }>(`/scanners/${id}/password`, {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+      }, true),
+    setActive: async (id: number, active: boolean) =>
+      apiRequest<GateScanner & { status: boolean; message?: string }>(`/scanners/${id}/active`, {
+        method: 'POST',
+        body: JSON.stringify({ active }),
+      }, true),
+    events: async () =>
+      apiRequest<{ status: boolean; message?: string; events: GateScannerEvent[] }>('/scanners/events', { method: 'GET' }, true),
+    checkins: async (eventId: number) =>
+      apiRequest<{ status: boolean; message?: string; checkins: GateCheckin[] }>(
+        `/scanners/checkins?eventId=${eventId}`,
+        { method: 'GET' },
+        true
+      ),
+  },
+}
+
+/** Door staff who sign in to the gate app with a phone number and password, attached to one event at a time. */
+export interface GateScanner {
+  id: number
+  name: string
+  phone: string
+  companyId: number
+  companyName: string | null
+  eventId: number | null
+  eventName: string | null
+  active: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  /** Phones signed in as this scanner right now */
+  phones: number
+  /** Tickets they have let in */
+  admitted: number
+}
+
+/** An event a scanner can be attached to: not closed and not over. */
+export interface GateScannerEvent {
+  id: number
+  eventName: string
+  status: string
+  startDate: string | null
+}
+
+export interface GateCheckin {
+  ticketId: number
+  barcode: string
+  orderCode: string
+  ticketName: string
+  holderName: string | null
+  holderPhone: string | null
+  scannedAt: string
+  gate: string | null
+  /** H live, B synced after an outage, S by SMS, L found by search */
+  channel: string | null
+  scannedByName: string | null
+  scannedByPhone: string | null
+  /** A photo the scanner took of the code, kept until shortly after the event */
+  photoId: number | null
 }
 
