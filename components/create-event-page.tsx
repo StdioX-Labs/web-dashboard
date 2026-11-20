@@ -24,6 +24,8 @@ import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/comp
 import { EVENT_CATEGORIES } from "@/lib/event-categories"
 import { endAfterStartChange, startDateError } from "@/lib/event-dates"
 import { TICKET_FIELD_HELP } from "@/lib/ticket-limits"
+import { rolloverChoices, rolloverOrder, type RolloverNode } from "@/lib/ticket-rollover"
+import { RolloverSelect } from "@/components/rollover-select"
 import { sessionManager } from "@/lib/session-manager"
 import { uploadToContabo, validateImageFile } from "@/lib/contabo-uploader"
 
@@ -38,6 +40,7 @@ const EVENT_FIELD_LABELS: Record<string, true> = {
 const TICKET_FIELDS: Record<string, true> = {
   ticketName: true, ticketPrice: true, quantityAvailable: true, numberOfComplementary: true,
   ticketsToIssue: true, ticketLimitPerPerson: true, ticketSaleStartDate: true, ticketSaleEndDate: true,
+  rolloverFromTicketId: true,
 }
 
 /** The request field each ticket input feeds, so editing it clears the right error. */
@@ -45,6 +48,7 @@ const TICKET_FORM_TO_API: Partial<Record<keyof TicketType, string>> = {
   name: "ticketName", price: "ticketPrice", quantity: "quantityAvailable", complementary: "numberOfComplementary",
   ticketsToIssue: "ticketsToIssue", limitPerPerson: "ticketLimitPerPerson",
   saleStartDate: "ticketSaleStartDate", saleEndDate: "ticketSaleEndDate",
+  rolloverFrom: "rolloverFromTicketId",
 }
 
 /** Drops one field's error, and the form-level one, once the organiser edits. */
@@ -69,6 +73,15 @@ interface TicketType {
   restrictLimitPerPerson: boolean
   saleStartDate: Date | undefined
   saleEndDate: Date | undefined
+  /** Id of the form row this ticket opens after, "" if it sells on its own dates. */
+  rolloverFrom: string
+}
+
+/** A ticket already saved on an earlier attempt, keyed by its form row id. */
+interface CreatedTicket {
+  id: number
+  name: string
+  rolloverFrom: string
 }
 
 export default function CreateEventPage() {
@@ -97,9 +110,19 @@ export default function CreateEventPage() {
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
   const [eventErrors, setEventErrors] = useState<FieldErrors>({})
   const [ticketErrors, setTicketErrors] = useState<Record<string, FieldErrors>>({})
+  // Tickets saved before a partial failure. Their rows leave the form so a
+  // retry can't create them twice, but later tickets can still open after them.
+  const [createdTickets, setCreatedTickets] = useState<Record<string, CreatedTicket>>({})
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
-    { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
+    { id: "1", name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined, rolloverFrom: "" },
   ])
+
+  // Every ticket a row could open after: the other rows, and any saved on an
+  // earlier attempt. Unnamed rows still count as followers but aren't offered.
+  const rolloverNodes: RolloverNode<string>[] = [
+    ...Object.entries(createdTickets).map(([key, t]) => ({ key, name: t.name, after: t.rolloverFrom || null })),
+    ...ticketTypes.map((t) => ({ key: t.id, name: t.name.trim(), after: t.rolloverFrom || null })),
+  ]
 
   // Auto-generate slug from event name
   const generateSlug = (name: string) => {
@@ -146,7 +169,7 @@ export default function CreateEventPage() {
     const id = Date.now().toString()
     setTicketTypes((prev) => [
       ...prev,
-      { id, name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined },
+      { id, name: "", price: "", quantity: "", description: "", complementary: "0", ticketsToIssue: "1", limitPerPerson: "0", isGroupTicket: false, restrictLimitPerPerson: false, saleStartDate: undefined, saleEndDate: undefined, rolloverFrom: "" },
     ])
     setNewTicketId(id)
   }
@@ -167,7 +190,12 @@ export default function CreateEventPage() {
 
   const removeTicketType = (id: string) => {
     if (ticketTypes.length > 1) {
-      setTicketTypes((prev) => prev.filter((ticket) => ticket.id !== id))
+      // A ticket that was to open after this one now sells on its own dates.
+      setTicketTypes((prev) =>
+        prev
+          .filter((ticket) => ticket.id !== id)
+          .map((ticket) => (ticket.rolloverFrom === id ? { ...ticket, rolloverFrom: "" } : ticket))
+      )
     }
   }
 
@@ -379,6 +407,9 @@ export default function CreateEventPage() {
       const saleEnd = ticket.saleEndDate || saleEndDateTime
       if (saleStart && saleEnd && saleEnd <= saleStart) e.ticketSaleEndDate = "Ticket sales must close after they open"
       else if (saleEnd && eventEndDate && saleEnd > eventEndDate) e.ticketSaleEndDate = "Ticket sales must close by the time the event ends"
+      if (ticket.rolloverFrom && !createdTickets[ticket.rolloverFrom] && !toCreate.some((t) => t.id === ticket.rolloverFrom)) {
+        e.rolloverFromTicketId = "Fill in the ticket this one opens after, or choose None"
+      }
       if (Object.keys(e).length > 0) errors[ticket.id] = e
     }
 
@@ -403,11 +434,30 @@ export default function CreateEventPage() {
       toast.info(`Creating ${toCreate.length} ticket type(s)...`)
       const created = new Set<string>()
       const failed: Record<string, FieldErrors> = {}
+      // Server ids by form row id, so a ticket can name the one it opens after.
+      // Predecessors are created first, which is what makes those ids known.
+      const savedIds: Record<string, number> = Object.fromEntries(
+        Object.entries(createdTickets).map(([rowId, t]) => [rowId, t.id])
+      )
+      const newlyCreated: Record<string, CreatedTicket> = {}
+      const ordered = rolloverOrder(toCreate.map((t) => ({ key: t.id, name: t.name, after: t.rolloverFrom || null })))
+        .map((node) => toCreate.find((t) => t.id === node.key)!)
 
-      for (const ticket of toCreate) {
+      for (const ticket of ordered) {
+        let rolloverFromTicketId: number | undefined
+        if (ticket.rolloverFrom) {
+          rolloverFromTicketId = savedIds[ticket.rolloverFrom]
+          if (rolloverFromTicketId === undefined) {
+            const predecessor = toCreate.find((t) => t.id === ticket.rolloverFrom)
+            failed[ticket.id] = {
+              rolloverFromTicketId: `${predecessor?.name.trim() || "The ticket this opens after"} wasn't created, so this one wasn't either`,
+            }
+            continue
+          }
+        }
         try {
           const price = parseFloat(ticket.price)
-          await api.company.createTicket({
+          const response = await api.company.createTicket({
             event: { id: createdEventId },
             ticketName: ticket.name.trim(),
             ticketPrice: price,
@@ -418,8 +468,14 @@ export default function CreateEventPage() {
             ticketSaleStartDate: (ticket.saleStartDate || saleStartDateTime!).toISOString(),
             ticketSaleEndDate: (ticket.saleEndDate || saleEndDateTime!).toISOString(),
             isFree: price === 0,
+            ...(rolloverFromTicketId !== undefined && { rolloverFromTicketId }),
           })
 
+          const savedId = response.ticket?.[0]?.id
+          if (savedId !== undefined) {
+            savedIds[ticket.id] = savedId
+            newlyCreated[ticket.id] = { id: savedId, name: ticket.name.trim(), rolloverFrom: ticket.rolloverFrom }
+          }
           created.add(ticket.id)
           toast.success(`✓ Ticket created: ${ticket.name}`)
         } catch (ticketError) {
@@ -432,6 +488,7 @@ export default function CreateEventPage() {
       }
 
       if (Object.keys(failed).length > 0) {
+        setCreatedTickets((prev) => ({ ...prev, ...newlyCreated }))
         // Keep only the tickets that still need attention, so trying again
         // can't create the successful ones a second time.
         setTicketTypes((prev) => prev.filter((t) => !created.has(t.id) && !isBlank(t)))
@@ -1026,6 +1083,20 @@ export default function CreateEventPage() {
                       className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                     />
                   </div>
+
+                  {/* Rollover: open once another ticket is finished */}
+                  {(() => {
+                    const choices = rolloverChoices(rolloverNodes, ticket.id).filter((n) => n.name)
+                    if (choices.length === 0 && !ticket.rolloverFrom) return null
+                    return (
+                      <RolloverSelect
+                        value={ticket.rolloverFrom}
+                        options={choices.map((n) => ({ value: n.key, label: n.name }))}
+                        onChange={(value) => updateTicketType(ticket.id, "rolloverFrom", value)}
+                        error={ticketErrors[ticket.id]?.rolloverFromTicketId}
+                      />
+                    )
+                  })()}
 
                   {/* Ticket Sale Period */}
                   <div className="pt-2 border-t border-border">

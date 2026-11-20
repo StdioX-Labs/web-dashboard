@@ -23,6 +23,8 @@ import { uploadToContabo } from "@/lib/contabo-uploader"
 import { EVENT_CATEGORIES, findCategoryIdByName } from "@/lib/event-categories"
 import { defaultEventEnd, endAfterStartChange, startDateError } from "@/lib/event-dates"
 import { clampTicketsToIssue, TICKET_FIELD_HELP } from "@/lib/ticket-limits"
+import { ROLLOVER_FIELD, rolloverChoices, rolloverSteps, type RolloverNode } from "@/lib/ticket-rollover"
+import { RolloverSelect } from "@/components/rollover-select"
 
 interface TicketType {
   id: string
@@ -38,6 +40,10 @@ interface TicketType {
   isFree: boolean
   isGroupTicket: boolean
   restrictLimitPerPerson: boolean
+  /** Id of the saved ticket this one opens after, "" if it sells on its own dates. */
+  rolloverFrom: string
+  /** The same, as last saved, so the link is only sent when it changed. */
+  savedRolloverFrom: string
 }
 
 export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
@@ -73,6 +79,8 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
   const [saleStartDateTime, setSaleStartDateTime] = useState<Date | undefined>(undefined)
   const [saleEndDateTime, setSaleEndDateTime] = useState<Date | undefined>(undefined)
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([])
+  // The API's reason a ticket's "Opens after" link was refused, by ticket id
+  const [rolloverErrors, setRolloverErrors] = useState<Record<string, string>>({})
 
   // Load event data from API
   useEffect(() => {
@@ -155,6 +163,8 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
               restrictLimitPerPerson: (ticket.ticketLimitPerPerson || 0) > 0,
               saleStartDate: ticket.ticketSaleStartDate ? new Date(ticket.ticketSaleStartDate) : undefined,
               saleEndDate: ticket.ticketSaleEndDate ? new Date(ticket.ticketSaleEndDate) : undefined,
+              rolloverFrom: ticket.rolloverFromTicketId != null ? String(ticket.rolloverFromTicketId) : "",
+              savedRolloverFrom: ticket.rolloverFromTicketId != null ? String(ticket.rolloverFromTicketId) : "",
             }))
 
             console.log('Setting tickets:', formattedTickets)
@@ -226,7 +236,9 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
         isGroupTicket: false,
         restrictLimitPerPerson: false,
         saleStartDate: undefined,
-        saleEndDate: undefined
+        saleEndDate: undefined,
+        rolloverFrom: "",
+        savedRolloverFrom: "",
       },
     ])
     setNewTicketId(id)
@@ -245,6 +257,14 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
    * each other.
    */
   const updateTicketType = (id: string, field: keyof TicketType, value: string | Date | undefined | boolean) => {
+    if (field === "rolloverFrom") {
+      setRolloverErrors((prev) => {
+        if (!prev[id]) return prev
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+    }
     setTicketTypes((prev) =>
       prev.map((ticket) =>
         ticket.id === id ? { ...ticket, [field]: value } : ticket
@@ -258,6 +278,13 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
       prev.map((ticket) => (ticket.id === id ? { ...ticket, ...patch } : ticket))
     )
   }
+
+  // Every ticket on the form and the one it opens after, for the pickers
+  const rolloverNodes: RolloverNode<string>[] = ticketTypes.map((t) => ({
+    key: t.id,
+    name: t.name.trim(),
+    after: t.rolloverFrom || null,
+  }))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -366,68 +393,109 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
       // this session have no server id yet — their `id` is a timestamp from
       // addTicketType — so they have to be created. Updating against that
       // timestamp is what used to make new ticket types vanish on save.
+      //
+      // "Opens after" links on saved tickets go separately, one at a time, so a
+      // ticket giving up a predecessor does so before another claims it. New
+      // tickets that open after a saved one are created last for the same reason.
       console.log('Saving tickets...')
-      const ticketResults = await Promise.all(
-        validTickets.map(async (ticket) => {
-          const price = parseFloat(ticket.price) || 0
-          const isFree = price === 0
-          const quantity = parseInt(ticket.quantity) || 0
+      setRolloverErrors({})
+      const rolloverErrorsFound: Record<string, string> = {}
+      const isSaved = (ticket: TicketType) => existingTicketIds.has(ticket.id)
+      const linkedNew = validTickets.filter((ticket) => !isSaved(ticket) && ticket.rolloverFrom)
 
-          const common = {
-            ticketName: ticket.name,
-            ticketPrice: price,
-            quantityAvailable: quantity,
-            ticketsToIssue: clampTicketsToIssue(ticket.ticketsToIssue, quantity),
-            ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
-            numberOfComplementary: parseInt(ticket.complementary || "0"),
-            isFree,
-          }
+      const saveTicket = async (ticket: TicketType) => {
+        const price = parseFloat(ticket.price) || 0
+        const isFree = price === 0
+        const quantity = parseInt(ticket.quantity) || 0
 
-          // Fall back to the event-wide sale window, as creating does.
-          const startDate = ticket.saleStartDate || saleStartDateTime
-          const endDate = ticket.saleEndDate || saleEndDateTime
+        const common = {
+          ticketName: ticket.name,
+          ticketPrice: price,
+          quantityAvailable: quantity,
+          ticketsToIssue: clampTicketsToIssue(ticket.ticketsToIssue, quantity),
+          ticketLimitPerPerson: parseInt(ticket.limitPerPerson || "0"),
+          numberOfComplementary: parseInt(ticket.complementary || "0"),
+          isFree,
+        }
 
-          try {
-            if (existingTicketIds.has(ticket.id)) {
-              const payload: Record<string, unknown> = { ...common }
-              if (ticket.saleStartDate) {
-                payload.ticketSaleStartDate = ticket.saleStartDate.toISOString()
-              }
-              if (ticket.saleEndDate) {
-                payload.ticketSaleEndDate = ticket.saleEndDate.toISOString()
-              }
+        // Fall back to the event-wide sale window, as creating does.
+        const startDate = ticket.saleStartDate || saleStartDateTime
+        const endDate = ticket.saleEndDate || saleEndDateTime
 
-              console.log('Updating ticket:', ticket.id, payload)
-              const response = await api.ticket.update(parseInt(ticket.id), payload)
-              return { name: ticket.name, ok: response.status, message: response.message }
+        try {
+          if (existingTicketIds.has(ticket.id)) {
+            const payload: Record<string, unknown> = { ...common }
+            if (ticket.saleStartDate) {
+              payload.ticketSaleStartDate = ticket.saleStartDate.toISOString()
+            }
+            if (ticket.saleEndDate) {
+              payload.ticketSaleEndDate = ticket.saleEndDate.toISOString()
             }
 
-            console.log('Creating ticket:', ticket.name)
-            const response = await api.company.createTicket({
-              ...common,
-              event: { id: eventId },
-              ticketSaleStartDate: startDate.toISOString(),
-              ticketSaleEndDate: endDate.toISOString(),
-            })
+            console.log('Updating ticket:', ticket.id, payload)
+            const response = await api.ticket.update(parseInt(ticket.id), payload)
             return { name: ticket.name, ok: response.status, message: response.message }
-          } catch (ticketError) {
-            console.error(`Error saving ticket "${ticket.name}":`, ticketError)
-            return {
-              name: ticket.name,
-              ok: false,
-              message: ticketError instanceof Error ? ticketError.message : undefined,
-            }
           }
-        })
+
+          console.log('Creating ticket:', ticket.name)
+          const response = await api.company.createTicket({
+            ...common,
+            event: { id: eventId },
+            ticketSaleStartDate: startDate.toISOString(),
+            ticketSaleEndDate: endDate.toISOString(),
+            ...(ticket.rolloverFrom ? { rolloverFromTicketId: parseInt(ticket.rolloverFrom) } : {}),
+          })
+          return { name: ticket.name, ok: response.status, message: response.message }
+        } catch (ticketError) {
+          console.error(`Error saving ticket "${ticket.name}":`, ticketError)
+          const message = ticketError instanceof Error ? ticketError.message : undefined
+          if (message && apiErrorField(ticketError) === ROLLOVER_FIELD) rolloverErrorsFound[ticket.id] = message
+          return { name: ticket.name, ok: false, message }
+        }
+      }
+
+      const ticketResults = await Promise.all(
+        validTickets.filter((ticket) => !linkedNew.includes(ticket)).map(saveTicket)
       )
 
+      const savedLinks = new Map(
+        ticketTypes.filter(isSaved).map((t) => [parseInt(t.id), t.savedRolloverFrom ? parseInt(t.savedRolloverFrom) : null])
+      )
+      const linkChanges = validTickets
+        .filter((t) => isSaved(t) && t.rolloverFrom !== t.savedRolloverFrom)
+        .map((t) => ({ id: parseInt(t.id), to: t.rolloverFrom ? parseInt(t.rolloverFrom) : null }))
+      const linksSaved: Record<string, string> = {}
+      for (const step of rolloverSteps(savedLinks, linkChanges)) {
+        const ticket = validTickets.find((t) => t.id === String(step.id))!
+        try {
+          // An explicit null unlinks, and a queued ticket goes on sale.
+          const response = await api.ticket.update(step.id, { rolloverFromTicketId: step.to })
+          if (!response.status) throw new Error(response.message || "Couldn't save when this ticket opens")
+          linksSaved[ticket.id] = step.to == null ? "" : String(step.to)
+        } catch (linkError) {
+          console.error(`Error linking ticket "${ticket.name}":`, linkError)
+          const message = linkError instanceof Error ? linkError.message : "Couldn't save when this ticket opens"
+          if (apiErrorField(linkError) === ROLLOVER_FIELD) rolloverErrorsFound[ticket.id] = message
+          ticketResults.push({ name: ticket.name, ok: false, message })
+        }
+      }
+
+      ticketResults.push(...(await Promise.all(linkedNew.map(saveTicket))))
+
+      // What saved is the new baseline, so trying again doesn't resend it.
+      setTicketTypes((prev) =>
+        prev.map((t) => (t.id in linksSaved ? { ...t, savedRolloverFrom: linksSaved[t.id] } : t))
+      )
+      setRolloverErrors(rolloverErrorsFound)
+
       const failed = ticketResults.filter((r) => !r.ok)
+      const failedCount = new Set(failed.map((f) => f.name)).size
 
       // The event itself saved, so this is a partial success — say so rather
       // than following the failure with a blanket "updated successfully".
       if (failed.length > 0) {
         console.error('Some tickets failed to save:', failed)
-        toast.error(`${failed.length} of ${ticketResults.length} ticket(s) could not be saved`, {
+        toast.error(`${failedCount} of ${validTickets.length} ticket(s) could not be saved`, {
           description: failed[0].message
             ? `${failed[0].name}: ${failed[0].message}`
             : `Check ${failed.map((f) => f.name).join(", ")} and try again.`,
@@ -935,6 +1003,22 @@ export default function EditEventPage({ eventId = 1 }: { eventId?: number }) {
                         className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 transition-all"
                       />
                     </div>
+
+                    {/* Rollover: open once another ticket is finished. Only saved
+                        tickets can be picked, since only they have an id yet. */}
+                    {(() => {
+                      const choices = rolloverChoices(rolloverNodes, ticket.id)
+                        .filter((n) => existingTicketIds.has(n.key) && n.name)
+                      if (choices.length === 0 && !ticket.rolloverFrom) return null
+                      return (
+                        <RolloverSelect
+                          value={ticket.rolloverFrom}
+                          options={choices.map((n) => ({ value: n.key, label: n.name }))}
+                          onChange={(value) => updateTicketType(ticket.id, "rolloverFrom", value)}
+                          error={rolloverErrors[ticket.id]}
+                        />
+                      )
+                    })()}
 
                     {/* Ticket Sale Period */}
                     <div className="pt-2 border-t border-border">

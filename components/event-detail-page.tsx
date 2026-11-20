@@ -45,6 +45,8 @@ import { FieldError, FormError, errorInputClass, type FieldErrors } from "@/comp
 import { sessionManager } from "@/lib/session-manager"
 import { eventCache } from "@/lib/event-cache"
 import { EventPromotionsTab } from "@/components/event-promotions-tab"
+import { RolloverSelect } from "@/components/rollover-select"
+import { ROLLOVER_FIELD, rolloverBadge, rolloverChoices, type RolloverNode } from "@/lib/ticket-rollover"
 
 // Type definitions
 interface TicketType {
@@ -63,6 +65,7 @@ interface TicketType {
   numberOfComplementary: number
   ticketSaleStartDate: string | null
   ticketSaleEndDate: string | null
+  rolloverFromTicketId: number | null
 }
 
 // Mock attendees data removed - now fetched from API
@@ -150,6 +153,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [editTicketComplementary, setEditTicketComplementary] = useState("")
   const [editTicketToIssue, setEditTicketToIssue] = useState("")
   const [editTicketIsFree, setEditTicketIsFree] = useState(false)
+  // "Opens after": the predecessor's id as a string ("" for none), and as saved
+  const [editTicketRollover, setEditTicketRollover] = useState("")
+  const [editTicketSavedRollover, setEditTicketSavedRollover] = useState("")
+  const [editTicketRolloverError, setEditTicketRolloverError] = useState("")
   const [loadingTicketDetails, setLoadingTicketDetails] = useState(false)
   const [detailedTicketsLoaded, setDetailedTicketsLoaded] = useState(false)
 
@@ -164,6 +171,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
   const [addTicketComplementary, setAddTicketComplementary] = useState("0")
   const [addTicketToIssue, setAddTicketToIssue] = useState("1")
   const [addTicketIsFree, setAddTicketIsFree] = useState(false)
+  const [addTicketRollover, setAddTicketRollover] = useState("")
   // Keyed by the API's field names, so the reason it gives lands under its input
   const [addTicketErrors, setAddTicketErrors] = useState<FieldErrors>({})
   const clearAddTicketError = (key: string) =>
@@ -886,7 +894,16 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     numberOfComplementary: ticket.numberOfComplementary ?? 0,
     ticketSaleStartDate: ticket.ticketSaleStartDate || null,
     ticketSaleEndDate: ticket.ticketSaleEndDate || null,
+    rolloverFromTicketId: ticket.rolloverFromTicketId ?? null,
   })) || []
+
+  // The event's tickets and the one each opens after, for the "Opens after" pickers
+  const rolloverNodes: RolloverNode<number>[] = ticketTypes.map((t) => ({
+    key: t.id,
+    name: t.name,
+    after: t.rolloverFromTicketId,
+  }))
+  const ticketNameById = (id: number) => ticketTypes.find((t) => t.id === id)?.name
 
   // Kenyan phone number validation and formatting
   const formatKenyanPhone = (phone: string): string | null => {
@@ -1093,6 +1110,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setEditTicketIsFree(false)
     setEditTicketSaleStart(undefined)
     setEditTicketSaleEnd(undefined)
+    const rollover = ticket.rolloverFromTicketId != null ? String(ticket.rolloverFromTicketId) : ""
+    setEditTicketRollover(rollover)
+    setEditTicketSavedRollover(rollover)
+    setEditTicketRolloverError("")
 
     // Show loading toast while fetching
     const loadingToast = toast.loading('Loading ticket details...')
@@ -1120,6 +1141,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
           setEditTicketComplementary(fullTicket.numberOfComplementary?.toString() || "0")
           setEditTicketToIssue(fullTicket.ticketsToIssue?.toString() || "1")
           setEditTicketIsFree(fullTicket.isFree || false)
+          if (fullTicket.rolloverFromTicketId !== undefined) {
+            const savedRollover = fullTicket.rolloverFromTicketId != null ? String(fullTicket.rolloverFromTicketId) : ""
+            setEditTicketRollover(savedRollover)
+            setEditTicketSavedRollover(savedRollover)
+          }
 
           // Set ticket sale dates
           if (fullTicket.ticketSaleStartDate) {
@@ -1196,6 +1222,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         ticketSaleStartDate: editTicketSaleStart.toISOString(),
         ticketSaleEndDate: editTicketSaleEnd.toISOString(),
       }
+      // Only when it changed; an explicit null unlinks.
+      if (editTicketRollover !== editTicketSavedRollover) {
+        ticketUpdateData.rolloverFromTicketId = editTicketRollover ? parseInt(editTicketRollover) : null
+      }
 
       console.log('=== Updating Ticket ===')
       console.log('Ticket ID:', ticketId)
@@ -1234,6 +1264,11 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         errorMessage = (error as { message: string }).message
       }
 
+      if (apiErrorField(error) === ROLLOVER_FIELD) {
+        setEditTicketRolloverError(errorMessage)
+        return
+      }
+
       toast.error(errorMessage, {
         description: "Please check the console for more details"
       })
@@ -1253,6 +1288,9 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setEditTicketComplementary("0")
     setEditTicketToIssue("1")
     setEditTicketIsFree(false)
+    setEditTicketRollover("")
+    setEditTicketSavedRollover("")
+    setEditTicketRolloverError("")
   }
 
   const handleAddTicket = () => {
@@ -1295,6 +1333,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
         ticketSaleStartDate: addTicketSaleStart!.toISOString(),
         ticketSaleEndDate: addTicketSaleEnd!.toISOString(),
         isFree: addTicketIsFree || price === 0,
+        ...(addTicketRollover ? { rolloverFromTicketId: parseInt(addTicketRollover) } : {}),
       })
 
       if (!response.status) {
@@ -1316,6 +1355,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       setAddTicketComplementary("0")
       setAddTicketToIssue("1")
       setAddTicketIsFree(false)
+      setAddTicketRollover("")
       setShowAddTicketModal(false)
 
       setTimeout(() => window.location.reload(), 500)
@@ -1324,7 +1364,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
       const message = error instanceof Error ? error.message : "Failed to create ticket"
       const field = apiErrorField(error)
       const ticketFields = ["ticketName", "ticketPrice", "quantityAvailable", "numberOfComplementary",
-        "ticketsToIssue", "ticketLimitPerPerson", "ticketSaleStartDate", "ticketSaleEndDate"]
+        "ticketsToIssue", "ticketLimitPerPerson", "ticketSaleStartDate", "ticketSaleEndDate", ROLLOVER_FIELD]
       setAddTicketErrors(field && ticketFields.includes(field) ? { [field]: message } : { form: message })
     }
   }
@@ -1342,6 +1382,7 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
     setAddTicketComplementary("0")
     setAddTicketToIssue("1")
     setAddTicketIsFree(false)
+    setAddTicketRollover("")
   }
 
   const handleIssueCompTicket = async () => {
@@ -3429,9 +3470,14 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                 const isExpired = !isClosed && !isSoldOut && saleEndDate && saleEndDate < now
                 const isUpcoming = !isSuspended && !isSoldOut && !isClosed && !isExpired && saleStartDate && saleStartDate > now
                 const isActive = !isSuspended && !isSoldOut && !isClosed && !isExpired && !isUpcoming
+                // Rollover: a queued tier waits for the one before it to finish
+                const rollover = rolloverBadge(apiStatus, ticket.rolloverFromTicketId, ticketNameById)
+                const isQueued = !!rollover?.queued && !isSuspended && !isSoldOut && !isClosed
 
                 // Status config: label, badge colors, left-border accent, progress bar color
-                const statusConfig = isSoldOut
+                const statusConfig = isQueued
+                  ? { label: rollover!.label, badge: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900', border: 'border-l-blue-500', bar: 'from-blue-400 to-blue-500' }
+                  : isSoldOut
                   ? { label: 'Sold Out',   badge: 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900',        border: 'border-l-red-500',    bar: 'from-red-400 to-red-500' }
                   : isSuspended
                   ? { label: 'On Hold',    badge: 'bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900', border: 'border-l-amber-500',  bar: 'from-amber-400 to-amber-500' }
@@ -3466,6 +3512,10 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                         <span className={cn("px-2.5 py-0.5 rounded-full text-xs font-semibold border", statusConfig.badge)}>
                           {statusConfig.label}
                         </span>
+                        {/* Opens after another ticket, once that one is finished */}
+                        {rollover && !isQueued && (
+                          <span className="text-xs text-muted-foreground">{rollover.label}</span>
+                        )}
                         {/* Free badge */}
                         {ticket.isFree && (
                           <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 dark:bg-zinc-800/50 text-zinc-200 dark:text-zinc-300 text-xs font-semibold border border-zinc-700 dark:border-zinc-700">
@@ -5277,6 +5327,21 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                   />
                 </div>
 
+                {/* Rollover: open once another ticket is finished */}
+                {(() => {
+                  const choices = editingTicket ? rolloverChoices(rolloverNodes, editingTicket.id as number) : []
+                  if (choices.length === 0 && !editTicketRollover) return null
+                  return (
+                    <RolloverSelect
+                      size="lg"
+                      value={editTicketRollover}
+                      options={choices.map((n) => ({ value: String(n.key), label: n.name }))}
+                      onChange={(value) => { setEditTicketRollover(value); setEditTicketRolloverError("") }}
+                      error={editTicketRolloverError}
+                    />
+                  )
+                })()}
+
                 {/* Ticket Sale Period */}
                 <div className="space-y-3 pt-2 border-t border-border">
                   <label className="text-sm font-medium block">
@@ -5463,6 +5528,22 @@ export default function EventDetailPage({ eventId = 1 }: { eventId?: number }) {
                     </label>
                   </div>
                 </div>
+
+                {/* Rollover: open once another ticket is finished */}
+                {(() => {
+                  // A ticket not yet created can't be anyone's predecessor, so no key of its own is needed
+                  const choices = rolloverChoices(rolloverNodes, -1)
+                  if (choices.length === 0) return null
+                  return (
+                    <RolloverSelect
+                      size="lg"
+                      value={addTicketRollover}
+                      options={choices.map((n) => ({ value: String(n.key), label: n.name }))}
+                      onChange={(value) => { setAddTicketRollover(value); clearAddTicketError(ROLLOVER_FIELD) }}
+                      error={addTicketErrors[ROLLOVER_FIELD]}
+                    />
+                  )
+                })()}
 
                 {/* Ticket Sale Period */}
                 <div className="space-y-3 pt-2 border-t border-border">
