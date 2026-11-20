@@ -5,7 +5,7 @@ import type Anthropic from "@anthropic-ai/sdk"
 import { AnimatePresence, motion, MotionConfig } from "framer-motion"
 import {
   Check, Loader2, Paperclip, RotateCcw, Send, History, ArrowLeft, MessageSquare, Sparkles, X, AlertTriangle, Search,
-  CalendarPlus, BarChart3, TrendingUp, TicketPercent, Gift, UserPlus, ChevronDown,
+  CalendarPlus, BarChart3, TrendingUp, TicketPercent, Gift, UserPlus, ChevronDown, Users, ScanLine, LifeBuoy,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { sessionManager } from "@/lib/session-manager"
@@ -51,6 +51,15 @@ const TASKS = [
   { icon: TicketPercent, title: "Promo code", hint: "Discounts for an event", prompt: "I want to create a promo code." },
   { icon: Gift, title: "Complimentary tickets", hint: "Send free tickets", prompt: "I want to issue complimentary tickets." },
   { icon: UserPlus, title: "Add a teammate", hint: "Staff or co-owner", prompt: "I want to add a teammate to my company." },
+]
+
+// Event Staff can't see sales or make changes, so they get these instead. This is
+// only what the panel offers; the chat route enforces the role itself.
+const STAFF_TASKS = [
+  { icon: Users, title: "Attendees", hint: "Who has a ticket", prompt: "Show me the attendees for one of my events." },
+  { icon: ScanLine, title: "Check-ins", hint: "Scanned so far", prompt: "How many tickets have been scanned for one of my events?" },
+  { icon: Search, title: "Find a ticket", hint: "By name or phone", prompt: "Help me find an attendee's ticket." },
+  { icon: LifeBuoy, title: "Get support", hint: "Contact SoldOut", prompt: "How do I contact SoldOut support?" },
 ]
 
 // `:::suggest Show earlier events | Create a promo code` at the end of a reply
@@ -470,6 +479,7 @@ export default function AssistantPanel() {
   const user = sessionManager.getUser()
   const currency = user?.currency || "KES"
   const greetingName = user?.company_name || "there"
+  const tasks = user && user.role !== "COMPANY_OWNER" && user.role !== "SUPER_ADMIN" ? STAFF_TASKS : TASKS
   const suggestions = busy || waitingOnOrganizer ? [] : suggestionsFrom(transcript)
 
   return (
@@ -654,7 +664,7 @@ export default function AssistantPanel() {
                       </p>
                     </motion.div>
                     <div className="grid grid-cols-2 gap-2">
-                      {TASKS.map((t) => (
+                      {tasks.map((t) => (
                         <motion.button
                           key={t.title}
                           variants={{ hidden: { opacity: 0, y: 12, scale: 0.97 }, show: { opacity: 1, y: 0, scale: 1 } }}
