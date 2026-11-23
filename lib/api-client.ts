@@ -332,6 +332,8 @@ export const api = {
             isFree: boolean
             ticketStatus: string
             createAt: string
+            /** The ticket this one opens after (rollover), or null if it sells on its own dates. */
+            rolloverFromTicketId?: number | null
           }>
           createdById: number
           companyId: number
@@ -391,6 +393,7 @@ export const api = {
               complementaryTicketsSold?: number
               /** Tickets issued per sale — 5 for a "group of 5", 1 otherwise. */
               ticketsToIssue?: number
+              rolloverFromTicketId?: number | null
             }>
             detailedEvent?: {
               id: number
@@ -420,6 +423,8 @@ export const api = {
                 isFree: boolean
                 ticketStatus: string
                 createAt: string
+                /** The ticket this one opens after (rollover), or null if it sells on its own dates. */
+                rolloverFromTicketId?: number | null
               }>
               createdById: number
               companyId: number
@@ -503,6 +508,7 @@ export const api = {
             ticketCount: ticket.ticketCount,
             paidTicketsSold: ticket.paidTicketsSold ?? 0,
             complementaryTicketsSold: ticket.complementaryTicketsSold ?? 0,
+            rolloverFromTicketId: ticket.rolloverFromTicketId ?? null,
           })) || []
 
           return {
@@ -604,10 +610,13 @@ export const api = {
       ticketSaleStartDate: string
       ticketSaleEndDate: string
       isFree: boolean
+      /** Keep this ticket off sale until that ticket is finished, then open it. */
+      rolloverFromTicketId?: number | null
     }) => {
       return apiRequest<{
         message: string
-        ticket: {
+        // The API returns the saved ticket in a one-element list.
+        ticket?: Array<{
           id: number
           ticketName: string
           ticketPrice: number
@@ -618,7 +627,9 @@ export const api = {
           ticketSaleStartDate: string
           ticketSaleEndDate: string
           isFree: boolean
-        }
+          ticketStatus?: string
+          rolloverFromTicketId?: number | null
+        }>
         status: boolean
       }>('/event/ticket/create', {
         method: 'POST',
@@ -794,6 +805,8 @@ export const api = {
             isFree: boolean
             ticketStatus: string
             createAt: string
+            /** The ticket this one opens after (rollover), or null if it sells on its own dates. */
+            rolloverFromTicketId?: number | null
           }>
           createdById: number
           companyId: number
@@ -940,6 +953,8 @@ export const api = {
               isFree: boolean
               ticketStatus: string
               createAt: string
+              /** The ticket this one opens after (rollover), or null if it sells on its own dates. */
+              rolloverFromTicketId?: number | null
             }
             buyer: {
               id: number

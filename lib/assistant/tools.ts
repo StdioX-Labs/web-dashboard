@@ -43,6 +43,34 @@ export function isReadTool(name: string): name is ReadToolName {
   return (READ_TOOLS as readonly string[]).includes(name)
 }
 
+// ---- Who may use what ----
+
+/**
+ * Roles that may see money: revenue, sales amounts, transactions, affiliate
+ * commission, payouts. Every other role (Event Staff is STAFF, and any role
+ * we don't know) is restricted, so a new or misspelled role fails closed.
+ */
+// EVENT_ORGANIZER is core's organiser role (Roles.java): they run the event and see its sales.
+const FINANCIAL_ROLES = new Set(['COMPANY_OWNER', 'EVENT_ORGANIZER', 'SUPER_ADMIN'])
+
+export function canSeeFinancials(role: string | null | undefined): boolean {
+  return !!role && FINANCIAL_ROLES.has(role)
+}
+
+/**
+ * What Event Staff can use: the event list (money stripped), event details and
+ * attendees (money stripped). No transactions, promotions, affiliates,
+ * teammates, and no writes.
+ */
+export const STAFF_TOOLS: readonly ReadToolName[] = ['list_events', 'get_event', 'list_attendees']
+
+/** The tool names this role may call. */
+export function allowedToolNames(role: string | null | undefined): Set<string> {
+  return canSeeFinancials(role)
+    ? new Set([...READ_TOOLS, ...WRITE_TOOLS])
+    : new Set<string>(STAFF_TOOLS)
+}
+
 // Nairobi wall-clock time as the model writes it: 2026-12-24T18:00
 const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/
 const localDateTime = (description: string) => ({
@@ -242,6 +270,24 @@ export const TOOL_DEFINITIONS: Anthropic.Tool[] = [
     },
   },
 ]
+
+// The same tools without their money fields, as Event Staff see them.
+const STAFF_DESCRIPTIONS: Partial<Record<ReadToolName, string>> = {
+  list_events:
+    "Every event the company owns, with dates, status, tickets issued and each ticket type (id, price, remaining stock, issued and complimentary counts). Start here to find event and ticket ids.",
+  list_attendees:
+    'Tickets issued for an event: holder name, phone, email, ticket type, complimentary or not, scanned or not, and the promotion used. Use the filters to narrow it down. Returns totals plus up to `limit` rows.',
+}
+
+/** The tool definitions this role is offered. */
+export function toolDefinitionsFor(role: string | null | undefined): Anthropic.Tool[] {
+  if (canSeeFinancials(role)) return TOOL_DEFINITIONS
+  const allowed = allowedToolNames(role)
+  return TOOL_DEFINITIONS.filter((t) => allowed.has(t.name)).map((t) => {
+    const description = STAFF_DESCRIPTIONS[t.name as ReadToolName]
+    return description ? { ...t, description } : t
+  })
+}
 
 // ---- Inputs ----
 
